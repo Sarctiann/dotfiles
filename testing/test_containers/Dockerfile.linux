@@ -1,0 +1,20 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  sudo git python3 curl unzip stow \
+  && rm -rf /var/lib/apt/lists/*
+
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN userdel -r ubuntu 2>/dev/null; \
+  groupadd -g ${GROUP_ID} dotfiles && \
+  useradd -l -m -u ${USER_ID} -g dotfiles -s /bin/bash dotfiles && \
+  echo "dotfiles ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER dotfiles
+WORKDIR /dotfiles
+
+CMD ["bash", "-c", "find /dotfiles -name '.DS_Store' -delete 2>/dev/null; exec ./install.sh"]

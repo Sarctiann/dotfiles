@@ -1,0 +1,111 @@
+{
+  "$schema": "https://aka.ms/terminal-profiles-schema",
+  "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
+  "actions": [
+    {
+      "command": {
+        "action": "copy",
+        "singleLine": false
+      },
+      "id": "Terminal.CopyToClipboard"
+    },
+    {
+      "command": "paste",
+      "id": "Terminal.PasteFromClipboard"
+    },
+    {
+      "command": "find",
+      "id": "Terminal.FindText"
+    },
+    {
+      "command": {
+        "action": "splitPane",
+        "split": "auto"
+      },
+      "id": "Terminal.DuplicatePaneAuto"
+    }
+  ],
+  "keybindings": [
+    {
+      "keys": "ctrl+c",
+      "id": "unbound"
+    },
+    {
+      "keys": "ctrl+v",
+      "id": "unbound"
+    },
+    {
+      "keys": "ctrl+shift+f",
+      "id": "Terminal.FindText"
+    },
+    {
+      "keys": "alt+shift+d",
+      "id": "Terminal.DuplicatePaneAuto"
+    }
+  ],
+  "copyFormatting": "none",
+  "copyOnSelect": true,
+  "newTabMenu": [
+    {
+      "type": "remainingProfiles"
+    }
+  ],
+  "profiles": {
+    "defaults": {
+      "font": {
+        "face": "CodeNewRoman Nerd Font Propo",
+        "size": 11
+      },
+      "opacity": 90,
+      "useAcrylic": true,
+      "colorScheme": "TokyoNight",
+      "cursorShape": "bar",
+      "cursorHeight": 25,
+      "antialiasingMode": "grayscale"
+    },
+    "list": [
+      {
+        "guid": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
+        "name": "Sarc WSL",
+        "commandline": "wsl.exe ~ tmux new-session -A -D -s main",
+        "hidden": false,
+        "colorScheme": "TokyoNight",
+        "font": {
+          "face": "CodeNewRoman Nerd Font Propo",
+          "size": 11
+        },
+        "opacity": 90,
+        "useAcrylic": true
+      }
+    ]
+  },
+  "schemes": [
+    {
+      "name": "TokyoNight",
+      "background": "#1A1B26",
+      "black": "#151E1E",
+      "blue": "#3A82DA",
+      "brightBlack": "#404858",
+      "brightBlue": "#7AA2F7",
+      "brightCyan": "#7DCFFF",
+      "brightGreen": "#9ECE6A",
+      "brightPurple": "#BB9AF7",
+      "brightRed": "#F7768E",
+      "brightWhite": "#C0CAF5",
+      "brightYellow": "#E0AF68",
+      "cursorColor": "#C0CAF5",
+      "cyan": "#5BDDED",
+      "foreground": "#C0CAF5",
+      "green": "#7EBE5A",
+      "purple": "#AD7AF9",
+      "red": "#D7546E",
+      "selectionBackground": "#2F3548",
+      "white": "#A9B1D6",
+      "yellow": "#C0AF68"
+    }
+  ],
+  "showTerminalTitleInTab": true,
+  "theme": "dark",
+  "windowingBehavior": "useAnyExisting",
+  "launchMode": "maximized"
+}

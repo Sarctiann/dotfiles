@@ -1,0 +1,26 @@
+# Tmux Keymaps
+
+Leader: `Ctrl + b`  (most bindings don't need prefix)
+
+## Windows
+
+  `Ctrl + Alt + w`        Create window (in current pane path)
+  `Alt + w`               Kill window / session (with confirm)
+  `Alt +,`                Previous window
+  `Alt + .`               Next window
+  `Alt + 1..9`            Select window 1-9
+
+## Sessions
+
+  `Ctrl + Alt + s`        Create session
+  `Alt + s`               Kill current session (with confirm)
+  `Ctrl + Alt + r`        Rename session
+  `Alt + Shift + ←`       Previous session
+  `Alt + Shift + →`       Next session
+
+## tmux-resurrect / tmux-continuum
+
+  `Ctrl + b` `Ctrl + s`   Save session (resurrect)
+  `Ctrl + b` `Ctrl + r`   Restore session (resurrect)
+            —             Auto-save every 15 min (continuum)
+            —             Auto-restore on tmux start (continuum)

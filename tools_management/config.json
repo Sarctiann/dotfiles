@@ -1,0 +1,87 @@
+{
+  "system_packages": [
+    "stow",
+    "tmux",
+    "git",
+    "curl",
+    "unzip",
+    "pipx",
+    "luarocks"
+  ],
+  "cli_tools": {
+    "neovim": {
+      "repo": "neovim/neovim",
+      "binary": "nvim",
+      "asset_pattern": null
+    },
+    "ripgrep": {
+      "repo": "BurntSushi/ripgrep",
+      "binary": "rg",
+      "asset_pattern": null
+    },
+    "fd": { "repo": "sharkdp/fd", "binary": "fd", "asset_pattern": null },
+    "bat": { "repo": "sharkdp/bat", "binary": "bat", "asset_pattern": null },
+    "lazygit": {
+      "repo": "jesseduffield/lazygit",
+      "binary": "lazygit",
+      "asset_pattern": null
+    },
+    "lazydocker": {
+      "repo": "jesseduffield/lazydocker",
+      "binary": "lazydocker",
+      "asset_pattern": null
+    },
+    "lazysql": {
+      "repo": "jorgerojas26/lazysql",
+      "binary": "lazysql",
+      "asset_pattern": null
+    },
+    "gh": { "repo": "cli/cli", "binary": "gh", "asset_pattern": null },
+    "fzf": { "repo": "junegunn/fzf", "binary": "fzf", "asset_pattern": null },
+    "yazi": { "repo": "sxyazi/yazi", "binary": "yazi", "asset_pattern": null },
+    "zig": { "repo": "ziglang/zig", "binary": "zig", "asset_pattern": null }
+  },
+  "fonts": ["CodeNewRoman", "NerdFontsSymbolsOnly"],
+  "runtimes": {
+    "nvm": true,
+    "bun": true,
+    "rust": true,
+    "opencode": true
+  },
+  "stow": {
+    "enabled": true,
+    "terminal": "ghostty",
+    "base": ["local-bin"],
+    "deps": {
+      "zsh": ["nvim", "opencode", "mojo"],
+      "tmux": ["zsh"],
+      "ghostty": ["tmux", "zsh"],
+      "alacritty": ["tmux", "zsh"],
+      "wezterm": ["tmux", "zsh"],
+      "windows-terminal": ["tmux", "zsh"],
+      "nvim": ["opencode"],
+      "opencode": ["nvim"],
+      "bat": [],
+      "mojo": [],
+      "local-bin": []
+    }
+  },
+  "post_install": {
+    "tpm": true,
+    "windows_terminal": true
+  },
+  "verify": {
+    "essential": ["stow", "nvim", "tmux", "rg", "fd", "bat", "gh", "git"],
+    "optional": [
+      "lazygit",
+      "lazydocker",
+      "lazysql",
+      "yazi",
+      "zig",
+      "nvm",
+      "bun",
+      "cargo",
+      "opencode"
+    ]
+  }
+}

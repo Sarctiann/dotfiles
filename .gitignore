@@ -1,0 +1,16 @@
+.DS_Store
+*.swp
+*.swo
+*~
+
+docs/plans/
+
+# Secrets (from opencode stow package)
+.credentials
+__pycache__/
+.ruff_cache/
+
+testing/test_containers/logs/
+
+# Runtime artifacts
+manifest.json

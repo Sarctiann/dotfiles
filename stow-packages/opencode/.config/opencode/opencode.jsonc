@@ -1,0 +1,162 @@
+{
+  // Schema for OpenCode configuration
+  "$schema": "https://opencode.ai/config.json",
+
+  // Username for the OpenCode instance
+  "username": "Sebastian",
+
+  // Enable automatic updates
+  "autoupdate": true,
+
+  // Allow all actions without prompts
+  "permission": "allow",
+
+  // Dissable Providers
+  "disabled_providers": [],
+
+  // Provider model filters - hide duplicates from opencode (Zen) that exist in opencode-go
+  "provider": {
+    "opencode": {
+      "blacklist": [
+        "minimax-m2.5",
+        "minimax-m2.7",
+        "glm-5",
+        "glm-5.1",
+        "kimi-k2.5",
+        "kimi-k2.6",
+        "qwen3.5-plus",
+        "qwen3.6-plus",
+      ],
+    },
+  },
+
+  // Plugins to load
+  "plugin": [
+    "@slkiser/opencode-quota",
+    "@mohak34/opencode-notifier@latest",
+    "superpowers@git+https://github.com/obra/superpowers.git",
+  ],
+
+  // Agent-specific model configuration
+  "agent": {
+    // Built-in agents with specific models and colors
+    "explore": {
+      "model": "opencode/minimax-m3-free",
+      "description": "[--- |--- |󱐋  ] Fast codebase exploration at lowest cost",
+    },
+    "general": {
+      "model": "opencode/mimo-v2.5-free",
+      "description": "[󰫣   |--- |󱐋󱐋 ] Balanced general-purpose assistant",
+    },
+    "build": {
+      "model": "opencode-go/qwen3.6-plus",
+      "color": "secondary",
+      "description": "[󰫣󰫣󰫣 |   |󱐋󱐋󱐋] Implementation specialist with precision coding",
+    },
+    "plan": {
+      "model": "opencode-go/mimo-v2.5-pro",
+      "color": "accent",
+      "description": "[󰫣󰫣󰫣 | |󱐋  ] Deep reasoning architect for multi-step planning and design",
+    },
+    // Custom agents with specific models and colors
+    "x--free": {
+      "model": "opencode/big-pickle",
+      "color": "#b8db87",
+      "description": "[--- |--- |󱐋  ] Free tier model for unlimited experimentation",
+      "mode": "primary",
+    },
+    "x-teach": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "color": "#4fd6be",
+      "description": "[󰫣󰫣  |   |󱐋󱐋󱐋] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+    },
+    "z-forge": {
+      "model": "opencode-go/deepseek-v4-pro",
+      "color": "#007197",
+      "description": "[󰫣󰫣󰫣 | |󱐋󱐋 ] High-precision implementation specialist",
+      "permission": {
+        "skill": { "*": "ask" },
+      },
+    },
+    "z-logic": {
+      "model": "opencode-go/kimi-k2.5",
+      "color": "#2e7de9",
+      "description": "[󰫣󰫣󰫣 |   |󱐋  ] Reasoning architect for decomposition and design decisions",
+      "permission": {
+        "skill": { "*": "ask" },
+      },
+    },
+    "z-nexus": {
+      "model": "opencode-go/kimi-k2.6",
+      "color": "#3760bf",
+      "description": "[󰫣󰫣󰫣 |  |󱐋  ] Large-context analyzer for multi-file understanding",
+      "permission": {
+        "skill": { "*": "ask" },
+      },
+    },
+    "z-pilot": {
+      "model": "opencode/deepseek-v4-flash",
+      "color": "#7aa2f7",
+      "description": "[󰫣󰫣  |   |󱐋󱐋󱐋] Tool and execution specialist for tests/builds/scripts",
+      "permission": {
+        "skill": { "*": "ask" },
+      },
+    },
+    "z-spark": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "color": "#7dcfff",
+      "description": "[󰫣󰫣  |--- |󱐋󱐋󱐋] Low-latency agent for quick tasks",
+      "permission": {
+        "skill": { "*": "ask" },
+      },
+    },
+    "z-ultra": {
+      "model": "opencode-go/qwen3.7-max",
+      "color": "#e26a75",
+      "description": "[󰫣󰫣󰫣 | |󱐋  ] Heavy refactor and structural transformation specialist",
+      "permission": {
+        "skill": { "*": "ask" },
+      },
+    },
+  },
+
+  // Commands
+  "command": {
+    "audit-agents": {
+      "agent": "x--free",
+      "template": "Run the agent-model-audit skill to audit and optimize agent model assignments. Check if the user provided a priority mode argument: 'skill'/'ability'/'habilidad' (default) = role fit first; 'price'/'cost'/'precio'/'barato' = cost first; 'speed'/'fast'/'velocidad'/'rapido' = speed first. Use that mode throughout the optimization step. If no argument was given, default to 'skill' mode.",
+      "description": "Audit and optimize agent model assignments. Optional argument: skill (default), price, or speed",
+    },
+    "sync-agents": {
+      "agent": "x--free",
+      "template": "Run the agent-sync-neovim skill to update Neovim MCP permissions in ~/.config/nvim/lua/utils/opencode-neovim/opencode_nvim_mcps.jsonc to match the current agent definitions in opencode.jsonc.",
+      "description": "Sync agent permissions to Neovim MCP config",
+    },
+  },
+
+  // MCP servers configuration
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "@playwright/mcp@latest"],
+      "enabled": true,
+    },
+    "augment-context-engine": {
+      "type": "local",
+      "command": ["auggie", "--mcp", "--mcp-auto-workspace"],
+      "enabled": true,
+    },
+    // Neovim MCP server for buffer access and editing (bigcodegen)
+    "neovim": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-neovim-server"],
+      "enabled": false,
+      "environment": {
+        // Enable shell commands execution through vim
+        "ALLOW_SHELL_COMMANDS": "true",
+        // Socket path for neovim connection (uses NVIM env var)
+        "NVIM_SOCKET_PATH": "{env:NVIM}",
+      },
+    },
+  },
+}

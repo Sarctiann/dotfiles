@@ -1,0 +1,38 @@
+-- Options are automatically loaded before lazy.nvim startup
+-- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
+-- Add any additional options here
+
+vim.opt.relativenumber = false
+
+-- Set cursor colors
+vim.api.nvim_command("highlight CursorL guibg=#9ece6a")
+vim.api.nvim_command("highlight VisualCursor guibg=#bb9af7")
+vim.api.nvim_command("highlight ReplaceCursor guibg=#f7768e")
+vim.api.nvim_command("highlight CmdTermCursor guibg=#55bbdd")
+
+-- minimap colors
+vim.api.nvim_set_hl(0, "CodewindowBorder", { bg = "#000e15" })
+vim.api.nvim_set_hl(0, "CodewindowBackground", { bg = "#000e15" })
+
+-- Set a new color group for unused code
+vim.api.nvim_set_hl(0, "UnusedCode", { fg = "darkcyan", bg = "#003040" })
+
+-- New group for `flash.nvim` pluggin
+vim.api.nvim_set_hl(0, "NewFlashLabel", { fg = "#ccfaff", bg = "#7f0044", bold = true })
+
+-- Set colorcolumn
+vim.opt.colorcolumn = "80"
+
+-- Spanish and English spell check for Markdown.
+vim.opt.spelllang = "en_us,es"
+
+-- Add Transparency to floating windows
+vim.opt.winblend = 7
+
+-- Ruby lsp settings || "../plugins/ruby.lua"
+vim.g.lazyvim_ruby_lsp = "ruby_lsp"
+vim.g.lazyvim_ruby_formatter = "rubocop"
+-- vim.g.lazyvim_ruby_lsp = "solargraph"
+
+-- Avoid useless Rust highlithings when working with rsx! macro
+vim.api.nvim_set_hl(0, "@lsp.type.unresolvedReference.rust", {})

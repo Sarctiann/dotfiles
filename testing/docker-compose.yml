@@ -1,0 +1,29 @@
+services:
+  linux:
+    build:
+      context: ..
+      dockerfile: testing/test_containers/Dockerfile.linux
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    volumes:
+      - ..:/dotfiles
+    working_dir: /dotfiles
+    environment:
+      - CI=1
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+
+  wsl:
+    build:
+      context: ..
+      dockerfile: testing/test_containers/Dockerfile.wsl
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    volumes:
+      - ..:/dotfiles
+    working_dir: /dotfiles
+    environment:
+      - CI=1
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+      - DOTFILES_WSL=1

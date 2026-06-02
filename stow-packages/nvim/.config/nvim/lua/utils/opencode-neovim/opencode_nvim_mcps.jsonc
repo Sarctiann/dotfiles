@@ -1,0 +1,82 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // MCP servers configuration
+  "mcp": {
+    // Neovim MCP server for buffer access and editing (bigcodegen)
+    "neovim": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-neovim-server"],
+      "enabled": true,
+      "environment": {
+        // Enable shell commands execution through vim
+        "ALLOW_SHELL_COMMANDS": "true",
+        // Socket path for neovim connection (uses NVIM env var)
+        "NVIM_SOCKET_PATH": "{env:NVIM}",
+      },
+    },
+  },
+  // Skill permissions for custom agents:
+  // allow neovim skills freely, keep ask for superpowers
+  "agent": {
+    "z-logic": {
+      "permission": {
+        "skill": {
+          "using-neovim": "allow",
+          "using-quickfix": "allow",
+          "using-neovim-lsp": "allow",
+          "*": "ask",
+        },
+      },
+    },
+    "z-forge": {
+      "permission": {
+        "skill": {
+          "using-neovim": "allow",
+          "using-quickfix": "allow",
+          "using-neovim-lsp": "allow",
+          "*": "ask",
+        },
+      },
+    },
+    "z-nexus": {
+      "permission": {
+        "skill": {
+          "using-neovim": "allow",
+          "using-quickfix": "allow",
+          "using-neovim-lsp": "allow",
+          "*": "ask",
+        },
+      },
+    },
+    "z-ultra": {
+      "permission": {
+        "skill": {
+          "using-neovim": "allow",
+          "using-quickfix": "allow",
+          "using-neovim-lsp": "allow",
+          "*": "ask",
+        },
+      },
+    },
+    "z-pilot": {
+      "permission": {
+        "skill": {
+          "using-neovim": "allow",
+          "using-quickfix": "allow",
+          "using-neovim-lsp": "allow",
+          "*": "ask",
+        },
+      },
+    },
+    "z-spark": {
+      "permission": {
+        "skill": {
+          "using-neovim": "allow",
+          "using-quickfix": "allow",
+          "using-neovim-lsp": "allow",
+          "*": "ask",
+        },
+      },
+    },
+  },
+}

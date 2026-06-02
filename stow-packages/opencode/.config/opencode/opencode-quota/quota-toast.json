@@ -1,0 +1,53 @@
+{
+  "enabled": true,
+  "enabledProviders": "auto",
+  "minIntervalMs": 300000,
+  "requestTimeoutMs": 5000,
+  "formatStyle": "allWindows",
+  "percentDisplayMode": "remaining",
+  "onlyCurrentModel": false,
+  "showSessionTokens": true,
+
+  "pricingSnapshot": {
+    "source": "auto",
+    "autoRefresh": 7
+  },
+
+  "enableToast": true,
+  "toastDurationMs": 3000,
+  "showOnIdle": false,
+  "showOnQuestion": true,
+  "showOnCompact": true,
+  "showOnBothFail": true,
+
+  "layout": {
+    "maxWidth": 50,
+    "narrowAt": 42,
+    "tinyAt": 32
+  },
+
+  "debug": false,
+
+  "tuiSidebarPanel": {
+    "enabled": true
+  },
+
+  "tuiCompactStatus": {
+    "enabled": false,
+    "homeBottom": true,
+    "sessionPrompt": true,
+    "suppressWhenNativeProviderQuota": true,
+    "maxWidth": 96
+  },
+
+  "maintainerAnnouncements": {
+    "enabled": true,
+    "home": true
+  },
+
+  "anthropicBinaryPath": "claude",
+  "googleModels": ["CLAUDE"],
+  "opencodeGoWindows": ["rolling", "weekly", "monthly"],
+  "alibabaCodingPlanTier": "lite",
+  "cursorPlan": "none"
+}

@@ -1,0 +1,13 @@
+tt.*
+.tests
+doc/tags
+debug
+.repro
+foo.*
+*.log
+data
+lazy-lock.json
+.DS_Store
+playground.lua
+lua/utils/company_dirs.lua
+docs/superpowers
