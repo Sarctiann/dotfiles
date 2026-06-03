@@ -2,11 +2,10 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from core import DOTFILES_DIR, detect_arch, detect_os
+from core import detect_arch, detect_os
 
 MANIFEST_DIR = Path.home() / ".local" / "share" / "dotfiles"
-REPO_PATH = DOTFILES_DIR / "tools_management" / "manifest.json"
-RUNTIME_PATH = MANIFEST_DIR / "manifest.json"
+MANIFEST_PATH = MANIFEST_DIR / "manifest.json"
 
 
 def create() -> dict:
@@ -20,7 +19,11 @@ def create() -> dict:
         "runtimes": {"preexisting": [], "installed": []},
         "fonts": {"preexisting": [], "installed": []},
         "stow": {"packages": [], "backups": {}},
-        "post_install": {"tpm_installed": False, "windows_terminal_linked": False, "zsh_plugins_installed": []},
+        "post_install": {
+            "tpm_installed": False,
+            "windows_terminal_linked": False,
+            "zsh_plugins_installed": [],
+        },
     }
 
 
@@ -51,40 +54,31 @@ def update_timestamp(manifest: dict) -> None:
 def save(manifest: dict) -> None:
     update_timestamp(manifest)
     MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
-    text = json.dumps(manifest, indent=2)
-    RUNTIME_PATH.write_text(text)
-    REPO_PATH.write_text(text)
+    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2))
 
 
 def load() -> dict:
-    for path in [RUNTIME_PATH, REPO_PATH]:
-        if path.exists():
-            try:
-                return json.loads(path.read_text())
-            except json.JSONDecodeError:
-                print(f"   ⚠  Corrupt manifest at {path}, creating fresh one")
-                continue
+    if MANIFEST_PATH.exists():
+        try:
+            return json.loads(MANIFEST_PATH.read_text())
+        except json.JSONDecodeError:
+            print("   ⚠  Corrupt manifest, creating fresh one")
     return create()
 
 
 def exists() -> bool:
-    """Check if a manifest was previously saved to disk."""
-    return RUNTIME_PATH.exists() or REPO_PATH.exists()
+    return MANIFEST_PATH.exists()
 
 
 def saved_version() -> dict | None:
-    """Load only an existing manifest (returns None if never saved)."""
-    for path in [RUNTIME_PATH, REPO_PATH]:
-        if path.exists():
-            try:
-                return json.loads(path.read_text())
-            except json.JSONDecodeError:
-                print(f"   ⚠  Corrupt manifest at {path}, ignoring")
-                continue
+    if MANIFEST_PATH.exists():
+        try:
+            return json.loads(MANIFEST_PATH.read_text())
+        except json.JSONDecodeError:
+            pass
     return None
 
 
 def delete() -> None:
-    for path in [RUNTIME_PATH, REPO_PATH]:
-        if path.exists():
-            path.unlink()
+    if MANIFEST_PATH.exists():
+        MANIFEST_PATH.unlink()

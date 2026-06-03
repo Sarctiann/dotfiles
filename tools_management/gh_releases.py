@@ -66,7 +66,11 @@ def _asset_pattern(tool_name: str, os_name: str, arch: str) -> str | None:
 def _latest_asset_url(repo: str, pattern: str) -> str | None:
     url = f"{GH_API}/repos/{repo}/releases/latest"
     headers = {"User-Agent": "dotfiles-install/1.0"}
-    token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    token = (
+        os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+        or os.environ.get("GITHUB_TOKEN")
+        or os.environ.get("GH_TOKEN")
+    )
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = Request(url, headers=headers)
@@ -78,7 +82,9 @@ def _latest_asset_url(repo: str, pattern: str) -> str | None:
             break
         except (URLError, ConnectionError, OSError) as e:
             if attempt == _MAX_RETRIES:
-                print(f"⚠  Failed to fetch {repo} releases after {_MAX_RETRIES} attempts: {e}")
+                print(
+                    f"⚠  Failed to fetch {repo} releases after {_MAX_RETRIES} attempts: {e}"
+                )
                 return None
             time.sleep(_RETRY_DELAY * attempt)
 

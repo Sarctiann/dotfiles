@@ -10,7 +10,13 @@ from urllib.request import urlopen
 DOTFILES_DIR = Path(__file__).resolve().parent.parent
 STOW_DIR = DOTFILES_DIR / "stow-packages"
 BIN_DIR = Path.home() / ".local" / "bin"
-CREDENTIALS_SAVE_DIR = Path.home() / ".local" / "share" / "dotfiles" / "saved-credentials"
+CREDENTIALS_SAVE_DIR = (
+    Path.home() / ".local" / "share" / "dotfiles" / "saved-credentials"
+)
+
+os.environ.setdefault("PATH", "")
+if str(BIN_DIR) not in os.environ["PATH"]:
+    os.environ["PATH"] = f"{BIN_DIR}:{os.environ['PATH']}"
 
 INTERACTIVE = False
 STOW_PLAN: set[str] | None = None
@@ -103,8 +109,10 @@ def download(url: str, dest: Path) -> None:
 
 
 def which(name: str) -> bool:
-    """Check if a command is available on PATH."""
-    return subprocess.run(["which", name], capture_output=True).returncode == 0
+    """Check if a command is available on PATH or in BIN_DIR."""
+    if subprocess.run(["which", name], capture_output=True).returncode == 0:
+        return True
+    return (BIN_DIR / name).is_file()
 
 
 def safe_rmtree(path: Path) -> None:

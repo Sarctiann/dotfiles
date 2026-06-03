@@ -9,7 +9,11 @@ import manifest as mf
 
 
 def _latest_github_release(repo: str) -> str | None:
-    token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    token = (
+        os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+        or os.environ.get("GITHUB_TOKEN")
+        or os.environ.get("GH_TOKEN")
+    )
     headers = {"User-Agent": "dotfiles-install/1.0"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
