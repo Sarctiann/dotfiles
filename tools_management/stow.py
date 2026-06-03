@@ -198,6 +198,22 @@ def _validate_packages(candidates: list[str]) -> None:
         print("   ℹ️  Stow packages should have dotfiles or subdirectories at root")
 
 
+def _config_package_diff(config: dict) -> None:
+    stow_cfg = config.get("stow", {})
+    known = set(stow_cfg.get("deps", {}).keys()) | set(stow_cfg.get("base", []))
+    on_disk = {p.name for p in STOW_DIR.iterdir() if p.is_dir()}
+
+    missing_on_disk = known - on_disk
+    for pkg in sorted(missing_on_disk):
+        print(f"   ⚠  config references '{pkg}' but no directory in stow-packages/")
+
+    unknown_in_dir = on_disk - known
+    for pkg in sorted(unknown_in_dir):
+        print(
+            f"   ⚠  stow-packages/{pkg} exists but not mentioned in config stow.deps"
+        )
+
+
 def stow_packages(config: dict, mode: str = "install") -> None:
     if mode == "uninstall":
         _uninstall_stow(config)
@@ -224,6 +240,7 @@ def stow_packages(config: dict, mode: str = "install") -> None:
     manifest = mf.load()
 
     _validate_packages(candidates)
+    _config_package_diff(config)
 
     print("🔗 Creating symlinks with stow...")
 
