@@ -5,7 +5,7 @@ from pathlib import Path
 from core import detect_os, download, run, run_optional, which
 import manifest as mf
 
-NF_VERSION = "3.3.0"
+NF_VERSION = "3.4.0"
 
 
 def _fonts_dir() -> Path:

@@ -33,11 +33,13 @@ def install_nvm() -> None:
         print("✅ nvm already installed")
         return
     print("📋 Installing nvm...")
+    version = _latest_github_release("nvm-sh/nvm")
+    tag = f"v{version}" if version else "v0.40.4"
     run(
         [
             "bash",
             "-c",
-            "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash",
+            f"curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/{tag}/install.sh | bash",
         ]
     )
     nvm_dir = Path.home() / ".nvm"
