@@ -25,13 +25,13 @@ Items ordered by priority. We start at #1 and work down without asking.
 
 ## P4 — Documentation
 
-- [ ] **11. CLI reference** — document all `2_management.py` subcommands and flags (for power users calling it directly).
-- [ ] **12. Architecture diagram** — visual flow of install/uninstall pipeline.
+- [x] **11. CLI reference** — `docs/cli-reference.md` documents all subcommands and flags.
+- [x] **12. Architecture diagram** — `docs/architecture.md` with Mermaid diagrams.
 
 ## P5 — Maintenance
 
 - [x] **13. Dependency bumps** — Nerd Fonts v3.4.0, nvm auto-detects latest via API.
-- [ ] **14. Nix / Homebrew / system package drift** — ensure `system_packages` list matches what each OS actually needs.
+- [x] **14. Nix / Homebrew / system package drift** — user confirmed not relevant (no Nix files in repo).
 
 ---
 
