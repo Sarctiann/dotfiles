@@ -21,7 +21,7 @@ Items ordered by priority. We start at #1 and work down without asking.
 ## P3 — Testing / CI
 
 - [x] **9. Test macOS path** — `python3 test_into_containers.py mac` runs `./install.sh --just nvim` locally.
-- [ ] **10. WSL-specific tests** — verify windows-terminal symlink logic, `/mnt/c` path resolution.
+- [x] **10. WSL-specific tests** — `python3 test_into_containers.py wsl` con fake `/mnt/c/Users` y `DOTFILES_WSL=1`.
 
 ## P4 — Documentation
 
