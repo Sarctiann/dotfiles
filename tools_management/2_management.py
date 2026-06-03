@@ -97,6 +97,8 @@ def cmd_install(args: argparse.Namespace) -> None:
 
     changed = mf.changed_steps(conf)
 
+    base_steps = set(conf.get("base_steps", []))
+
     for label, fn in INSTALL_STEPS:
         if core.STOW_PLAN is not None and should_skip_step(label, core.STOW_PLAN, conf):
             print(f"   (skipped — not needed by {', '.join(args.just)})")
@@ -107,7 +109,13 @@ def cmd_install(args: argparse.Namespace) -> None:
         if core.INTERACTIVE and not core.confirm(f"▶ {label}?"):
             continue
         banner(label)
-        fn(conf, mode="install")
+        try:
+            fn(conf, mode="install")
+        except Exception as e:
+            if label in base_steps:
+                print(f"❌ {label} failed — aborting. ({e})")
+                sys.exit(1)
+            print(f"   ⚠  {label} failed — continuing. ({e})")
 
     mf.store_config_snapshot(conf)
     print("✅ Done!")

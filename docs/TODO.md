@@ -13,13 +13,14 @@ Items ordered by priority. We start at #1 and work down without asking.
 ## P2 — Code quality
 
 - [x] **4. Formalize `base_steps` in config.json** — explicit section for steps that always run (instead of hardcoded `return False`).
-- [ ] **5. Auto-derive `should_skip_step` from config** — replace hardcoded package→step mapping with config-driven metadata.
+- [x] **5. Auto-derive `should_skip_step` from config** — replace hardcoded package→step mapping with config-driven `step_deps`.
 - [ ] **6. Stricter error handling** — decide which pipeline failures should abort vs warn. Currently some errors crash the whole pipeline, others print ⚠️ and continue.
-- [ ] **7. Skip verification on `--just`** — verification currently runs but always returns True (hardcoded). Either make it meaningful or skip it entirely.
+- [ ] **7. Mover `config.json` al root** — relocate `tools_management/config.json` → `/dotfiles/config.json`. Actualizar `config.py` para leer desde el nuevo path. Ajustar `MANIFEST_DIR` en `manifest.py` (o mover generación al root).
+- [x] **8. Skip verification on `--just`** — already handled by `should_skip_step`. Verification checks essentials/optional, skipped during `--just`.
 
 ## P3 — Testing / CI
 
-- [ ] **8. Test macOS path** — the `mac` target exists in design specs but was never implemented (runs subset of pipeline locally).
+- [ ] **9. Test macOS path** — the `mac` target exists in design specs but was never implemented (runs subset of pipeline locally).
 - [ ] **10. WSL-specific tests** — verify windows-terminal symlink logic, `/mnt/c` path resolution.
 
 ## P4 — Documentation
