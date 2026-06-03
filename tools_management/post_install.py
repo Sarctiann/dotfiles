@@ -1,8 +1,7 @@
-import shutil
 from pathlib import Path
 
 import manifest as mf
-from core import is_wsl, which, run
+from core import is_wsl, run, safe_rmtree, which
 from stow import stow_windows_terminal
 
 TPM_DIR = Path.home() / ".tmux" / "plugins" / "tpm"
@@ -12,7 +11,7 @@ ZSH_PLUGINS: dict[str, str] = {
     "zsh-syntax-highlighting": "https://github.com/zsh-users/zsh-syntax-highlighting",
 }
 
-ZSH_PLUGIN_DIR = Path.home() / ".zsh"
+ZSH_PLUGIN_DIR = Path.home() / ".local" / "share" / "zsh-plugins"
 
 
 def install_tpm() -> None:
@@ -26,7 +25,7 @@ def install_tpm() -> None:
 
 def _undo_tpm() -> None:
     if TPM_DIR.is_dir():
-        shutil.rmtree(TPM_DIR)
+        safe_rmtree(TPM_DIR)
         print("   removed TPM (~/.tmux/plugins/tpm)")
 
 
@@ -57,7 +56,7 @@ def _install_zsh_plugin(name: str, repo: str) -> bool:
             next(target.iterdir())
             return False
         except StopIteration:
-            shutil.rmtree(target)
+            safe_rmtree(target)
     elif target.is_symlink():
         target.unlink()
     elif target.exists():
@@ -80,8 +79,8 @@ def _undo_zsh_plugins(plugins: list[str]) -> None:
     for name in plugins:
         target = ZSH_PLUGIN_DIR / name
         if target.is_dir():
-            shutil.rmtree(target)
-            print(f"   removed ~/.zsh/{name}")
+            safe_rmtree(target)
+            print(f"   removed {ZSH_PLUGIN_DIR}/{name}")
 
 
 def _undo_post_install(_: dict) -> None:

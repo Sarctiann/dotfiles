@@ -1,5 +1,6 @@
 import os
 import platform
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -9,6 +10,7 @@ from urllib.request import urlopen
 DOTFILES_DIR = Path(__file__).resolve().parent.parent
 STOW_DIR = DOTFILES_DIR / "stow-packages"
 BIN_DIR = Path.home() / ".local" / "bin"
+CREDENTIALS_SAVE_DIR = Path.home() / ".local" / "share" / "dotfiles" / "saved-credentials"
 
 INTERACTIVE = False
 STOW_PLAN: set[str] | None = None
@@ -103,3 +105,23 @@ def download(url: str, dest: Path) -> None:
 def which(name: str) -> bool:
     """Check if a command is available on PATH."""
     return subprocess.run(["which", name], capture_output=True).returncode == 0
+
+
+def safe_rmtree(path: Path) -> None:
+    """Delete a directory tree, but preserve any .credentials files first."""
+    if not path.exists():
+        return
+    if path.is_file():
+        path.unlink()
+        return
+    creds = sorted(path.rglob(".credentials"))
+    saved = 0
+    for f in creds:
+        rel = f.relative_to(path)
+        dest = CREDENTIALS_SAVE_DIR / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(f, dest)
+        saved += 1
+    if saved:
+        print(f"  ⚠️  preserved {saved} .credentials file(s) to {CREDENTIALS_SAVE_DIR}")
+    shutil.rmtree(path)

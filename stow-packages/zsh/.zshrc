@@ -85,8 +85,9 @@ zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
 zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 
 # ─── Plugins ───────────────────────────────────────────────────
-source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+ZSH_PLUGIN_DIR="$HOME/.local/share/zsh-plugins"
+source "$ZSH_PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+source "$ZSH_PLUGIN_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
 # ─── Editor ────────────────────────────────────────────────────
 export EDITOR=nvim
@@ -142,10 +143,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/.opencode/bin:$PATH"
 
 # ─── API keys & credentials ────────────────────────────────────
-export GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token)
-
+# All env vars are defined in ~/.config/zsh/.credentials (see README.md there)
 set -a
-source "$HOME/.config/opencode/.credentials"
-source "$HOME/.config/.jira/.credentials"
-source "$HOME/.zsh/.credentials"
+[ -f "$HOME/.config/zsh/.credentials" ] && source "$HOME/.config/zsh/.credentials"
 set +a

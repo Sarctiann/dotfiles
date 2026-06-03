@@ -29,6 +29,9 @@ def _glob_to_stow_regex(pattern: str) -> str:
         c = pattern[i]
         if c == "*":
             if i + 1 < len(pattern) and pattern[i + 1] == "*":
+                if i == 0 and i + 2 < len(pattern) and pattern[i + 2] == "/":
+                    i += 3
+                    continue
                 parts.append(".*")
                 i += 2
             else:
@@ -75,13 +78,16 @@ def _backup_targets(pkg_name: str, manifest: dict, ignore_pats: list[str]) -> No
         if _is_ignored(str(rel_path), ignore_pats):
             continue
         target = Path.home() / rel_path
-        if target.exists() and not target.is_symlink():
-            backup_path = BACKUP_DIR / pkg_name / rel_path
-            backup_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(target, backup_path)
-            target.unlink()
-            backups[str(rel_path)] = str(backup_path)
-            print(f"   (backed up {rel_path})")
+        if not target.exists() or target.is_symlink():
+            continue
+        if STOW_DIR in target.resolve().parents:
+            continue
+        backup_path = BACKUP_DIR / pkg_name / rel_path
+        backup_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target, backup_path)
+        target.unlink()
+        backups[str(rel_path)] = str(backup_path)
+        print(f"   (backed up {rel_path})")
 
 
 def _restore_backups(manifest: dict) -> None:

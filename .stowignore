@@ -1,7 +1,8 @@
 # Files and patterns stow should NEVER modify
 # Glob syntax: * matches any non-/ chars, ** matches any path
 
-.credentials
-**/.credentials
+**/.gitkeep
+.DS_Store
+**/.DS_Store
 **/opencode-notifier-state.json
 **/.playwright-mcp
