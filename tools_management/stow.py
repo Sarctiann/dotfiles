@@ -180,6 +180,24 @@ def _uninstall_stow(_: dict) -> None:
     mf.save(manifest)
 
 
+def _validate_packages(candidates: list[str]) -> None:
+    warned = False
+    for pkg in candidates:
+        if pkg == "windows-terminal":
+            continue
+        pkg_dir = STOW_DIR / pkg
+        if not pkg_dir.is_dir():
+            continue
+        for entry in pkg_dir.iterdir():
+            if entry.is_file() and not entry.name.startswith("."):
+                print(
+                    f"   ⚠  {pkg}: {entry.name} at root — would symlink to ~/{entry.name}"
+                )
+                warned = True
+    if warned:
+        print("   ℹ️  Stow packages should have dotfiles or subdirectories at root")
+
+
 def stow_packages(config: dict, mode: str = "install") -> None:
     if mode == "uninstall":
         _uninstall_stow(config)
@@ -204,6 +222,8 @@ def stow_packages(config: dict, mode: str = "install") -> None:
         candidates = sorted(plan)
 
     manifest = mf.load()
+
+    _validate_packages(candidates)
 
     print("🔗 Creating symlinks with stow...")
 
