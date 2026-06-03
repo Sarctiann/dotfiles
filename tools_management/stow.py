@@ -1,11 +1,51 @@
+import re
 import shutil
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import manifest as mf
-from core import STOW_DIR, is_wsl, run, run_optional, which
+from core import DOTFILES_DIR, STOW_DIR, is_wsl, run, run_optional, which
 import core
 
 BACKUP_DIR = Path.home() / ".local" / "share" / "dotfiles" / "backups"
+STOWIGNORE_PATH = DOTFILES_DIR / ".stowignore"
+
+
+def _load_stowignore() -> list[str]:
+    if not STOWIGNORE_PATH.exists():
+        return []
+    patterns = []
+    for line in STOWIGNORE_PATH.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        patterns.append(line)
+    return patterns
+
+
+def _glob_to_stow_regex(pattern: str) -> str:
+    parts = []
+    i = 0
+    while i < len(pattern):
+        c = pattern[i]
+        if c == "*":
+            if i + 1 < len(pattern) and pattern[i + 1] == "*":
+                parts.append(".*")
+                i += 2
+            else:
+                parts.append("[^/]*")
+                i += 1
+        else:
+            parts.append(re.escape(c))
+            i += 1
+    return f"(?:.*/)?{''.join(parts)}$"
+
+
+def _is_ignored(rel_path: str, ignore_patterns: list[str]) -> bool:
+    p = PurePosixPath(rel_path)
+    for pat in ignore_patterns:
+        if p.match(pat):
+            return True
+    return False
 
 
 def resolve_stow_plan(config: dict, requested: list[str]) -> set[str]:
@@ -23,7 +63,7 @@ def resolve_stow_plan(config: dict, requested: list[str]) -> set[str]:
     return plan | base
 
 
-def _backup_targets(pkg_name: str, manifest: dict) -> None:
+def _backup_targets(pkg_name: str, manifest: dict, ignore_pats: list[str]) -> None:
     pkg_dir = STOW_DIR / pkg_name
     if not pkg_dir.is_dir():
         return
@@ -32,6 +72,8 @@ def _backup_targets(pkg_name: str, manifest: dict) -> None:
         if not filepath.is_file() or filepath.is_symlink():
             continue
         rel_path = filepath.relative_to(pkg_dir)
+        if _is_ignored(str(rel_path), ignore_pats):
+            continue
         target = Path.home() / rel_path
         if target.exists() and not target.is_symlink():
             backup_path = BACKUP_DIR / pkg_name / rel_path
@@ -104,6 +146,8 @@ def stow_packages(config: dict, mode: str = "install") -> None:
         print("❌ stow is not installed. Cannot create symlinks.")
         return
 
+    ignore_pats = _load_stowignore()
+
     plan = core.STOW_PLAN
     terminal = config.get("stow", {}).get("terminal", "ghostty")
     wsl = is_wsl()
@@ -136,9 +180,13 @@ def stow_packages(config: dict, mode: str = "install") -> None:
             print(f"   ⚠  package '{pkg_name}' not found in stow-packages")
             continue
 
-        _backup_targets(pkg_name, manifest)
+        _backup_targets(pkg_name, manifest, ignore_pats)
         print(f"   → {pkg_name}")
-        run(["stow", "-R", "-t", str(Path.home()), pkg_name], cwd=str(STOW_DIR))
+        stow_args = ["stow", "-R", "-t", str(Path.home())]
+        for pat in ignore_pats:
+            stow_args += ["--ignore", _glob_to_stow_regex(pat)]
+        stow_args.append(pkg_name)
+        run(stow_args, cwd=str(STOW_DIR))
 
         stow_pkgs = manifest.setdefault("stow", {}).setdefault("packages", [])
         if pkg_name not in stow_pkgs:

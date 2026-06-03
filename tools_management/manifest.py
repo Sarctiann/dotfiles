@@ -20,7 +20,7 @@ def create() -> dict:
         "runtimes": {"preexisting": [], "installed": []},
         "fonts": {"preexisting": [], "installed": []},
         "stow": {"packages": [], "backups": {}},
-        "post_install": {"tpm_installed": False, "windows_terminal_linked": False},
+        "post_install": {"tpm_installed": False, "windows_terminal_linked": False, "zsh_plugins_installed": []},
     }
 
 

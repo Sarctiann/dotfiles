@@ -2,15 +2,45 @@
 *.swp
 *.swo
 *~
+*.zwc*
+*.log
 
-docs/plans/
-
-# Secrets (from opencode stow package)
-.credentials
 __pycache__/
 .ruff_cache/
+node_modules/
 
+package.json
+package-lock.json
+bun.lock
+
+# Secrets / state
+.credentials
+opencode-notifier-state.json
+.playwright-mcp
+
+# nvim / LazyVim artifacts
+lazy-lock.json
+tags
+debug
+data
+.tests
+.repro
+tt.*
+foo.*
+playground.lua
+company_dirs.lua
+
+# Docs
+**/docs/agent-audits/
+**/docs/plans/
+**/docs/superpowers/
+**/docs/agent-audits/
+
+# Ghostty local override
+local_config
+
+# Testing
 testing/test_containers/logs/
 
-# Runtime artifacts
+# Repo artifacts
 manifest.json
