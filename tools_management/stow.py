@@ -66,11 +66,29 @@ def resolve_stow_plan(config: dict, requested: list[str]) -> set[str]:
     return plan | base
 
 
+def _migrate_backups_flat_to_per_pkg(manifest: dict) -> None:
+    raw = manifest.get("stow", {}).get("backups", {})
+    if not raw or any(isinstance(v, dict) for v in raw.values()):
+        return
+    pkgs = manifest.get("stow", {}).get("packages", [])
+    old = dict(raw)
+    raw.clear()
+    for rel_path, backup_path in old.items():
+        bp = Path(backup_path)
+        for pkg in pkgs:
+            if (BACKUP_DIR / pkg) in bp.parents:
+                raw.setdefault(pkg, {})[rel_path] = backup_path
+                break
+        else:
+            raw.setdefault("_unknown", {})[rel_path] = backup_path
+
+
 def _backup_targets(pkg_name: str, manifest: dict, ignore_pats: list[str]) -> None:
     pkg_dir = STOW_DIR / pkg_name
     if not pkg_dir.is_dir():
         return
     backups = manifest.setdefault("stow", {}).setdefault("backups", {})
+    _migrate_backups_flat_to_per_pkg(manifest)
     for filepath in pkg_dir.rglob("*"):
         if not filepath.is_file() or filepath.is_symlink():
             continue
@@ -86,25 +104,29 @@ def _backup_targets(pkg_name: str, manifest: dict, ignore_pats: list[str]) -> No
         backup_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(target, backup_path)
         target.unlink()
-        backups[str(rel_path)] = str(backup_path)
+        backups.setdefault(pkg_name, {})[str(rel_path)] = str(backup_path)
         print(f"   (backed up {rel_path})")
 
 
-def _restore_backups(manifest: dict) -> None:
-    backups = manifest.get("stow", {}).get("backups", {})
-    if not backups:
+def _restore_backups(manifest: dict, packages: list[str] | None = None) -> None:
+    raw = manifest.get("stow", {}).get("backups", {})
+    if not raw:
         return
+    _migrate_backups_flat_to_per_pkg(manifest)
     print("♻️  Restoring stow backups...")
-    for rel_path, backup_path in backups.items():
-        target = Path.home() / rel_path
-        backup = Path(backup_path)
-        if backup.exists():
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(backup, target)
-            backup.unlink()
-            print(f"   (restored {rel_path})")
-        else:
-            print(f"   ⚠  backup not found: {backup_path}")
+    for pkg_name, pkg_backups in raw.items():
+        if packages is not None and pkg_name not in packages:
+            continue
+        for rel_path, backup_path in pkg_backups.items():
+            target = Path.home() / rel_path
+            backup = Path(backup_path)
+            if backup.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(backup, target)
+                backup.unlink()
+                print(f"   (restored {rel_path})")
+            else:
+                print(f"   ⚠  backup not found: {backup_path}")
     if BACKUP_DIR.is_dir():
         for pkg_dir in sorted(BACKUP_DIR.iterdir(), reverse=True):
             if pkg_dir.is_dir():
