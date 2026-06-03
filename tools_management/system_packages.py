@@ -1,6 +1,7 @@
 import time
 from pathlib import Path
 
+import core
 from core import detect_os, run, which
 
 
@@ -37,7 +38,11 @@ def install_system_packages(config: dict, mode: str = "install") -> None:
     if mode == "uninstall":
         print("   (system packages are not removed)")
         return
-    pkgs = config.get("system_packages", [])
+    pkgs = list(config.get("system_packages", []))
+    plan = core.STOW_PLAN
+    for pkg, needs in config.get("conditional_system_packages", {}).items():
+        if plan is None or set(needs) & plan:
+            pkgs.append(pkg)
     if not pkgs:
         return
 

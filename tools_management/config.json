@@ -4,6 +4,9 @@
     "git",
     "pipx"
   ],
+  "conditional_system_packages": {
+    "luarocks": ["zsh"]
+  },
   "cli_tools": {
     "neovim": {
       "repo": "neovim/neovim",
