@@ -151,7 +151,7 @@ def _uninstall_opencode() -> None:
 
 def _clean_path_from_rc(marker: str) -> None:
     for rc in [Path.home() / ".zshrc", Path.home() / ".bashrc"]:
-        if rc.exists():
+        if rc.exists() and not rc.is_symlink():
             lines = rc.read_text().splitlines()
             cleaned = [
                 line
