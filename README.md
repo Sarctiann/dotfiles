@@ -10,7 +10,7 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-- Edit `tools_management/config.json` to toggle steps or change terminal
+- Edit `config.json` to toggle steps or change terminal
 - Use `./install.sh -i` to confirm each step interactively
 - Use `./install.sh --just nvim` for a minimal install (only what nvim needs)
 
@@ -111,7 +111,7 @@ Example:
 | ----------- | -------------------- | ------------------------------------------------------------ |
 | macOS       | Ghostty              | `ghostty/`                                                   |
 | Linux       | Ghostty              | `ghostty/`                                                   |
-| macOS/Linux | Alacritty or Wezterm | configure via `tools_management/config.json` `stow.terminal` |
+| macOS/Linux | Alacritty or Wezterm | configure via `config.json` `stow.terminal` |
 | WSL         | Windows Terminal     | `windows-terminal/` (symlinked via post_install)             |
 
 Shell (zsh), editor (nvim), multiplexer (tmux), fonts (CodeNewRoman + NerdFontsSymbolsOnly), and Git are shared across all three.
@@ -178,7 +178,7 @@ Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and 
 7.  **Post-install** — TPM, Windows Terminal symlink (WSL)
 8.  **Verify** — checks essential commands are in PATH
 
-All steps can be toggled on/off via `tools_management/config.json`. Run with `-i` for interactive mode (confirms each step before proceeding). Use `--just PKG` to run only the steps needed by one or more stow packages (skips unrelated phases).
+All steps can be toggled on/off via `config.json`. Run with `-i` for interactive mode (confirms each step before proceeding). Use `--just PKG` to run only the steps needed by one or more stow packages (skips unrelated phases).
 
 ## Stow Packages
 
