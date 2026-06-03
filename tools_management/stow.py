@@ -108,7 +108,7 @@ def _backup_targets(pkg_name: str, manifest: dict, ignore_pats: list[str]) -> No
         print(f"   (backed up {rel_path})")
 
 
-def _restore_backups(manifest: dict, packages: list[str] | None = None) -> None:
+def _restore_backups(manifest: dict, packages: set[str] | None = None) -> None:
     raw = manifest.get("stow", {}).get("backups", {})
     if not raw:
         return
@@ -146,9 +146,20 @@ def _uninstall_stow(_: dict) -> None:
     if not manifest:
         print("⚠️  No manifest found. Nothing to uninstall.")
         return
-    packages = manifest.get("stow", {}).get("packages", [])
-    print("🗑  Removing stow symlinks...")
-    for pkg_name in packages:
+    packages: list[str] = manifest.get("stow", {}).get("packages", [])
+    plan = core.STOW_PLAN
+
+    if plan is not None:
+        to_unstow = sorted(set(packages) & plan)
+        if not to_unstow:
+            print("   (no matching packages in manifest)")
+            return
+        print(f"🗑  Removing stow symlinks ({', '.join(to_unstow)})...")
+    else:
+        to_unstow = packages
+        print("🗑  Removing stow symlinks...")
+
+    for pkg_name in to_unstow:
         pkg_dir = STOW_DIR / pkg_name
         if not pkg_dir.is_dir():
             print(f"   ⚠  package '{pkg_name}' not found, skipping")
@@ -157,8 +168,15 @@ def _uninstall_stow(_: dict) -> None:
         run_optional(
             ["stow", "-D", "-t", str(Path.home()), pkg_name], cwd=str(STOW_DIR)
         )
-    _restore_backups(manifest)
-    manifest["stow"] = {"packages": [], "backups": {}}
+
+    _restore_backups(manifest, packages=plan)
+
+    if plan is not None:
+        manifest["stow"]["packages"] = [p for p in packages if p not in plan]
+        for pkg in plan:
+            manifest["stow"]["backups"].pop(pkg, None)
+    else:
+        manifest["stow"] = {"packages": [], "backups": {}}
     mf.save(manifest)
 
 

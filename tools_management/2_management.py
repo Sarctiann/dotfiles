@@ -171,14 +171,15 @@ def cmd_uninstall(args: argparse.Namespace) -> None:
 
     for label, fn in UNINSTALL_STEPS:
         if core.STOW_PLAN is not None and label != "Stow symlinks":
-            print(f"   (skipped — --just mode)")
+            print("   (skipped — --just mode)")
             continue
         if core.INTERACTIVE and not core.confirm(f"▶ {label}?"):
             continue
         banner(label)
         fn(conf, mode="uninstall")
 
-    mf.delete()
+    if not args.just:
+        mf.delete()
     print("✅ Uninstall complete!")
 
 
