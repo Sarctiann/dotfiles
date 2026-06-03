@@ -5,14 +5,13 @@ local gemini_utils = require("utils.gemini_utils")
 local augment_utils = require("utils.augment_utils")
 local opencode_utils = require("utils.opencode_utils")
 
-local cd_ok, company_dirs_module = pcall(require, "utils.company_dirs")
-if not cd_ok then
-  vim.notify(
-    "utils.company_dirs.lua not found. Create lua/utils/company_dirs.lua:\n" .. 'return { "<company_dir_name>" }',
-    vim.log.levels.WARN
-  )
+local company_dirs_str = os.getenv("COMPANY_DIRS") or ""
+local company_dirs = {}
+if company_dirs_str ~= "" then
+  for dir in company_dirs_str:gmatch("[^:]+") do
+    table.insert(company_dirs, dir)
+  end
 end
-local company_dirs = (cd_ok and company_dirs_module) or {}
 
 local current_dir = vim.fn.getcwd()
 

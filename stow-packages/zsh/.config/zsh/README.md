@@ -59,3 +59,14 @@ Email address associated with the Jira account.
 API key for the Tavily search API.
 
 Obtained from: `https://tavily.com`
+
+---
+
+### `COMPANY_DIRS`
+
+Colon-separated list of company project root directories used by Neovim to
+detect company projects and activate Augment (instead of OpenCode).
+
+```zsh
+COMPANY_DIRS="/home/projects/company-a:/work/src/company-b"
+```
