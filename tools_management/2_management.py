@@ -166,7 +166,13 @@ def cmd_uninstall(args: argparse.Namespace) -> None:
 
     conf = cfg.load()
 
+    if args.just:
+        core.STOW_PLAN = set(args.just)
+
     for label, fn in UNINSTALL_STEPS:
+        if core.STOW_PLAN is not None and label != "Stow symlinks":
+            print(f"   (skipped — --just mode)")
+            continue
         if core.INTERACTIVE and not core.confirm(f"▶ {label}?"):
             continue
         banner(label)
@@ -197,6 +203,12 @@ def main() -> None:
     )
     uninstall_parser.add_argument(
         "-i", "--interactive", action="store_true", help="ask before each step"
+    )
+    uninstall_parser.add_argument(
+        "--just",
+        nargs="+",
+        metavar="PKG",
+        help="only unstow specified packages + restore their backups",
     )
 
     args = parser.parse_args()
