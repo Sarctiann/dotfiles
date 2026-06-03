@@ -7,6 +7,11 @@
   "conditional_system_packages": {
     "luarocks": ["zsh"]
   },
+  "base_steps": [
+    "System packages",
+    "Fonts",
+    "Stow symlinks"
+  ],
   "cli_tools": {
     "neovim": {
       "repo": "neovim/neovim",

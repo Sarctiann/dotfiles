@@ -61,20 +61,17 @@ def print_summary(conf: dict) -> None:
     print()
 
 
-def should_skip_step(label: str, plan: set[str], _: dict) -> bool:
+def should_skip_step(label: str, plan: set[str], config: dict) -> bool:
+    base = set(config.get("base_steps", []))
+    if label in base:
+        return False
     match label:
-        case "System packages":
-            return False
         case "CLI tools":
             needs_cli_tool = {"nvim", "bat"}
             return not needs_cli_tool & plan
         case "NPM packages":
             needs_npm = {"nvim", "zsh"}
             return not needs_npm & plan
-        case "Fonts":
-            return False
-        case "Stow symlinks":
-            return False
         case "Runtimes":
             runtime_users = {"nvim", "opencode", "zsh"}
             return not runtime_users & plan
