@@ -44,3 +44,4 @@ testing/test_containers/logs/
 
 # Repo artifacts
 manifest.json
+dotfiles-manifest.json

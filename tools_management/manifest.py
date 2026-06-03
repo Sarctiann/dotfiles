@@ -7,7 +7,7 @@ from core import DOTFILES_DIR, detect_arch, detect_os
 
 MANIFEST_DIR = Path.home() / ".local" / "share" / "dotfiles"
 MANIFEST_PATH = MANIFEST_DIR / "manifest.json"
-ROOT_MANIFEST_PATH = DOTFILES_DIR / "manifest.json"
+ROOT_MANIFEST_PATH = DOTFILES_DIR / "dotfiles-manifest.json"
 
 
 def create() -> dict:
