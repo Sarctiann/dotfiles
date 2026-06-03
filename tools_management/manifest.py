@@ -1,3 +1,4 @@
+import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -83,3 +84,42 @@ def saved_version() -> dict | None:
 def delete() -> None:
     if MANIFEST_PATH.exists():
         MANIFEST_PATH.unlink()
+
+
+STEP_CONFIG_KEYS: dict[str, list[str]] = {
+    "System packages": ["system_packages", "conditional_system_packages"],
+    "CLI tools": ["cli_tools"],
+    "Fonts": ["fonts"],
+    "Stow symlinks": ["stow"],
+    "Runtimes": ["runtimes"],
+    "NPM packages": ["npm_packages"],
+    "Post-install": ["post_install"],
+}
+
+
+def _hash_config_subset(config: dict, keys: list[str]) -> str:
+    sub = {k: config.get(k) for k in keys}
+    return hashlib.sha256(
+        json.dumps(sub, sort_keys=True, default=str).encode()
+    ).hexdigest()[:12]
+
+
+def store_config_snapshot(config: dict) -> dict:
+    manifest = load()
+    snapshot = manifest.setdefault("config_snapshot", {})
+    for step, keys in STEP_CONFIG_KEYS.items():
+        snapshot[step] = _hash_config_subset(config, keys)
+    save(manifest)
+    return manifest
+
+
+def changed_steps(config: dict) -> set[str]:
+    manifest = saved_version()
+    if not manifest:
+        return set(STEP_CONFIG_KEYS.keys())
+    snapshot = manifest.get("config_snapshot", {})
+    return {
+        step
+        for step, keys in STEP_CONFIG_KEYS.items()
+        if snapshot.get(step) != _hash_config_subset(config, keys)
+    }

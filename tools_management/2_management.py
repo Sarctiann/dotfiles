@@ -110,15 +110,21 @@ def cmd_install(args: argparse.Namespace) -> None:
     if core.INTERACTIVE:
         print_summary(conf)
 
+    changed = mf.changed_steps(conf)
+
     for label, fn in INSTALL_STEPS:
         if core.STOW_PLAN is not None and should_skip_step(label, core.STOW_PLAN, conf):
             print(f"   (skipped — not needed by {', '.join(args.just)})")
+            continue
+        if core.STOW_PLAN is None and label not in changed and label != "Verification":
+            print(f"   (config unchanged — skipping)")
             continue
         if core.INTERACTIVE and not core.confirm(f"▶ {label}?"):
             continue
         banner(label)
         fn(conf, mode="install")
 
+    mf.store_config_snapshot(conf)
     print("✅ Done!")
     print("   - Open Neovim so Lazy can install plugins")
     print("   - In tmux, press Prefix + I to install TPM plugins")
