@@ -70,6 +70,12 @@
       "local-bin": []
     }
   },
+  "step_deps": {
+    "CLI tools": ["nvim", "bat"],
+    "NPM packages": ["nvim", "zsh"],
+    "Runtimes": ["nvim", "opencode", "zsh"],
+    "Post-install": ["tmux", "windows-terminal"]
+  },
   "post_install": {
     "tpm": true,
     "windows_terminal": true

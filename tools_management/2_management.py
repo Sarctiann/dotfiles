@@ -65,23 +65,11 @@ def should_skip_step(label: str, plan: set[str], config: dict) -> bool:
     base = set(config.get("base_steps", []))
     if label in base:
         return False
-    match label:
-        case "CLI tools":
-            needs_cli_tool = {"nvim", "bat"}
-            return not needs_cli_tool & plan
-        case "NPM packages":
-            needs_npm = {"nvim", "zsh"}
-            return not needs_npm & plan
-        case "Runtimes":
-            runtime_users = {"nvim", "opencode", "zsh"}
-            return not runtime_users & plan
-        case "Post-install":
-            post_users = {"tmux", "windows-terminal"}
-            return not post_users & plan
-        case "Verification":
-            return True
-        case _:
-            return False
+    if label == "Verification":
+        return True
+    step_deps = config.get("step_deps", {})
+    needs = set(step_deps.get(label, []))
+    return not (needs & plan)
 
 
 def cmd_install(args: argparse.Namespace) -> None:

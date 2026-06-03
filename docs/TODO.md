@@ -12,7 +12,7 @@ Items ordered by priority. We start at #1 and work down without asking.
 
 ## P2 — Code quality
 
-- [ ] **4. Formalize `base_dependencies` in config.json** — explicit section for packages/steps that always run (instead of `should_skip_step` returning `False` for some).
+- [x] **4. Formalize `base_steps` in config.json** — explicit section for steps that always run (instead of hardcoded `return False`).
 - [ ] **5. Auto-derive `should_skip_step` from config** — replace hardcoded package→step mapping with config-driven metadata.
 - [ ] **6. Stricter error handling** — decide which pipeline failures should abort vs warn. Currently some errors crash the whole pipeline, others print ⚠️ and continue.
 - [ ] **7. Skip verification on `--just`** — verification currently runs but always returns True (hardcoded). Either make it meaningful or skip it entirely.
