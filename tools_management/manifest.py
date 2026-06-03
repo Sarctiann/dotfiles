@@ -3,10 +3,11 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from core import detect_arch, detect_os
+from core import DOTFILES_DIR, detect_arch, detect_os
 
 MANIFEST_DIR = Path.home() / ".local" / "share" / "dotfiles"
 MANIFEST_PATH = MANIFEST_DIR / "manifest.json"
+ROOT_MANIFEST_PATH = DOTFILES_DIR / "manifest.json"
 
 
 def create() -> dict:
@@ -55,8 +56,10 @@ def update_timestamp(manifest: dict) -> None:
 
 def save(manifest: dict) -> None:
     update_timestamp(manifest)
+    payload = json.dumps(manifest, indent=2)
     MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
-    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2))
+    MANIFEST_PATH.write_text(payload)
+    ROOT_MANIFEST_PATH.write_text(payload)
 
 
 def load() -> dict:
