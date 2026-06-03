@@ -20,7 +20,7 @@ Items ordered by priority. We start at #1 and work down without asking.
 
 ## P3 — Testing / CI
 
-- [ ] **9. Test macOS path** — the `mac` target exists in design specs but was never implemented (runs subset of pipeline locally).
+- [x] **9. Test macOS path** — `python3 test_into_containers.py mac` runs `./install.sh --just nvim` locally.
 - [ ] **10. WSL-specific tests** — verify windows-terminal symlink logic, `/mnt/c` path resolution.
 
 ## P4 — Documentation
