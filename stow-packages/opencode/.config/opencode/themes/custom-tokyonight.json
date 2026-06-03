@@ -67,7 +67,7 @@
       "light": "lightOrange0"
     },
     "error": {
-      "dark": "darkRedError",
+      "dark": "darkRed0",
       "light": "lightRed0"
     },
     "warning": {
@@ -231,7 +231,7 @@
       "light": "lightBlue1"
     },
     "syntaxVariable": {
-      "dark": "darkRed0",
+      "dark": "darkBrightFg",
       "light": "lightRed0"
     },
     "syntaxString": {
