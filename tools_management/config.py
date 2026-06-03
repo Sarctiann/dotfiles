@@ -26,3 +26,9 @@ def runtime_enabled(config: dict, name: str) -> bool:
 def post_install_enabled(config: dict, name: str) -> bool:
     """Check if a post-install step is enabled."""
     return config.get("post_install", {}).get(name, True)
+
+
+def npm_package_enabled(config: dict, name: str) -> bool:
+    """Check if an npm package is enabled in config."""
+    pkgs = config.get("npm_packages", {})
+    return pkgs.get(name) is not None

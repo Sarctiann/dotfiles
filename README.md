@@ -7,11 +7,58 @@ Configuration files managed with [GNU Stow](https://www.gnu.org/software/stow/).
 ```bash
 git clone <repo-url> ~/dotfiles
 cd ~/dotfiles
-./install.sh [-i]
+./install.sh
 ```
 
-- `-i` — interactive mode: confirms each step before running
 - Edit `tools_management/config.json` to toggle steps or change terminal
+- Use `./install.sh -i` to confirm each step interactively
+- Use `./install.sh --just nvim` for a minimal install (only what nvim needs)
+
+## Usage
+
+### Install
+
+```bash
+./install.sh [options]
+```
+
+| Argument               | Description                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `-i`, `--interactive`  | Confirm each step before running                                                    |
+| `--just PKG [PKG ...]` | Only stow specified packages + dependencies + base. Skips unrelated pipeline steps. |
+
+Examples:
+
+```bash
+# Full install (default)
+./install.sh
+
+# Confirm each step
+./install.sh -i
+
+# Minimal: only stow nvim + its deps (opencode, fonts, runtimes)
+./install.sh --just nvim
+
+# Single terminal package
+./install.sh --just ghostty
+```
+
+### Uninstall
+
+```bash
+./uninstall.sh [options]
+```
+
+| Argument              | Description                      |
+| --------------------- | -------------------------------- |
+| `-f`, `--force`       | Skip confirmation prompt         |
+| `-i`, `--interactive` | Confirm each step before running |
+
+Example:
+
+```bash
+./uninstall.sh -f
+```
 
 ## Prerequisites
 
@@ -49,10 +96,12 @@ cd ~/dotfiles
 ├─────────────────────────────────────────┤
 │  Tools: ripgrep, fd, bat, fzf,          │
 │  lazygit, lazydocker, lazysql,          │
-│  yazi, gh, zig, bun, rust, nvm          │
+│  yazi, gh, zig, bun, rust, nvm,         │
+│  auggie, gemini-cli                     │
 ├─────────────────────────────────────────┤
 │  AI: OpenCode + custom agents,          │
-│  Gemini CLI, Neovim MCP integration     │
+│  Auggie, Gemini CLI,                    │
+│  Neovim MCP integration                 │
 └─────────────────────────────────────────┘
 ```
 
@@ -99,6 +148,7 @@ dotfiles/
 │   ├── stow.py             ← symlink management
 │   ├── manifest.py         ← tracks installed vs pre-existing for safe uninstall
 │   ├── cli_tools.py        ← CLI tools aggregator
+│   ├── npm_packages.py     ← npm global packages (auggie, gemini-cli)
 │   ├── runtimes.py         ← nvm/bun/rust/opencode
 │   ├── post_install.py     ← TPM, Windows Terminal
 │   └── verify.py           ← post-install verification
@@ -113,19 +163,113 @@ The install runs in two stages:
 
 1. **macOS**: Xcode Command Line Tools → Homebrew → `brew install python@3 curl unzip stow`
 2. **Linux/WSL**: ensures `python3 curl unzip stow` via apt/pacman/dnf
+
+Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and `unzip` are installed here and not duplicated in Stage 2.
 3. Hands off to Stage 2
 
 **Stage 2** (`tools_management/2_management.py`) — Python orchestrator:
 
-1. **System packages** — brew/apt/pacman packages (tmux, git, pipx, luarocks)
-2. **CLI tools** — neovim, ripgrep, fd, bat, lazygit, lazydocker, lazysql, gh, fzf, yazi, zig
-3. **Fonts** — installs CodeNewRoman and NerdFontsSymbolsOnly Nerd Fonts
-4. **Stow** — creates symlinks for all stow packages
-5. **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode
-6. **Post-install** — TPM, Windows Terminal symlink (WSL)
-7. **Verify** — checks essential commands are in PATH
+1.  **System packages** — brew/apt/pacman packages (tmux, git, pipx)
+2.  **CLI tools** — neovim, ripgrep, fd, bat, lazygit, lazydocker, lazysql, gh, fzf, yazi, zig
+3.  **Fonts** — installs CodeNewRoman and NerdFontsSymbolsOnly Nerd Fonts
+4.  **Stow** — creates symlinks for all stow packages
+5.  **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode
+6.  **NPM packages** — auggie, gemini-cli (via bun, fallback npm)
+7.  **Post-install** — TPM, Windows Terminal symlink (WSL)
+8.  **Verify** — checks essential commands are in PATH
 
-All steps can be toggled on/off via `tools_management/config.json`. Run with `-i` for interactive mode (confirms each step before proceeding).
+All steps can be toggled on/off via `tools_management/config.json`. Run with `-i` for interactive mode (confirms each step before proceeding). Use `--just PKG` to run only the steps needed by one or more stow packages (skips unrelated phases).
+
+## Stow Packages
+
+The core of this project. Each folder under `stow-packages/` mirrors part of `$HOME`:
+
+```
+stow-packages/nvim/.config/nvim/init.lua  →  $HOME/.config/nvim/init.lua
+stow-packages/zsh/.zshrc                  →  $HOME/.zshrc
+```
+
+When `stow` runs, it creates symlinks from `$HOME` into the repo. Removing the symlink later is safe — the repo is the source of truth.
+
+### Dependency resolution
+
+Packages can declare dependencies in `config.json → stow.deps`. When you use `--just PKG`, the system computes a transitive closure:
+
+```
+--just ghostty → ghostty + tmux + zsh + nvim + opencode + mojo + local-bin
+```
+
+The resolver handles circular deps (nvim ↔ opencode) gracefully.
+
+### Terminal selection
+
+Only one terminal package is active at a time, set via `config.json → stow.terminal`:
+
+| Value               | Alternative                                   |
+| ------------------- | --------------------------------------------- |
+| `ghostty` (default) | Stows ghostty/, skips alacritty/ and wezterm/ |
+| `alacritty`         | Stows alacritty/, skips the others            |
+| `wezterm`           | Stows wezterm/, skips the others              |
+
+On WSL, all three are skipped — Windows Terminal is handled separately by `post_install.py`.
+
+### Base packages
+
+`stow.base` (default: `["local-bin"]`) always gets stowed regardless of `--just`.
+
+### Base steps (always run)
+
+Regardless of `--just`, these steps always execute:
+
+- **System packages** — tmux, git, pipx
+- **Fonts** — Nerd Fonts (CodeNewRoman, NerdFontsSymbolsOnly)
+- **Stow** — symlink creation
+
+### Conditional steps (skipped if not needed)
+
+| Pipeline step | Needed by              |
+| ------------- | ---------------------- |
+| CLI tools     | nvim, bat              |
+| NPM packages  | nvim, zsh              |
+| Runtimes      | nvim, opencode, zsh    |
+| Post-install  | tmux, windows-terminal |
+
+### Backup and restore
+
+Before stow overwrites an existing file, `stow.py` copies it to `~/.local/share/dotfiles/backups/`. On uninstall, backups are restored and symlinks removed.
+
+### Stowignore
+
+`.stowignore` contains glob patterns for files stow should never touch:
+
+```
+**/.gitkeep
+.DS_Store
+**/.playwright-mcp
+```
+
+## Adding a new stow package
+
+1. Create a directory: `stow-packages/my-app/.config/my-app/config`
+2. Add files with paths relative to `$HOME`
+3. If it needs other packages, add deps to `config.json → stow.deps`:
+
+   ```json
+   "my-app": ["nvim"]
+   ```
+
+4. If it needs specific pipeline steps (CLI tools, runtimes, etc.), update `should_skip_step()` in `2_management.py`
+5. Run `./install.sh` — the new package is auto-discovered
+
+## Manual stow commands
+
+```bash
+# Stow a single package (create symlinks)
+stow -R -t $HOME nvim
+
+# Remove symlinks for a package
+stow -D -t $HOME nvim
+```
 
 ## Uninstall
 
@@ -139,6 +283,7 @@ What gets removed:
 
 - **Stow symlinks** — deleted, original files restored from backup
 - **CLI tools** — only those installed by the script (not pre-existing ones)
+- **NPM packages** — auggie, gemini-cli (only if not pre-existing)
 - **Runtimes** — nvm, Bun, Rust, OpenCode (only if not pre-existing)
 - **Fonts** — CodeNewRoman and NerdFontsSymbolsOnly font files
 - **Post-install** — TPM, Windows Terminal symlink (WSL)

@@ -31,22 +31,26 @@ WSL emulation sets `DOTFILES_WSL=1` (detected by `tools_management/core.py:is_ws
 # Keep containers after test (skip cleanup prompt)
 ./testing/test_into_containers.py --keep
 
-# Print logs to stdout instead of saving to files
+ # Print logs to stdout instead of saving to files
 ./testing/test_into_containers.py --no-log
-
-# Run full install + uninstall pipeline with pause between phases
-./testing/test_into_containers.py --pipeline
-./testing/test_into_containers.py linux --pipeline
 ```
 
-Logs are saved to `testing/test_containers/logs/<target>-<timestamp>.log`.
+Logs are saved to `testing/test_containers/logs/<target>-<timestamp>.log`. During execution, a progress indicator prints every 15s (`⏳ linux running... (30s)`) so you know containers are still working.
 
 ## Requirements
 
 - Docker Desktop
 - The repo bind-mounted into the container (no rebuild needed for code changes)
 
-## What Gets Tested (normal mode)
+## What Gets Tested
+
+Each container runs the full install + uninstall pipeline (`test_pipeline.sh`):
+
+### Stage 0: Preexisting files
+
+Creates simulated preexisting environment (config files, CLI tool) with checksums recorded for restore verification.
+
+### Stage 1: Install
 
 The full `install.sh` pipeline runs inside each container:
 
@@ -55,37 +59,34 @@ The full `install.sh` pipeline runs inside each container:
 3. Nerd Fonts
 4. Stow symlinks
 5. Runtimes (nvm, bun, rust, opencode)
-6. Post-install (TPM, Windows Terminal)
-7. Verification
+6. NPM packages (auggie, gemini-cli — via bun, fallback npm)
+7. Post-install (TPM, Windows Terminal)
+8. Verification
 
-## Pipeline mode (`--pipeline`)
+### Stage 2: Verify install
 
-Tests the complete install + uninstall cycle, including backup and restore, split into two phases with a pause for manual testing between them.
+Validates: tools installed, symlinks created, preexisting files backed up, manifest tracks preexisting correctly.
 
-### Phase 1: Install
+### Stage 3: Uninstall
 
-1. Creates files simulating a preexisting environment (config files, CLI tool)
-2. Runs full `./install.sh`
-3. Verifies: tools installed, symlinks created, preexisting files backed up, manifest tracks preexisting correctly
-4. **Pauses** — per-container prompt with `docker exec` command for manual testing
+Runs `./uninstall.sh -f`.
 
-### Phase 2: Uninstall
+### Stage 4: Verify uninstall
 
-4. Runs `./uninstall.sh -f`
-5. Verifies: preexisting files restored with original content, preexisting tools preserved, installed tools removed, manifest deleted
-6. **Pauses** — per-container prompt before cleanup
+Validates: preexisting files restored with original content, preexisting tools preserved, installed tools removed, manifest deleted.
 
-## Manual Testing
+## Progress Indicator
 
-During the pause between phases, you can enter any container and inspect the installed state:
+When testing both linux and wsl in parallel, a heartbeat prints every 15s:
 
-```bash
-docker exec -it test-linux bash
-docker exec -it test-wsl bash
+```
+⏳ linux running... (15s)
+⏳ linux running... (30s)
+⏳ linux running... (45s)
 ```
 
-The container remains running until you confirm or skip the next phase.
+This confirms containers are still executing while waiting for the full pipeline.
 
 ## Parallel Execution
 
-When testing both linux and wsl (`all`), containers build and run in parallel. Each container pauses independently after install, so you can inspect one while the other is still running.
+When testing both linux and wsl (`all`), containers build and run in parallel. Exit codes are printed as each container finishes.

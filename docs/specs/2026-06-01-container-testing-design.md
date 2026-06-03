@@ -1,16 +1,13 @@
 # Container-Based Testing for Dotfiles Installation
 
+> **Status:** Implemented — evolved from original spec. See notes below.
+
 ## Problem
 
 The dotfiles install script supports macOS, Linux (bare-metal), and WSL (Windows Subsystem for Linux).
 The author only has access to macOS, making it impossible to test changes to the Linux and WSL
 installation paths. Bugs in those paths go undetected until someone tries to install on those
 platforms.
-
-## Scope
-
-This spec covers testing only. It does not modify the install pipeline itself beyond a single
-minimal change to `is_wsl()`.
 
 ## Design
 
@@ -114,6 +111,13 @@ def is_wsl() -> bool:
 
 This is the only modification to install code. The environment variable takes precedence over the
 `/proc` check, enabling WSL emulation without falsifying `/proc`.
+
+## Implementation Notes
+
+- Dockerfiles now include `npm` as a dependency for npm global packages
+- Tests run the full install + uninstall pipeline (not just install)
+- Pipeline runs via `test_pipeline.sh` which handles all 4 stages
+- Progress indicator (heartbeat every 15s) added during parallel execution
 
 ### `docker-compose.yml`
 

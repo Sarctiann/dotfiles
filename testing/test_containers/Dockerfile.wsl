@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  sudo git python3 curl unzip stow \
+  sudo git python3 curl unzip stow npm \
   && rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=1000

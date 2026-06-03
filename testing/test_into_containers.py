@@ -65,6 +65,18 @@ async def start_pipeline(system: str) -> str:
     return container_name
 
 
+async def _heartbeat(system: str, stop_event: asyncio.Event) -> None:
+    """Print progress every 15s until stop_event is set."""
+    interval = 15
+    elapsed = 0
+    while not stop_event.is_set():
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval)
+        except asyncio.TimeoutError:
+            elapsed += interval
+            print(f"   ⏳ {system} running... ({elapsed}s)")
+
+
 async def collect_result(
     container_name: str,
     system: str,
@@ -72,7 +84,11 @@ async def collect_result(
 ) -> int:
     """Wait for container to finish, capture logs, return exit code."""
 
+    stop_event = asyncio.Event()
+    heartbeat_task = asyncio.create_task(_heartbeat(system, stop_event))
     await run_command(["docker", "wait", container_name])
+    stop_event.set()
+    await heartbeat_task
 
     insp_out, _ = await run_command(
         ["docker", "inspect", "-f", "{{.State.ExitCode}}", container_name],

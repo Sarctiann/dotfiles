@@ -11,6 +11,7 @@ import manifest as mf
 from cli_tools import install_cli_tools
 from core import DOTFILES_DIR, detect_arch, detect_os, is_wsl
 from fonts import install_fonts
+from npm_packages import install_npm_packages
 from post_install import run_post_install
 from runtimes import install_runtimes
 from stow import resolve_stow_plan, stow_packages
@@ -28,12 +29,14 @@ INSTALL_STEPS = [
     ("Fonts", install_fonts),
     ("Stow symlinks", stow_packages),
     ("Runtimes", install_runtimes),
+    ("NPM packages", install_npm_packages),
     ("Post-install", run_post_install),
     ("Verification", verify),
 ]
 
 UNINSTALL_STEPS = [
     ("Post-install", run_post_install),
+    ("NPM packages", install_npm_packages),
     ("Runtimes", install_runtimes),
     ("Stow symlinks", stow_packages),
     ("Fonts", install_fonts),
@@ -47,6 +50,9 @@ def print_summary(conf: dict) -> None:
     print("  The following will be installed:")
     tools = list(conf.get("cli_tools", {}).keys())
     print(f"  • CLI tools: {', '.join(tools)}")
+    npm_pkgs = list(conf.get("npm_packages", {}).keys())
+    if npm_pkgs:
+        print(f"  • NPM packages: {', '.join(npm_pkgs)}")
     runtimes = [k for k, v in conf.get("runtimes", {}).items() if v]
     if runtimes:
         print(f"  • Runtimes: {', '.join(runtimes)}")
@@ -62,9 +68,11 @@ def should_skip_step(label: str, plan: set[str], _: dict) -> bool:
         case "CLI tools":
             needs_cli_tool = {"nvim", "bat"}
             return not needs_cli_tool & plan
+        case "NPM packages":
+            needs_npm = {"nvim", "zsh"}
+            return not needs_npm & plan
         case "Fonts":
-            font_users = {"ghostty", "alacritty", "wezterm", "tmux", "nvim"}
-            return not font_users & plan
+            return False
         case "Stow symlinks":
             return False
         case "Runtimes":

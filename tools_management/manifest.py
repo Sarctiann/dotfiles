@@ -16,6 +16,7 @@ def create() -> dict:
         "updated_at": now,
         "system": {"os": detect_os(), "arch": detect_arch()},
         "cli_tools": {"preexisting": [], "installed": []},
+        "npm_packages": {"preexisting": [], "installed": []},
         "runtimes": {"preexisting": [], "installed": []},
         "fonts": {"preexisting": [], "installed": []},
         "stow": {"packages": [], "backups": {}},

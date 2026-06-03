@@ -1,5 +1,7 @@
 # Split Pipeline + Parallel Containers Design
 
+> **Status:** Implemented — see implementation notes below.
+
 **Date:** 2026-06-02
 **Author:** Sebastian (via opencode)
 
@@ -100,14 +102,20 @@ async def run_phase(systems: list[str], phase_script: str, no_log: bool, pipelin
     return results
 ```
 
+## Implementation Notes
+
+- `--pipeline` flag was removed — the default mode always runs the full install + uninstall pipeline
+- No per-container pause between phases; pipeline runs in a single shot via `test_pipeline.sh`
+- Progress indicator (heartbeat every 15s) added so users see containers are still working
+- `npm` added to Dockerfiles for npm global package compatibility
+
 ## Flags (backwards compatible)
 
-| Flag         | Behavior                                                                    |
-| ------------ | --------------------------------------------------------------------------- |
-| (none)       | Install only, pause per container, prompt for uninstall, prompt for cleanup |
-| `--pipeline` | Install + uninstall with pause between phases                               |
-| `--keep`     | Skip cleanup prompt, containers persist                                     |
-| `--no-log`   | Print logs to stdout instead of file                                        |
+| Flag       | Behavior                                                |
+| ---------- | ------------------------------------------------------- |
+| (none)     | Run full install + uninstall pipeline, prompt for cleanup |
+| `--keep`   | Skip cleanup prompt, containers persist                 |
+| `--no-log` | Print logs to stdout instead of file                    |
 
 ## Cleanup
 

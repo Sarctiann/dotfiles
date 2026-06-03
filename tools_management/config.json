@@ -1,12 +1,8 @@
 {
   "system_packages": [
-    "stow",
     "tmux",
     "git",
-    "curl",
-    "unzip",
-    "pipx",
-    "luarocks"
+    "pipx"
   ],
   "cli_tools": {
     "neovim": {
@@ -70,6 +66,16 @@
     "tpm": true,
     "windows_terminal": true
   },
+  "npm_packages": {
+    "auggie": {
+      "package": "@augmentcode/auggie",
+      "binary": "auggie"
+    },
+    "gemini": {
+      "package": "@google/gemini-cli",
+      "binary": "gemini"
+    }
+  },
   "verify": {
     "essential": ["stow", "nvim", "tmux", "rg", "fd", "bat", "gh", "git"],
     "optional": [
@@ -81,7 +87,9 @@
       "nvm",
       "bun",
       "cargo",
-      "opencode"
+      "opencode",
+      "auggie",
+      "gemini"
     ]
   }
 }

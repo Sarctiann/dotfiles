@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-from core import run, which
+from core import BIN_DIR, run, which
 import manifest as mf
 
 
@@ -76,6 +76,10 @@ def install_bun() -> None:
         return
     print("📋 Installing Bun...")
     run(["bash", "-c", "curl -fsSL https://bun.sh/install | bash"])
+    bun_src = Path.home() / ".bun" / "bin" / "bun"
+    if bun_src.exists():
+        BIN_DIR.mkdir(parents=True, exist_ok=True)
+        (BIN_DIR / "bun").symlink_to(bun_src)
 
 
 def install_rust() -> None:
