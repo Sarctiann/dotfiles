@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test dotfiles install inside Docker containers."""
+"""Test dotfiles install inside Docker containers or locally on macOS."""
 
 import argparse
 import asyncio
@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
 LOG_DIR = SCRIPT_DIR / "test_containers" / "logs"
 PIPELINE_SCRIPT = "/dotfiles/testing/test_containers/test_pipeline.sh"
 
@@ -153,24 +154,65 @@ def cleanup() -> None:
         subprocess.run(["docker", "rm", "-f", name], capture_output=True)
 
 
+async def run_mac(no_log: bool) -> int:
+    """Run install with --just nvim on the host macOS machine."""
+    print("\n  🍏 macOS test (local — no container)")
+    print("  ⚠️  Will run `./install.sh --just nvim` on your machine")
+    print("  System packages (brew) are skipped. Stow/verify only.\n")
+
+    cmd = ["bash", str(REPO_ROOT / "install.sh"), "--just", "nvim"]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    out, _ = await proc.communicate()
+    exit_code = proc.returncode or 0
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = LOG_DIR / f"mac-{ts}.log"
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    if not no_log:
+        log_path.write_bytes(out)
+    else:
+        print(out.decode())
+
+    return exit_code
+
+
 async def main_async(systems: list[str], keep: bool, no_log: bool) -> int:
-    cleanup()
+    docker_systems = [s for s in systems if s != "mac"]
+    run_mac_flag = "mac" in systems
 
-    try:
-        await asyncio.gather(*[build_container(s) for s in systems])
-    except RuntimeError:
-        return 1
+    if docker_systems:
+        cleanup()
+        try:
+            await asyncio.gather(*[build_container(s) for s in docker_systems])
+        except RuntimeError:
+            return 1
 
-    results = await run_pipeline_phase(systems, no_log)
+    docker_results = {}
+    if docker_systems:
+        docker_results = await run_pipeline_phase(docker_systems, no_log)
+
+    mac_code = 0
+    if run_mac_flag:
+        mac_code = await run_mac(no_log)
+        status = "✅" if mac_code == 0 else "❌"
+        print(f"  {status} mac   → exit {mac_code}")
 
     print(f"\n{'='*50}")
     print("  === SUMMARY ===")
     print(f"{'='*50}")
+    results = {**docker_results}
+    if run_mac_flag:
+        results["mac"] = mac_code
     for s, code in results.items():
         status = "✅" if code == 0 else "❌"
         print(f"  {status} {s:6s} → exit {code}")
 
-    if not keep:
+    if docker_systems and not keep:
         loop = asyncio.get_event_loop()
         try:
             resp = await loop.run_in_executor(
@@ -194,7 +236,7 @@ def main() -> None:
         "system",
         nargs="?",
         default="all",
-        choices=["all", "linux", "wsl"],
+        choices=["all", "linux", "wsl", "mac"],
         help="system to test (default: all)",
     )
     parser.add_argument(
@@ -214,6 +256,8 @@ def main() -> None:
         systems.append("linux")
     if args.system in ("all", "wsl"):
         systems.append("wsl")
+    if args.system == "mac":
+        systems.append("mac")
 
     sys.exit(asyncio.run(main_async(systems, args.keep, args.no_log)))
 

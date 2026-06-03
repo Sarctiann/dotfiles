@@ -30,7 +30,7 @@ Items ordered by priority. We start at #1 and work down without asking.
 
 ## P5 — Maintenance
 
-- [ ] **13. Dependency bumps** — pin GitHub release versions in config.json or auto-update.
+- [x] **13. Dependency bumps** — Nerd Fonts v3.4.0, nvm auto-detects latest via API.
 - [ ] **14. Nix / Homebrew / system package drift** — ensure `system_packages` list matches what each OS actually needs.
 
 ---
