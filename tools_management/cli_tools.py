@@ -45,6 +45,16 @@ def install_cli_tools(config: dict, mode: str = "install") -> None:
         _uninstall_cli_tools(config)
         return
 
+    if mode == "check":
+        print("🛠  CLI tools:")
+        for name, info in tools.items():
+            if info is None:
+                continue
+            status = "✅" if which(info["binary"]) else "⬜"
+            print(f"   {status} {name} ({info['binary']})")
+        print()
+        return
+
     print("🛠  Installing CLI tools from GitHub releases...")
     manifest = mf.load()
     mf.record_preexisting(manifest, "cli_tools", _preexisting_names(config))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test dotfiles install inside Docker containers or locally on macOS."""
+"""Test dotfiles install pipeline inside Docker containers."""
 
 import argparse
 import asyncio
@@ -155,12 +155,10 @@ def cleanup() -> None:
 
 
 async def run_mac(no_log: bool) -> int:
-    """Run install with --just nvim on the host macOS machine."""
-    print("\n  🍏 macOS test (local — no container)")
-    print("  ⚠️  Will run `./install.sh --just nvim` on your machine")
-    print("  System packages (brew) are skipped. Stow/verify only.\n")
+    """Run dry-run check on the host macOS machine (read-only)."""
+    print("\n  🍏 macOS check (local — no container, read-only)\n")
 
-    cmd = ["bash", str(REPO_ROOT / "install.sh"), "--just", "nvim"]
+    cmd = ["bash", str(REPO_ROOT / "install.sh"), "--check"]
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -230,7 +228,7 @@ async def main_async(systems: list[str], keep: bool, no_log: bool) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Test dotfiles install in Docker containers",
+        description="Test dotfiles install pipeline (Docker for linux/wsl, read-only check for mac)",
     )
     parser.add_argument(
         "system",
@@ -256,7 +254,7 @@ def main() -> None:
         systems.append("linux")
     if args.system in ("all", "wsl"):
         systems.append("wsl")
-    if args.system == "mac":
+    if args.system in ("all", "mac"):
         systems.append("mac")
 
     sys.exit(asyncio.run(main_async(systems, args.keep, args.no_log)))

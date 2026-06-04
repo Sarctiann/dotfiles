@@ -7,7 +7,7 @@
 
 ## Problem
 
-The current `test_into_containers.py` script:
+The current `test_pipeline.py` script:
 
 1. Removes containers immediately via `--rm`, making the cleanup prompt useless
 2. Runs containers serially (no parallelism)
@@ -30,7 +30,7 @@ Split the pipeline into two phases with per-container pauses, run containers in 
 
 | File                      | Changes                                                                 |
 | ------------------------- | ----------------------------------------------------------------------- |
-| `test_into_containers.py` | asyncio parallelism, per-container pauses, split pipeline orchestration |
+| `test_pipeline.py` | asyncio parallelism, per-container pauses, split pipeline orchestration |
 | `TESTING.md`              | Updated usage docs                                                      |
 
 ### Unchanged

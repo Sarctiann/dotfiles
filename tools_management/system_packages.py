@@ -47,6 +47,16 @@ def install_system_packages(config: dict, mode: str = "install") -> None:
         return
 
     os_name = detect_os()
+
+    if mode == "check":
+        pm = {"macos": "brew", "linux": "apt/pacman/dnf"}.get(os_name, "?")
+        print(f"📦 System packages (via {pm}):")
+        for pkg in pkgs:
+            status = "✅" if which(pkg) else "⬜"
+            print(f"   {status} {pkg}")
+        print()
+        return
+
     print("📦 Installing system packages...")
 
     match os_name:

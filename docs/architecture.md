@@ -160,7 +160,7 @@ dotfiles/
 │   ├── post_install.py                 # Post-install hooks
 │   └── verify.py                       # Install verification
 └── testing/
-    ├── test_into_containers.py         # Test orchestrator
+    ├── test_pipeline.py                # Test orchestrator (linux/wsl via Docker, mac via --check)
     ├── docker-compose.yml              # Docker compose services
     ├── test_containers/
     │   ├── test_pipeline.sh            # Shared pipeline test script

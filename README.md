@@ -25,6 +25,7 @@ cd ~/dotfiles
 | Argument               | Description                                                                         |
 | ---------------------- | ----------------------------------------------------------------------------------- |
 | `-i`, `--interactive`  | Confirm each step before running                                                    |
+| `--check`              | Validate config and show plan without making changes                                |
 | `--just PKG [PKG ...]` | Only stow specified packages + dependencies + base. Skips unrelated pipeline steps. |
 
 Examples:
@@ -41,6 +42,9 @@ Examples:
 
 # Single terminal package
 ./install.sh --just ghostty
+
+# Dry-run check (validate config, no changes)
+./install.sh --check
 ```
 
 ### Uninstall
@@ -53,6 +57,7 @@ Examples:
 | --------------------- | -------------------------------- |
 | `-f`, `--force`       | Skip confirmation prompt         |
 | `-i`, `--interactive` | Confirm each step before running |
+| `--just PKG [PKG ...]`| Only unstow specified packages + restore their backups |
 
 Example:
 
@@ -96,7 +101,7 @@ Example:
 ├─────────────────────────────────────────┤
 │  Tools: ripgrep, fd, bat, fzf,          │
 │  lazygit, lazydocker, lazysql,          │
-│  yazi, gh, zig, bun, rust, nvm,         │
+│  yazi, gh, zig, uv, bun, rust, nvm,     │
 │  auggie, gemini-cli                     │
 ├─────────────────────────────────────────┤
 │  AI: OpenCode + custom agents,          │
@@ -135,6 +140,10 @@ dotfiles/
 │   ├── local-bin/          ← local scripts
 │   ├── mojo/               ← Mojo + Pixi config
 │   └── ...
+├── testing/                ← container-based test suite
+│   ├── test_pipeline.py   ← CLI orchestrator (linux/wsl/mac)
+│   ├── test_containers/    ← Dockerfiles + pipeline script
+│   └── TESTING.md          ← testing documentation
 ├── tools_management/       ← two-stage bootstrap + uninstall
 │   ├── 1_setup.sh          ← Stage 1: bash bootstrap (python3 + base pkgs)
 │   ├── 1_uninstall.sh      ← Stage 1: bash bootstrap (python3)
@@ -149,7 +158,7 @@ dotfiles/
 │   ├── manifest.py         ← tracks installed vs pre-existing for safe uninstall
 │   ├── cli_tools.py        ← CLI tools aggregator
 │   ├── npm_packages.py     ← npm global packages (auggie, gemini-cli)
-│   ├── runtimes.py         ← nvm/bun/rust/opencode
+│   ├── runtimes.py         ← nvm/bun/rust/opencode/uv
 │   ├── post_install.py     ← TPM, Windows Terminal
 │   └── verify.py           ← post-install verification
 └── README.md
@@ -169,11 +178,11 @@ Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and 
 
 **Stage 2** (`tools_management/2_management.py`) — Python orchestrator:
 
-1.  **System packages** — brew/apt/pacman packages (tmux, git, pipx)
+1.  **System packages** — brew/apt/pacman packages (tmux, git)
 2.  **CLI tools** — neovim, ripgrep, fd, bat, lazygit, lazydocker, lazysql, gh, fzf, yazi, zig
 3.  **Fonts** — installs CodeNewRoman and NerdFontsSymbolsOnly Nerd Fonts
 4.  **Stow** — creates symlinks for all stow packages
-5.  **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode
+5.  **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode, uv
 6.  **NPM packages** — auggie, gemini-cli (via bun, fallback npm)
 7.  **Post-install** — TPM, Windows Terminal symlink (WSL)
 8.  **Verify** — checks essential commands are in PATH
@@ -221,7 +230,7 @@ On WSL, all three are skipped — Windows Terminal is handled separately by `pos
 
 Regardless of `--just`, these steps always execute:
 
-- **System packages** — tmux, git, pipx
+- **System packages** — tmux, git
 - **Fonts** — Nerd Fonts (CodeNewRoman, NerdFontsSymbolsOnly)
 - **Stow** — symlink creation
 
@@ -284,11 +293,31 @@ What gets removed:
 - **Stow symlinks** — deleted, original files restored from backup
 - **CLI tools** — only those installed by the script (not pre-existing ones)
 - **NPM packages** — auggie, gemini-cli (only if not pre-existing)
-- **Runtimes** — nvm, Bun, Rust, OpenCode (only if not pre-existing)
+- **Runtimes** — nvm, Bun, Rust, OpenCode, uv (only if not pre-existing)
 - **Fonts** — CodeNewRoman and NerdFontsSymbolsOnly font files
 - **Post-install** — TPM, Windows Terminal symlink (WSL)
 
 System packages (stow, tmux, git via brew/apt) are **not** removed.
+
+## Testing
+
+The install/uninstall pipeline is tested inside Docker containers for Linux and WSL,
+plus a read-only check for macOS.
+
+```bash
+# Test all platforms (parallel Docker + local mac)
+./testing/test_pipeline.py
+
+# Test a single platform
+./testing/test_pipeline.py linux
+./testing/test_pipeline.py wsl
+./testing/test_pipeline.py mac
+
+# Dry-run check directly (no containers needed)
+./install.sh --check
+```
+
+See [`testing/TESTING.md`](testing/TESTING.md) for details.
 
 ## Neovim (LazyVim)
 

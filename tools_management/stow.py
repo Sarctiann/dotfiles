@@ -242,6 +242,32 @@ def stow_packages(config: dict, mode: str = "install") -> None:
     _validate_packages(candidates)
     _config_package_diff(config)
 
+    if mode == "check":
+        print("🔗 Stow symlinks (dry-run):")
+        for pkg_name in candidates:
+            if plan is None:
+                if pkg_name in ("ghostty", "alacritty", "wezterm"):
+                    if wsl:
+                        print(f"   (skipped {pkg_name} — WSL)")
+                        continue
+                    if pkg_name != terminal:
+                        print(f"   (skipped {pkg_name} — using {terminal})")
+                        continue
+            if pkg_name == "windows-terminal":
+                continue
+            pkg_dir = STOW_DIR / pkg_name
+            if not pkg_dir.is_dir():
+                print(f"   ⚠  package '{pkg_name}' not found")
+                continue
+            print(f"   → {pkg_name}")
+            stow_args = ["stow", "--no", "-v", "-R", "-t", str(Path.home())]
+            for pat in ignore_pats:
+                stow_args += ["--ignore", _glob_to_stow_regex(pat)]
+            stow_args.append(pkg_name)
+            run_optional(stow_args, cwd=str(STOW_DIR))
+        print()
+        return
+
     print("🔗 Creating symlinks with stow...")
 
     manifest["stow"]["packages"] = []

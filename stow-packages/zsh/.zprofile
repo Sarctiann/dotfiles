@@ -5,7 +5,7 @@ export PATH=/usr/local/bin:$PATH
 autoload -Uz compinit
 compinit
 
-# Created by `pipx` on 2024-06-11 12:12:38
+# ~/.local/bin added for user-level tools (uv, pipx, etc.)
 export PATH="$PATH:/Users/sebastianrodriguezcapurro/.local/bin"
 
 # Added by `rbenv init` on Mon Dec  1 18:42:01 -03 2025

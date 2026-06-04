@@ -111,6 +111,16 @@ def install_npm_packages(config: dict, mode: str = "install") -> None:
         _uninstall_npm_packages(config)
         return
 
+    if mode == "check":
+        print("📦 NPM packages:")
+        for name, info in pkgs.items():
+            if info is None:
+                continue
+            status = "✅" if which(info["binary"]) else "⬜"
+            print(f"   {status} {name} ({info['package']})")
+        print()
+        return
+
     print("📦 Installing npm global packages...")
     manifest = mf.load()
     mf.record_preexisting(manifest, "npm_packages", _preexisting_names(config))

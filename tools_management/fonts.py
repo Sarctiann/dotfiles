@@ -110,6 +110,16 @@ def install_fonts(config: dict, mode: str = "install") -> None:
     fonts = config.get("fonts", [])
     if not fonts:
         return
+
+    if mode == "check":
+        target = _fonts_dir()
+        print("🔤 Fonts:")
+        for name in fonts:
+            status = "✅" if _font_installed(name, target) else "⬜"
+            print(f"   {status} {name} Nerd Font")
+        print()
+        return
+
     manifest = mf.load()
     installed = []
     for name in fonts:

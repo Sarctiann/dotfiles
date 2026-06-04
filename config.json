@@ -1,17 +1,9 @@
 {
-  "system_packages": [
-    "tmux",
-    "git",
-    "pipx"
-  ],
+  "system_packages": ["tmux", "git"],
   "conditional_system_packages": {
     "luarocks": ["zsh"]
   },
-  "base_steps": [
-    "System packages",
-    "Fonts",
-    "Stow symlinks"
-  ],
+  "base_steps": ["System packages", "Fonts", "Stow symlinks"],
   "cli_tools": {
     "neovim": {
       "repo": "neovim/neovim",
@@ -50,7 +42,8 @@
     "nvm": true,
     "bun": true,
     "rust": true,
-    "opencode": true
+    "opencode": true,
+    "uv": true
   },
   "stow": {
     "enabled": true,
@@ -102,6 +95,7 @@
       "bun",
       "cargo",
       "opencode",
+      "uv",
       "auggie",
       "gemini"
     ]

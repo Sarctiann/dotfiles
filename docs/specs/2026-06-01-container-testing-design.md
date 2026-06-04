@@ -6,16 +6,16 @@
 
 The dotfiles install script supports macOS, Linux (bare-metal), and WSL (Windows Subsystem for Linux).
 The author only has access to macOS, making it impossible to test changes to the Linux and WSL
-installation paths. Bugs in those paths go undetected until someone tries to install on those
-platforms.
+installation paths. Container-based testing is the only way to validate the full pipeline
+from macOS without modifying the host machine.
 
 ## Design
 
 ### Overview
 
-A Python CLI orchestrator (`test_into_containers.py`) that builds and runs Docker containers to test
-the install script on emulated Linux and WSL environments. macOS cannot be dockerized (Apple
-restrictions), so a dry-run mode on the host Mac serves as the macOS test path.
+A Python CLI orchestrator (`test_pipeline.py`) that builds and runs Docker containers to test
+the install script on emulated Linux and WSL environments. For macOS, it runs `install.sh --check`
+directly on the host — a read-only validation with zero system changes.
 
 ### `test_containers/` Directory
 
@@ -26,13 +26,13 @@ test_containers/
 └── logs/                  # Per-run log output
 ```
 
-### `test_into_containers.py` — CLI Orchestrator
+### `test_pipeline.py` — CLI Orchestrator
 
 ```
-usage: test_into_containers.py [-h] [--keep] [--no-log] [system]
+usage: test_pipeline.py [-h] [--keep] [--no-log] [system]
 
 positional arguments:
-  system      Target system to test: 'linux', 'wsl', or 'mac' (default: all)
+  system      Target system to test: 'linux', 'wsl', 'mac' (default: all)
 
 options:
   --keep      Leave containers running after tests finish (no-op for mac)
@@ -150,19 +150,6 @@ services:
       - CI=1
 ```
 
-### macOS Test Path (No Container)
-
-For macOS, the user can run:
-
-```bash
-python3 test_into_containers.py mac
-```
-
-This runs `install/2_install.py --just nvim` (or another minimal plan) directly on the host,
-skipping system packages (brew). This tests the Python pipeline logic without modifying system
-packages. The dry-run focus is on stow, verify, and the orchestrator flow — not on brew
-installation.
-
 ### Logging
 
 Each container run writes to `test_containers/logs/<service>-<timestamp>.log`. The orchestrator
@@ -181,7 +168,7 @@ By default, the script prompts to remove containers and the default network afte
 
 ## Files Changed
 
-- **New:** `test_into_containers.py`
+- **New:** `test_pipeline.py`
 - **New:** `test_containers/Dockerfile.linux`
 - **New:** `test_containers/Dockerfile.wsl`
 - **New:** `docker-compose.yml` (repo root)

@@ -7,39 +7,53 @@ Validate the dotfiles `install.sh` pipeline on Linux and WSL environments using 
 ## Targets
 
 ```
-./testing/test_into_containers.py [system]
+./testing/test_pipeline.py [system]
 ```
 
 | Target  | Runs                         |
 | ------- | ---------------------------- |
 | `linux` | Ubuntu 24.04 container       |
 | `wsl`   | Ubuntu 24.04 + WSL emulation |
-| `all`   | Both (default)               |
+| `mac`   | Local dry-run (read-only, no container) |
+| `all`   | All of the above (default)   |
 
 WSL emulation sets `DOTFILES_WSL=1` (detected by `tools_management/core.py:is_wsl()`) and creates a fake `/mnt/c/Users/` structure to test the windows-terminal stow logic.
 
 ## Usage
 
 ```bash
-# Test both platforms (parallel)
-./testing/test_into_containers.py
+# Test all platforms (parallel Docker + local mac)
+./testing/test_pipeline.py
 
 # Test a single platform
-./testing/test_into_containers.py linux
-./testing/test_into_containers.py wsl
+./testing/test_pipeline.py linux
+./testing/test_pipeline.py wsl
+./testing/test_pipeline.py mac
 
 # Keep containers after test (skip cleanup prompt)
-./testing/test_into_containers.py --keep
+./testing/test_pipeline.py --keep
 
  # Print logs to stdout instead of saving to files
-./testing/test_into_containers.py --no-log
+./testing/test_pipeline.py --no-log
 ```
 
 Logs are saved to `testing/test_containers/logs/<target>-<timestamp>.log`. During execution, a progress indicator prints every 15s (`⏳ linux running... (30s)`) so you know containers are still working.
 
+## macOS Check (Dry-Run)
+
+On macOS, run a read-only validation instead of real containers:
+
+```bash
+./install.sh --check
+```
+
+This loads the config, checks what tools are already installed vs what needs installation,
+dry-runs stow symlinks, and runs verification. Zero changes to your system.
+
 ## Requirements
 
-- Docker Desktop
+- **linux / wsl**: Docker Desktop
+- **mac**: No requirements — `./install.sh --check` runs locally without containers
 - The repo bind-mounted into the container (no rebuild needed for code changes)
 
 ## What Gets Tested
@@ -58,7 +72,7 @@ The full `install.sh` pipeline runs inside each container:
 2. CLI tools from GitHub releases
 3. Nerd Fonts
 4. Stow symlinks
-5. Runtimes (nvm, bun, rust, opencode)
+5. Runtimes (nvm, bun, rust, opencode, uv)
 6. NPM packages (auggie, gemini-cli — via bun, fallback npm)
 7. Post-install (TPM, Windows Terminal)
 8. Verification

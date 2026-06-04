@@ -97,7 +97,7 @@ All CLI arguments (e.g. `-i`) are forwarded to `2_install.py` via `"$@"`.
 
 **`cli_tools.py`** — reads `config.json["cli_tools"]`, iterates tools: if enabled, calls `gh_releases.install_binary()`. Each tool has a registry entry with repo name, binary name, and OS/arch-aware asset pattern.
 
-**`runtimes.py`** — nvm (git clone + install script), bun (curl), rust (rustup), opencode (curl). Each reads its enabled flag from config.
+**`runtimes.py`** — nvm (git clone + install script), bun (curl), rust (rustup), opencode (curl), uv (curl). Each reads its enabled flag from config.
 
 **`post_install.py`** — TPM git clone, Windows Terminal symlink, etc.
 
@@ -138,7 +138,7 @@ asks before each step; non-interactive mode runs all steps without prompting.
     "git",
     "curl",
     "unzip",
-    "pipx",
+    "uv",
     "luarocks"
   ],
   "cli_tools": {
@@ -162,7 +162,8 @@ asks before each step; non-interactive mode runs all steps without prompting.
     "nvm": true,
     "bun": true,
     "rust": true,
-    "opencode": true
+    "opencode": true,
+    "uv": true
   },
   "stow": {
     "enabled": true,
@@ -183,7 +184,8 @@ asks before each step; non-interactive mode runs all steps without prompting.
       "nvm",
       "bun",
       "cargo",
-      "opencode"
+      "opencode",
+      "uv"
     ]
   }
 }

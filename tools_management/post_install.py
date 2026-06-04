@@ -104,6 +104,21 @@ def _undo_post_install(_: dict) -> None:
 
 
 def run_post_install(config: dict, mode: str = "install") -> None:
+    if mode == "check":
+        print("🔄 Post-install:")
+        tpm_enabled = config.get("post_install", {}).get("tpm", True)
+        if tpm_enabled:
+            print(f"   {'✅' if TPM_DIR.is_dir() else '⬜'} TPM")
+        if config.get("post_install", {}).get("windows_terminal", True) and is_wsl():
+            print("   ⬜ Windows Terminal symlink")
+        print("   📦 Zsh plugins:")
+        for name in ZSH_PLUGINS:
+            target = ZSH_PLUGIN_DIR / name
+            status = "✅" if target.is_dir() and any(target.iterdir()) else "⬜"
+            print(f"      {status} {name}")
+        print()
+        return
+
     print("🔄 Post-install...")
 
     if mode == "uninstall":

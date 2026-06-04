@@ -84,6 +84,14 @@ def install_bun() -> None:
         (BIN_DIR / "bun").symlink_to(bun_src)
 
 
+def install_uv() -> None:
+    if which("uv"):
+        print("✅ uv already installed")
+        return
+    print("📋 Installing uv (Python package manager)...")
+    run(["bash", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"])
+
+
 def install_rust() -> None:
     if which("cargo"):
         print("✅ rust/cargo already installed")
@@ -102,6 +110,18 @@ def install_rust() -> None:
         ]
     )
     run(["sh", "/tmp/rustup.sh", "-y"])
+
+
+def _uninstall_uv() -> None:
+    uv_bin = BIN_DIR / "uv"
+    if uv_bin.exists():
+        uv_bin.unlink()
+        print("   removed ~/.local/bin/uv")
+    uvx_bin = BIN_DIR / "uvx"
+    if uvx_bin.exists():
+        uvx_bin.unlink()
+        print("   removed ~/.local/bin/uvx")
+    _clean_path_from_rc(".local/bin")
 
 
 def _uninstall_nvm() -> None:
@@ -182,6 +202,8 @@ def _preexisting_names() -> list[str]:
         preexisting.append("rust")
     if which("opencode"):
         preexisting.append("opencode")
+    if which("uv"):
+        preexisting.append("uv")
     return preexisting
 
 
@@ -190,6 +212,7 @@ INSTALLERS = {
     "opencode": install_opencode,
     "bun": install_bun,
     "rust": install_rust,
+    "uv": install_uv,
 }
 
 
@@ -198,7 +221,24 @@ UNINSTALLERS = {
     "bun": _uninstall_bun,
     "rust": _uninstall_rust,
     "opencode": _uninstall_opencode,
+    "uv": _uninstall_uv,
 }
+
+
+def _check_runtime(name: str, enabled: bool) -> None:
+    if not enabled:
+        return
+    checks = {
+        "nvm": lambda: Path.home().joinpath(".nvm").is_dir(),
+        "bun": lambda: which("bun"),
+        "rust": lambda: which("cargo"),
+        "opencode": lambda: which("opencode"),
+        "uv": lambda: which("uv"),
+    }
+    installed = checks.get(name, lambda: False)()
+    display = {"opencode": "OpenCode", "nvm": "nvm"}.get(name, name.capitalize())
+    status = "✅" if installed else "⬜"
+    print(f"   {status} {display}")
 
 
 def install_runtimes(config: dict, mode: str = "install") -> None:
@@ -208,6 +248,13 @@ def install_runtimes(config: dict, mode: str = "install") -> None:
 
     runtimes = config.get("runtimes", {})
     if not runtimes:
+        return
+
+    if mode == "check":
+        print("📋 Runtimes:")
+        for name, enabled in runtimes.items():
+            _check_runtime(name, enabled)
+        print()
         return
 
     print("📋 Installing runtimes...")

@@ -72,7 +72,41 @@ def should_skip_step(label: str, plan: set[str], config: dict) -> bool:
     return not (needs & plan)
 
 
+def cmd_check(args: argparse.Namespace) -> None:
+    conf = cfg.load()
+
+    print("========================================")
+    print("  🔍 Dotfiles Check (dry-run)")
+    print("========================================")
+
+    os_name = detect_os()
+    wsl = is_wsl()
+    print(f"   OS: {os_name}{' (WSL)' if wsl else ''}")
+    print(f"   Arch: {detect_arch()}")
+    print()
+
+    print_summary(conf)
+
+    for label, fn in INSTALL_STEPS:
+        if label == "Verification":
+            continue
+        banner(label)
+        try:
+            fn(conf, mode="check")
+        except Exception as e:
+            print(f"   ⚠  {label} check failed — continuing. ({e})")
+
+    banner("Verification")
+    verify(conf, mode="install")
+
+    print("✅ Check complete — no changes made.\n")
+
+
 def cmd_install(args: argparse.Namespace) -> None:
+    if args.check:
+        cmd_check(args)
+        return
+
     if args.interactive:
         core.INTERACTIVE = True
 
@@ -189,6 +223,11 @@ def main() -> None:
     install_parser = subparsers.add_parser("install", help="Install dotfiles")
     install_parser.add_argument(
         "-i", "--interactive", action="store_true", help="ask before each step"
+    )
+    install_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate config and show plan without making changes",
     )
     install_parser.add_argument(
         "--just",
