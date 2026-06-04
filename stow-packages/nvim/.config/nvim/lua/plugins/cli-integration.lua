@@ -49,7 +49,11 @@ if is_company_project() then
       require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Augment")
     end,
     on_open = function(_, _)
-      augment_utils.on_open_auggie(cache_dir, { jira = { JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN") } })
+      local nvim_soc = os.getenv("NVIM") or vim.v.servername
+      augment_utils.on_open_auggie(cache_dir, {
+        neovim = { NVIM_SOCKET_PATH = nvim_soc },
+        jira = { JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN") },
+      })
     end,
     format_paths = function(paths, actions)
       if #paths == 1 then
