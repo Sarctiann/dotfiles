@@ -18,4 +18,15 @@ return {
       },
     },
   },
+  init = function()
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = "mojo",
+      callback = function()
+        vim.bo.expandtab = true
+        vim.bo.tabstop = 4
+        vim.bo.shiftwidth = 4
+        vim.bo.softtabstop = 4
+      end,
+    })
+  end,
 }
