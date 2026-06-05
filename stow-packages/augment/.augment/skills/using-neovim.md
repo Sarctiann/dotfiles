@@ -20,14 +20,14 @@ Neovim MCP must be connected first. If not connected, use the `editor-neovim` sk
 Use before LSP commands, quickfix navigation, or buffer switches:
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+vim_command_neovim(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
 ```
 
 ### Combined Focus + Open (preferred for file opening)
 **No round-trip pause.** Focuses a normal window and opens the file in a single MCP call:
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
+vim_command_neovim(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
 ```
 
 ## Tools Reference
@@ -35,13 +35,13 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 | Tool | Purpose |
 |------|---------|
 | File operations | Use native tools (not MCP) |
-| `neovim_vim_status` | Current buffer, cursor, LSP clients |
-| `neovim_vim_buffer` | Read buffer the user has open (for context) |
-| `neovim_vim_file_open` | Open a file in Neovim (show results) |
-| `neovim_vim_command` | Run Vim commands (`:e`, `:copen`, `:checktime`, `:lua ...`) |
-| `neovim_vim_grep` | Populate quickfix for user navigation |
-| `neovim_vim_window` | Split/vsplit management for showing files |
-| `neovim_vim_health` | Connection health check |
+| `vim_status_neovim` | Current buffer, cursor, LSP clients |
+| `vim_buffer_neovim` | Read buffer the user has open (for context) |
+| `vim_file_open_neovim` | Open a file in Neovim (show results) |
+| `vim_command_neovim` | Run Vim commands (`:e`, `:copen`, `:checktime`, `:lua ...`) |
+| `vim_grep_neovim` | Populate quickfix for user navigation |
+| `vim_window_neovim` | Split/vsplit management for showing files |
+| `vim_health_neovim` | Connection health check |
 
 ## Workflows
 
@@ -50,19 +50,19 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 When the user says "this line", "this file", or "here" without specifying a path:
 
 1. **Window Focus Step** (see above).
-2. `neovim_vim_status` → returns active buffer filename, cursor position, LSP clients.
-3. `neovim_vim_buffer(<filename>)` → read the buffer content if you need more context.
+2. `vim_status_neovim` → returns active buffer filename, cursor position, LSP clients.
+3. `vim_buffer_neovim(<filename>)` → read the buffer content if you need more context.
 
 ### Project-wide search (show results in quickfix)
 
 1. Use native grep to find matches.
-2. Populate quickfix: `neovim_vim_grep(<pattern>)` then `neovim_vim_command(":copen")`
+2. Populate quickfix: `vim_grep_neovim(<pattern>)` then `vim_command_neovim(":copen")`
 
 ### Apply edits and show results
 
 1. Use native tools to edit files.
 2. Open in Neovim with **Combined Focus + Open** (see above).
-3. Reload changed buffers: `neovim_vim_command(":checktime")`
+3. Reload changed buffers: `vim_command_neovim(":checktime")`
 
 ## Common Mistakes
 
@@ -71,5 +71,5 @@ When the user says "this line", "this file", or "here" without specifying a path
 | Using MCP to edit instead of native tools | Use native edit/write |
 | Opening a file without the **Window Focus Step** | Always focus first — the file opens in the AI terminal otherwise |
 | Opening a file as two MCP calls (focus + open) | Use **Combined Focus + Open** — one call, no pause |
-| Not opening the file after editing | Call `neovim_vim_file_open` or **Combined Focus + Open** so the user sees the result |
+| Not opening the file after editing | Call `vim_file_open_neovim` or **Combined Focus + Open** so the user sees the result |
 | Using MCP for code navigation | Use native read/grep |
