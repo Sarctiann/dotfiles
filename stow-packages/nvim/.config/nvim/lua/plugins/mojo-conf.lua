@@ -38,6 +38,37 @@ return {
         end,
       })
 
+      -- NOTE: TermOpen fires when a terminal buffer is created.
+      -- We detect the mojo env from the terminal's cwd and source
+      -- the activation script automatically — exactly like VSCode
+      -- does when it auto-activates the Python env in the integrated
+      -- terminal. This makes `mojo`, `mojo-lsp-server`, etc. available
+      -- without the user needing to run `pixi shell` manually.
+      vim.api.nvim_create_autocmd("TermOpen", {
+        callback = function()
+          local buf = vim.api.nvim_get_current_buf()
+          vim.schedule(function()
+            local channel = vim.bo[buf].channel
+            if not channel or channel <= 0 then
+              return
+            end
+            -- NOTE: vim.fn.getcwd() respects :lcd window-local dirs,
+            -- so the terminal opens in the same directory the user sees.
+            local env = require("utils.mojo-env").activate_in_terminal(
+              channel,
+              vim.fn.getcwd()
+            )
+            if env then
+              vim.notify(
+                "Terminal activated [" .. env.type .. "]",
+                vim.log.levels.INFO,
+                { title = "MOJO", timeout = 2000 }
+              )
+            end
+          end)
+        end,
+      })
+
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "mojo",
         callback = function()

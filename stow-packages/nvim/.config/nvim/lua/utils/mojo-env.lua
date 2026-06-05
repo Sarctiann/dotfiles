@@ -31,25 +31,16 @@ local function env_prepend(var, dir)
   vim.env[var] = dir .. ":" .. current
 end
 
---- Walk up from filepath to find the project root,
---- then scan for a mojo environment inside it.
+--- Core: detect env for a directory and activate it.
 --- Caches the result by directory to avoid repeated scans.
 --- NOTE: Cache is never invalidated automatically.
 --- If you add mojo to a project that previously had none,
 --- call :lua require("utils.mojo-env").reset_cache() or restart Neovim.
-function M.find_and_activate(filepath)
-  filepath = filepath or vim.fn.expand("%:p")
-  log("find_and_activate filepath=", filepath)
-  if filepath == "" then
-    log("find_and_activate empty filepath, returning false")
-    return false
-  end
-
-  local dir = vim.fn.fnamemodify(filepath, ":h")
-  log("find_and_activate dir=", dir)
+function M.activate_for_dir(dir)
+  log("activate_for_dir dir=", dir)
 
   if cache[dir] ~= nil then
-    log("find_and_activate cache hit for dir=", dir, "value=", tostring(cache[dir]))
+    log("activate_for_dir cache hit for dir=", dir, "value=", tostring(cache[dir]))
     if cache[dir] == false then
       return false
     end
@@ -57,19 +48,21 @@ function M.find_and_activate(filepath)
     return true
   end
 
-  -- NOTE: vim.fs.root walks upward from filepath looking for these markers.
+  -- NOTE: vim.fs.root walks upward from dir looking for these markers.
   -- Order matters: the first match wins. Keep pixi markers before generic ones.
   local markers = { "pixi.toml", "pyproject.toml", ".pixi", ".venv" }
-  local root = vim.fs.root(filepath, markers)
-  log("find_and_activate vim.fs.root result=", tostring(root))
+  -- NOTE: Append "/." so that vim.fs.root treats dir as a file path,
+  -- ensuring it searches starting FROM dir rather than its parent.
+  local root = vim.fs.root(dir .. "/.", markers)
+  log("activate_for_dir vim.fs.root result=", tostring(root))
   if not root then
-    log("find_and_activate no root found, caching false for dir=", dir)
+    log("activate_for_dir no root found, caching false for dir=", dir)
     cache[dir] = false
     return false
   end
 
   local env = M._scan(root)
-  log("find_and_activate scan result for root=", root, "env=", vim.inspect(env))
+  log("activate_for_dir scan result for root=", root, "env=", vim.inspect(env))
   cache[dir] = env or false
 
   if env then
@@ -77,8 +70,22 @@ function M.find_and_activate(filepath)
     return true
   end
 
-  log("find_and_activate no env found in root, returning false")
+  log("activate_for_dir no env found in root, returning false")
   return false
+end
+
+--- Called from autocmds on *.mojo files.
+--- Resolves the file's directory and delegates to activate_for_dir.
+function M.find_and_activate(filepath)
+  filepath = filepath or vim.fn.expand("%:p")
+  log("find_and_activate filepath=", filepath)
+  if filepath == "" then
+    log("find_and_activate empty filepath, returning false")
+    return false
+  end
+  local dir = vim.fn.fnamemodify(filepath, ":h")
+  log("find_and_activate dir=", dir)
+  return M.activate_for_dir(dir)
 end
 
 --- Scan a project root for mojo-lsp-server.
@@ -132,6 +139,59 @@ function M._activate(env)
     log("_activate MODULAR_HOME=", vim.env.MODULAR_HOME)
     log("_activate DYLD_FALLBACK_LIBRARY_PATH=", vim.env.DYLD_FALLBACK_LIBRARY_PATH)
   end
+end
+
+--- Return the shell command to activate the given environment
+--- in a sub-shell (e.g. terminal inside Neovim).
+--- NOTE: We source the conda activate.d script for pixi envs
+--- because it sets PATH, CONDA_PREFIX, MODULAR_HOME, etc. in the
+--- shell session, exactly as VSCode does when it auto-activates the
+--- Python env in its integrated terminal.
+function M.get_activate_cmd(env)
+  if not env then
+    return nil
+  end
+  if env.type == "pixi" then
+    local prefix = vim.fn.fnamemodify(env.bin_dir, ":h")
+    -- NOTE: The conda-compatible activation script sets MODULAR_HOME
+    -- and other vars. This is the same script that runs on `pixi shell`.
+    local script = prefix .. "/etc/conda/activate.d/10-activate-max.sh"
+    if vim.fn.filereadable(script) == 1 then
+      return "source " .. script
+    end
+    -- Fallback: use pixi shell-hook for newer pixi versions
+    -- that may not use the conda layout.
+    local env_name = vim.fn.fnamemodify(env.bin_dir, ":h:t")
+    return "eval \"$(pixi shell-hook --environment " .. env_name .. ")\""
+  elseif env.type == "venv" then
+    return "source " .. env.env_dir .. "/.venv/bin/activate"
+  end
+  return nil
+end
+
+--- Activate the environment for a terminal channel based on cwd.
+--- Returns the env table if activated, nil otherwise.
+function M.activate_in_terminal(channel, cwd)
+  if not channel or channel <= 0 then
+    log("activate_in_terminal invalid channel=", tostring(channel))
+    return nil
+  end
+  if not M.activate_for_dir(cwd) then
+    log("activate_in_terminal no env for cwd=", cwd)
+    return nil
+  end
+  local env = M.get_active()
+  local cmd = M.get_activate_cmd(env)
+  if not cmd then
+    log("activate_in_terminal no activate cmd for env type=", env.type)
+    return nil
+  end
+  -- NOTE: nvim_chan_send writes directly to the terminal's pty,
+  -- as if the user typed the command. The terminal shell reads it
+  -- from stdin and executes it.
+  vim.api.nvim_chan_send(channel, cmd .. "\n")
+  log("activate_in_terminal sent cmd=", cmd)
+  return env
 end
 
 --- Return the full path to mojo-lsp-server inside the active environment,
