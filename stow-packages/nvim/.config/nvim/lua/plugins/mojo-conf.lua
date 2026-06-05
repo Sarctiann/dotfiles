@@ -50,41 +50,47 @@ return {
       vim.api.nvim_create_autocmd("TermOpen", {
         callback = function()
           local buf = vim.api.nvim_get_current_buf()
+          -- NOTE: Capture the terminal's window handle at TermOpen time.
+          -- vim.schedule runs later when the user may have switched windows,
+          -- making nvim_get_current_win() unreliable for window checks.
+          local term_win = vim.api.nvim_get_current_win()
 
-          vim.schedule(function()
-            local win = vim.api.nvim_get_current_win()
-
-            -- Skip floating windows (filepickers, popup terminals) and narrow
-            -- side panels (< 40% of editor width) which are typically AI
-            -- integration panels rather than user-invoked terminals.
-            local win_config = vim.api.nvim_win_get_config(win)
-            if win_config.relative ~= ''
-              or vim.api.nvim_win_get_width(win) < vim.o.columns * 0.4
-            then
+          -- Parse the terminal buffer name to identify the running command.
+          -- Format: term://cwd//pid:command
+          -- Only activate for known interactive shells (zsh, bash, etc.),
+          -- not for AI integration panels, custom command runners, etc.
+          local buf_name = vim.api.nvim_buf_get_name(buf)
+          local cmd_in_name = buf_name:match(":([^:]+)$")
+          if cmd_in_name then
+            local cmd_base = vim.fn.fnamemodify(cmd_in_name, ":t")
+            local known_shells = { "zsh", "bash", "fish", "sh", "dash", "ksh" }
+            local is_shell = false
+            for _, s in ipairs(known_shells) do
+              if cmd_base == s then
+                is_shell = true
+                break
+              end
+            end
+            if not is_shell then
               return
             end
+          end
+
+          vim.schedule(function()
+            -- Skip floating windows (filepickers, popup terminals)
+            local win_config = vim.api.nvim_win_get_config(term_win)
+            if win_config.relative ~= "" then
+              return
+            end
+
             local channel = vim.bo[buf].channel
             if not channel or channel <= 0 then
               return
             end
 
-            -- Only activate in regular shell terminals (not AI integration
-            -- panels running opencode / gemini / auggie, etc.)
-            local ok, info = pcall(vim.fn.job_info, channel)
-            if ok and info and info.cmd and #info.cmd > 0 then
-              local shell = vim.fn.fnamemodify(vim.o.shell, ":t")
-              local cmd = vim.fn.fnamemodify(info.cmd[1], ":t")
-              if cmd ~= shell then
-                return
-              end
-            end
-
             -- NOTE: vim.fn.getcwd() respects :lcd window-local dirs,
             -- so the terminal opens in the same directory the user sees.
-            local env = require("utils.mojo-env").activate_in_terminal(
-              channel,
-              vim.fn.getcwd()
-            )
+            local env = require("utils.mojo-env").activate_in_terminal(channel, vim.fn.getcwd())
             if env then
               vim.notify(
                 "Terminal activated [" .. env.type .. "]",
