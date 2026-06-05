@@ -2,6 +2,46 @@
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
 
+-- Redirect `:edit`|`:e` from non-file windows (terminal, help, etc.) into the
+-- first normal file window. This ensures MCP file-open tools and any agent
+-- that sends `:e <path>` always open in a proper editor window automatically,
+-- regardless of whether the agent remembered to focus first.
+do
+  local function is_edit_cmd(cmdline)
+    if cmdline == "e" or cmdline == "edit" or cmdline == "e!" or cmdline == "edit!" then
+      return true
+    end
+    if cmdline:match("^e[!]?%s") or cmdline:match("^edit[!]?%s") then
+      return true
+    end
+    return false
+  end
+
+  local group = vim.api.nvim_create_augroup("EditRedirect", { clear = true })
+  vim.api.nvim_create_autocmd("CmdlineLeave", {
+    group = group,
+    pattern = ":",
+    callback = function()
+      local cmdline = vim.fn.getcmdline() or ""
+      if not is_edit_cmd(cmdline) then
+        return
+      end
+      local cur_win = vim.api.nvim_get_current_win()
+      local cur_buf = vim.api.nvim_win_get_buf(cur_win)
+      if vim.bo[cur_buf].buftype == "" then
+        return
+      end
+      for _, w in ipairs(vim.api.nvim_list_wins()) do
+        local b = vim.api.nvim_win_get_buf(w)
+        if vim.bo[b].buftype == "" and vim.api.nvim_buf_get_name(b) ~= "" then
+          vim.api.nvim_set_current_win(w)
+          return
+        end
+      end
+    end,
+  })
+end
+
 if not vim.g.vscode then
   -- Single source of truth for cursor behavior in Neovim and on exit
   local nvim_cursor =
