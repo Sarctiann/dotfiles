@@ -143,26 +143,21 @@ end
 
 --- Return the shell command to activate the given environment
 --- in a sub-shell (e.g. terminal inside Neovim).
---- NOTE: We source the conda activate.d script for pixi envs
---- because it sets PATH, CONDA_PREFIX, MODULAR_HOME, etc. in the
---- shell session, exactly as VSCode does when it auto-activates the
---- Python env in its integrated terminal.
+--- NOTE: For pixi we use `pixi shell-hook` which is the official
+--- pixi activation method. It sets PATH, CONDA_PREFIX, sources all
+--- activate.d scripts (including 10-activate-max.sh for MODULAR_HOME),
+--- and sets PS1 so the shell prompt shows "(default)" or the env name.
+--- Sourcing an individual activate.d script (like 10-activate-max.sh)
+--- is not enough — it only sets MODULAR_HOME, not PATH or PS1.
+--- NOTE: `pixi` must be in the user's shell PATH (~/.local/bin, Homebrew, etc.)
+--- for this to work. This is normally the case on macOS with pixi installed.
 function M.get_activate_cmd(env)
   if not env then
     return nil
   end
   if env.type == "pixi" then
-    local prefix = vim.fn.fnamemodify(env.bin_dir, ":h")
-    -- NOTE: The conda-compatible activation script sets MODULAR_HOME
-    -- and other vars. This is the same script that runs on `pixi shell`.
-    local script = prefix .. "/etc/conda/activate.d/10-activate-max.sh"
-    if vim.fn.filereadable(script) == 1 then
-      return "source " .. script
-    end
-    -- Fallback: use pixi shell-hook for newer pixi versions
-    -- that may not use the conda layout.
     local env_name = vim.fn.fnamemodify(env.bin_dir, ":h:t")
-    return "eval \"$(pixi shell-hook --environment " .. env_name .. ")\""
+    return 'eval "$(pixi shell-hook --environment ' .. env_name .. ')"'
   elseif env.type == "venv" then
     return "source " .. env.env_dir .. "/.venv/bin/activate"
   end
@@ -187,10 +182,12 @@ function M.activate_in_terminal(channel, cwd)
     return nil
   end
   -- NOTE: nvim_chan_send writes directly to the terminal's pty,
-  -- as if the user typed the command. The terminal shell reads it
-  -- from stdin and executes it.
-  vim.api.nvim_chan_send(channel, cmd .. "\n")
-  log("activate_in_terminal sent cmd=", cmd)
+  -- as if the user typed the command. A short defer lets the shell
+  -- initialize (print its first prompt) before we inject the command.
+  vim.defer_fn(function()
+    vim.api.nvim_chan_send(channel, cmd .. "&& clear\n")
+    log("activate_in_terminal sent cmd=", cmd)
+  end, 300)
   return env
 end
 
@@ -217,7 +214,7 @@ function M.get_mojo_cmd()
 end
 
 function M.get_active()
-  return active_env
+  return active_env or { bin_dir = "", type = "none" }
 end
 
 function M.set_debug(enabled)
