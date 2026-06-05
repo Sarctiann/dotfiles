@@ -105,8 +105,11 @@ Example:
 │  auggie, gemini-cli                     │
 ├─────────────────────────────────────────┤
 │  AI: OpenCode + custom agents,          │
-│  Auggie, Gemini CLI,                    │
-│  Neovim MCP integration                 │
+│  Augment (auggie) user-level +          │
+│    work-profile (neovim-deployed),      │
+│  Gemini CLI (stow-managed),             │
+│  Neovim MCP integration across all      │
+│  three clients                          │
 └─────────────────────────────────────────┘
 ```
 
@@ -136,6 +139,8 @@ dotfiles/
 │   ├── wezterm/            ← Wezterm config
 │   ├── windows-terminal/   ← Windows Terminal settings.json (WSL)
 │   ├── opencode/           ← OpenCode config (agents, skills, themes, quota, notifier)
+│   ├── augment/            ← Augment user-level config (AGENTS.md, skills)
+│   ├── gemini/             ← Gemini CLI config (policies, custom-skills)
 │   ├── bat/                ← bat theme (.config/bat/config)
 │   ├── local-bin/          ← local scripts
 │   ├── mojo/               ← Mojo + Pixi config
@@ -349,7 +354,9 @@ See [`testing/TESTING.md`](testing/TESTING.md) for details.
 | `Ctrl+b Ctrl+s`   | Save session (resurrect)    |
 | `Ctrl+b Ctrl+r`   | Restore session (resurrect) |
 
-## OpenCode
+## OpenCode / AI Clients
+
+### OpenCode
 
 - Config sourced from [Sarctiann/opencode-config](https://github.com/Sarctiann/opencode-config)
 - Custom agents: x-teach, z-forge, z-logic, z-nexus, z-pilot, z-spark, z-ultra, x--free
@@ -357,6 +364,34 @@ See [`testing/TESTING.md`](testing/TESTING.md) for details.
 - Plugins: opencode-quota (toast + TUI), opencode-notifier, superpowers
 - Skills: agent-model-audit, agent-sync-neovim
 - Theme: custom tokyonight
+
+### Augment (auggie)
+
+- **User-level** (`~/.augment/`): `AGENTS.md` + skills stow-managed via `stow-packages/augment/`
+- **Work-profile** (`<project>/.augment_work_profile/`): `AGENTS.md` + skills deployed by Neovim
+  from `nvim/lua/utils/augment-work-profile/` on every `on_open_auggie` hook
+
+### Gemini CLI
+
+- **Policy** (`~/.gemini/policies/default.md`): stow-managed, loaded via `gemini --policy ...`
+- **Skills** (`~/.gemini/custom-skills/`): stow-managed via `stow-packages/gemini/`, linked
+  to `~/.gemini/skills/` via `gemini skills link`
+
+### Multi-Client Skill Synchronization
+
+The three Neovim MCP skills (`using-neovim`, `using-neovim-lsp`, `using-quickfix`) in
+`nvim/lua/utils/opencode-neovim/skills/` are **shared across all AI clients**:
+
+| Client | Location | Method |
+|--------|----------|--------|
+| OpenCode | `.../opencode-neovim/skills/<name>/SKILL.md` | Native (source of truth) |
+| Augment (user) | `~/.augment/skills/<name>.md` | Stow symlink |
+| Augment (work) | `<work-profile>/skills/<name>.md` | Neovim-deployed symlink |
+| Gemini | `~/.gemini/custom-skills/<name>/SKILL.md` | Stow symlink (+ `gemini skills link`) |
+
+**Changes to any skill MUST be replicated to all four destinations** (opencode source,
+augment user-level, augment work-profile, gemini). The content is identical except for
+client-specific details (prerequisites section, connection instructions).
 
 ## Supported OS
 

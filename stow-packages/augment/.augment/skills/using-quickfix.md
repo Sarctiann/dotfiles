@@ -1,0 +1,56 @@
+# Using Quickfix List
+
+## Purpose
+
+The quickfix list lets the user navigate multi-file results with `:cn` / `:cp` / `:copen`. Populate it only **after** doing the actual work with native tools — it's a visualization aid, not a work mechanism.
+
+**Requires:** Neovim MCP active. See `using-neovim` skill.
+
+## When to Use
+
+- After a project-wide search via native grep — show results so user can browse
+- After collecting references — populate quickfix for navigation
+- Before multi-file edits — show scope so the user can review
+
+## Core Pattern
+
+### 1. Do the actual search with native tools
+
+Use native grep to find matches.
+
+### 2. Populate quickfix for user navigation
+
+```
+neovim_vim_grep(<pattern>)
+neovim_vim_command(":copen")
+```
+
+### 3. Navigate programmatically
+
+```
+neovim_vim_command(":cfirst")   // jump to first match
+neovim_vim_command(":cn")       // next match
+neovim_vim_command(":cp")       // previous match
+```
+
+### 4. Read quickfix entries programmatically
+
+```
+neovim_vim_command(":lua print(vim.fn.json_encode(vim.fn.getqflist()))")
+```
+
+## Multi-File Edit Workflow
+
+1. Use native grep/glob to identify which files to edit.
+2. `neovim_vim_grep(<pattern>)` + `:copen` to show the scope.
+3. Apply edits with native tools.
+4. Reload buffers: `neovim_vim_command(":checktime")`.
+5. `neovim_vim_command(":cclose")` when done.
+
+## Common Mistakes
+
+| Mistake | Fix |
+|---------|-----|
+| Using vim_grep as primary search tool | Use native grep — vim_grep is only for showing results |
+| Making multi-file edits without showing scope first | Populate quickfix before editing |
+| Forgetting to open quickfix after populating | Always call `neovim_vim_command(":copen")` |

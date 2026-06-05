@@ -28,3 +28,19 @@ Invoke the `using-neovim` skill for detailed guidance on visualization patterns.
 - `neovim_vim_buffer_save` — use native `write`
 - `neovim_vim_search` / `neovim_vim_search_replace` — use native `grep`/`edit`
 - `neovim_vim_mark` / `neovim_vim_visual` — broken (MCP server bug)
+
+## Multi-Client Synchronization
+
+The three skills in `./skills/` (`using-neovim`, `using-neovim-lsp`, `using-quickfix`) are
+**ported to three clients** and MUST be kept in sync:
+
+| Client | Location |
+|--------|----------|
+| **OpenCode** (native) | `./skills/<name>/SKILL.md` |
+| **Augment** (user-level) | `~/.augment/skills/<name>.md` (stow-managed) |
+| **Augment** (work-profile) | `<work-profile>/skills/<name>.md` (neovim-deployed) |
+| **Gemini CLI** | `~/.gemini/custom-skills/<name>/SKILL.md` (stow-managed) |
+
+**Rule**: Any change to a skill in `./skills/` MUST be replicated to all three augment
+locations and the gemini custom-skills directory. The content is identical except for
+client-specific details (prerequisites section, connection instructions).

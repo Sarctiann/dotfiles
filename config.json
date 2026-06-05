@@ -60,6 +60,8 @@
       "opencode": ["nvim"],
       "bat": [],
       "mojo": [],
+      "augment": [],
+      "gemini": [],
       "local-bin": []
     }
   },
