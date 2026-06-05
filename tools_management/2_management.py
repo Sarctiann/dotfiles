@@ -11,6 +11,7 @@ import manifest as mf
 from cli_tools import install_cli_tools
 from core import DOTFILES_DIR, detect_arch, detect_os, is_wsl
 from fonts import install_fonts
+from git_setup import git_setup
 from npm_packages import install_npm_packages
 from post_install import run_post_install
 from runtimes import install_runtimes
@@ -28,6 +29,7 @@ INSTALL_STEPS = [
     ("CLI tools", install_cli_tools),
     ("Fonts", install_fonts),
     ("Stow symlinks", stow_packages),
+    ("Git config", git_setup),
     ("Runtimes", install_runtimes),
     ("NPM packages", install_npm_packages),
     ("Post-install", run_post_install),
@@ -38,6 +40,7 @@ UNINSTALL_STEPS = [
     ("Post-install", run_post_install),
     ("NPM packages", install_npm_packages),
     ("Runtimes", install_runtimes),
+    ("Git config", git_setup),
     ("Stow symlinks", stow_packages),
     ("Fonts", install_fonts),
     ("CLI tools", install_cli_tools),

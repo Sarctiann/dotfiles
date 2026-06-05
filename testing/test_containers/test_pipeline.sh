@@ -36,6 +36,14 @@ echo "   ✓ Created preexisting bat/config"
 PRETOOL_MD5=$(md5sum "$HOME/.local/bin/preexisting-fake" | cut -d' ' -f1)
 echo "   ✓ Recorded checksums"
 
+# Git env vars (needed by the "Git config" install step)
+export GIT_NAME="Test User"
+export GIT_EMAIL="test@example.com"
+export COMPANY_GIT_NAME="Test Work"
+export COMPANY_GIT_EMAIL="test@work.com"
+export COMPANY_DIR="$HOME/work"
+echo "   ✓ Set git env vars for install step"
+
 # === Stage 1: Install ===
 echo ""
 echo "═══ Stage 1: Install dotfiles ═══"
@@ -126,6 +134,26 @@ if [ -f "$BACKUP_DIR/bat/.config/bat/config" ]; then
     echo "   ✓ bat backup exists"
 else
     echo "❌ bat backup missing"
+    FAILED=1
+fi
+
+# Git config verification
+if [ -f "$HOME/.gitconfig" ] && [ ! -L "$HOME/.gitconfig" ]; then
+    echo "   ✓ ~/.gitconfig is a regular file (not a stow symlink)"
+    if grep -q "Test User" "$HOME/.gitconfig" && grep -q "test@example.com" "$HOME/.gitconfig"; then
+        echo "   ✓ ~/.gitconfig has correct git identity"
+    else
+        echo "❌ ~/.gitconfig missing expected identity"
+        FAILED=1
+    fi
+else
+    echo "❌ ~/.gitconfig missing or still a symlink"
+    FAILED=1
+fi
+if [ -f "$HOME/.gitconfig-work" ]; then
+    echo "   ✓ ~/.gitconfig-work generated"
+else
+    echo "❌ ~/.gitconfig-work missing"
     FAILED=1
 fi
 

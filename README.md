@@ -142,7 +142,7 @@ dotfiles/
 │   ├── augment/            ← Augment user-level config (AGENTS.md, skills)
 │   ├── gemini/             ← Gemini CLI config (policies, custom-skills)
 │   ├── bat/                ← bat theme (.config/bat/config)
-│   ├── local-bin/          ← local scripts
+│   ├── local-bin/          ← local scripts (includes sync_git_config.py)
 │   ├── mojo/               ← Mojo + Pixi config
 │   └── ...
 ├── testing/                ← container-based test suite
@@ -187,10 +187,11 @@ Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and 
 2.  **CLI tools** — neovim, ripgrep, fd, bat, lazygit, lazydocker, lazysql, gh, fzf, yazi, zig
 3.  **Fonts** — installs CodeNewRoman and NerdFontsSymbolsOnly Nerd Fonts
 4.  **Stow** — creates symlinks for all stow packages
-5.  **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode, uv
-6.  **NPM packages** — auggie, gemini-cli (via bun, fallback npm)
-7.  **Post-install** — TPM, Windows Terminal symlink (WSL)
-8.  **Verify** — checks essential commands are in PATH
+5.  **Git config** — prompts for identity vars, generates `~/.gitconfig` via `sync_git_config.py`
+6.  **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode, uv
+7.  **NPM packages** — auggie, gemini-cli (via bun, fallback npm)
+8.  **Post-install** — TPM, Windows Terminal symlink (WSL)
+9.  **Verify** — checks essential commands are in PATH
 
 All steps can be toggled on/off via `config.json`. Run with `-i` for interactive mode (confirms each step before proceeding). Use `--just PKG` to run only the steps needed by one or more stow packages (skips unrelated phases).
 
@@ -332,6 +333,29 @@ See [`testing/TESTING.md`](testing/TESTING.md) for details.
 - AI integration: OpenCode CLI + custom Neovim utils (server management, tunnel, session browser)
 - Plugin extras: copilot, formatting (black, prettier), language support (Python, Rust, TypeScript, Zig, Docker, SQL, TOML, YAML, Markdown, Tailwind, Ruby, Mojo, V)
 - Custom plugins: cli-integration.nvim, cursor-agent.nvim, blamer.nvim
+
+## Git
+
+`~/.gitconfig` is **generated** from environment variables by
+[`sync_git_config.py`](stow-packages/local-bin/.local/bin/sync_git_config.py),
+which is called automatically during `install.sh` (the "Git config" step).
+
+Define these in `~/.config/zsh/.credentials` (see [Credentials docs](stow-packages/zsh/.config/zsh/README.md)):
+
+| Variable | Purpose |
+|----------|---------|
+| `GIT_NAME` | Personal `[user] name` |
+| `GIT_EMAIL` | Personal `[user] email` |
+| `COMPANY_GIT_NAME` | Work identity (for `includeIf`) |
+| `COMPANY_GIT_EMAIL` | Work email (for `includeIf`) |
+| `COMPANY_DIR` | Path under which work identity applies |
+
+To regenerate manually:
+
+```bash
+source ~/.config/zsh/.credentials
+sync_git_config.py
+```
 
 ## Tmux
 

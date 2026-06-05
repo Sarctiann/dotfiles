@@ -62,11 +62,39 @@ Obtained from: `https://tavily.com`
 
 ---
 
-### `COMPANY_DIRS`
+### `GIT_NAME` / `GIT_EMAIL`
 
-Colon-separated list of company project root directories used by Neovim to
-detect company projects and activate Augment (instead of OpenCode).
+Personal git identity. Used by `sync_git_config.py` to generate `~/.gitconfig`.
+
+| Var | Purpose |
+|-----|---------|
+| `GIT_NAME` | `[user] name` in `~/.gitconfig` |
+| `GIT_EMAIL` | `[user] email` in `~/.gitconfig` |
 
 ```zsh
-COMPANY_DIRS="/home/projects/company-a:/work/src/company-b"
+GIT_NAME="Your Name"
+GIT_EMAIL="your@email.com"
+```
+
+### `COMPANY_GIT_NAME` / `COMPANY_GIT_EMAIL`
+
+Work git identity. Used by `sync_git_config.py` to generate `~/.gitconfig-work`,
+loaded via `includeIf` when inside `COMPANY_DIR`.
+
+```zsh
+COMPANY_GIT_NAME="Your Work Name"
+COMPANY_GIT_EMAIL="your@work.com"
+```
+
+### `COMPANY_DIR`
+
+Company project root directory. Used by:
+
+- **`sync_git_config.py`** — generates `includeIf` in `~/.gitconfig`
+- **Neovim** — detects company projects and activates Augment
+
+Supports `~` expansion.
+
+```zsh
+COMPANY_DIR="~/Documents/MyCompany"
 ```

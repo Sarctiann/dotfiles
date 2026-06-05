@@ -26,14 +26,14 @@ local WORK_PROFILE_SOURCE = vim.fn.expand("~/.config/nvim/lua/utils/augment-work
 --   }
 
 -- NOTE: Helper function to get the augment cache directory
--- Returns the cache directory path based on current working directory and COMPANY_DIRS
+-- Returns the cache directory path based on current working directory and COMPANY_DIR
 function M.get_augment_cache_dir()
   local current_dir = vim.fn.getcwd()
-  local company_dirs_str = os.getenv("COMPANY_DIRS") or ""
+  local company_dirs_str = os.getenv("COMPANY_DIR") or ""
   local company_dirs = {}
   if company_dirs_str ~= "" then
     for dir in company_dirs_str:gmatch("[^:]+") do
-      table.insert(company_dirs, dir)
+      table.insert(company_dirs, vim.fn.expand(dir))
     end
   end
 

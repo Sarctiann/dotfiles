@@ -5,11 +5,11 @@ local gemini_utils = require("utils.gemini_utils")
 local augment_utils = require("utils.augment_utils")
 local opencode_utils = require("utils.opencode_utils")
 
-local company_dirs_str = os.getenv("COMPANY_DIRS") or ""
+local company_dirs_str = os.getenv("COMPANY_DIR") or ""
 local company_dirs = {}
 if company_dirs_str ~= "" then
   for dir in company_dirs_str:gmatch("[^:]+") do
-    table.insert(company_dirs, dir)
+    table.insert(company_dirs, vim.fn.expand(dir))
   end
 end
 
