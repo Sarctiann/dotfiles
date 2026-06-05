@@ -10,7 +10,16 @@ Neovim MCP exists for **visualization and context sharing**, not for executing f
 
 ## Prerequisites
 
-Neovim MCP must be connected first. If not connected, use the `editor-neovim` skill to establish a connection.
+Neovim MCP must be connected first. If not connected, use the `connect-to-neovim` skill to establish a connection.
+
+## Window Focus Step
+
+**Always run this BEFORE any operation that opens a file, runs an LSP command, or switches buffers.**
+It ensures the action happens in a normal file window, not the AI terminal panel:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+```
 
 ## Tools Reference
 
@@ -25,22 +34,15 @@ Neovim MCP must be connected first. If not connected, use the `editor-neovim` sk
 | `neovim_vim_window` | Split/vsplit management for showing files |
 | `neovim_vim_health` | Connection health check |
 
-## Common Mistakes
-
-| Mistake | Fix |
-|---------|-----|
-| Using MCP to edit instead of native tools | Use native edit/write |
-| Not opening the file after editing | Call `neovim_vim_file_open` so the user sees the result |
-| Using MCP for code navigation | Use native read/grep |
-
 ## Workflows
 
 ### "What is the user looking at?"
 
 When the user says "this line", "this file", or "here" without specifying a path:
 
-1. `neovim_vim_status` → returns active buffer filename, cursor position, LSP clients.
-2. `neovim_vim_buffer(<filename>)` → read the buffer content if you need more context.
+1. **Window Focus Step** (see above).
+2. `neovim_vim_status` → returns active buffer filename, cursor position, LSP clients.
+3. `neovim_vim_buffer(<filename>)` → read the buffer content if you need more context.
 
 ### Project-wide search (show results in quickfix)
 
@@ -50,5 +52,15 @@ When the user says "this line", "this file", or "here" without specifying a path
 ### Apply edits and show results
 
 1. Use native tools to edit files.
-2. Open in Neovim: `neovim_vim_file_open(<path>)`
-3. Reload changed buffers: `neovim_vim_command(":checktime")`
+2. **Window Focus Step** (see above).
+3. Open in Neovim: `neovim_vim_file_open(<path>)`
+4. Reload changed buffers: `neovim_vim_command(":checktime")`
+
+## Common Mistakes
+
+| Mistake | Fix |
+|---------|-----|
+| Using MCP to edit instead of native tools | Use native edit/write |
+| Opening a file without the **Window Focus Step** | Always run it first — the file opens in the AI terminal otherwise |
+| Not opening the file after editing | Call `neovim_vim_file_open` so the user sees the result |
+| Using MCP for code navigation | Use native read/grep |

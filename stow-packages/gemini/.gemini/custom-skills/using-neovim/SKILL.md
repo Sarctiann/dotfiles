@@ -16,6 +16,15 @@ Neovim MCP exists for **visualization and context sharing**, not for executing f
 
 Neovim MCP must be connected. Gemini connects automatically via the configured `nvim` MCP server in settings.json. If connection fails, check that Neovim is running.
 
+## Window Focus Step
+
+**Always run this BEFORE any operation that opens a file, runs an LSP command, or switches buffers.**
+It ensures the action happens in a normal file window, not the AI terminal panel:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+```
+
 ## Tools Reference
 
 | Tool | Purpose |
@@ -33,24 +42,27 @@ Neovim MCP must be connected. Gemini connects automatically via the configured `
 
 ### "What is the user looking at?"
 
-1. `neovim_vim_status` → active buffer, cursor, LSP clients
-2. `neovim_vim_buffer` → read buffer content for context
+1. **Window Focus Step** (see above).
+2. `neovim_vim_status` → active buffer, cursor, LSP clients
+3. `neovim_vim_buffer` → read buffer content for context
+
+### Apply edits and show results
+
+1. Use native tools to edit files.
+2. **Window Focus Step** (see above).
+3. `neovim_vim_file_open(<path>)` to show the result
+4. `neovim_vim_command(":checktime")` to reload buffers
 
 ### Project-wide search
 
 1. Use native grep for the search
 2. `neovim_vim_grep(<pattern>)` then `neovim_vim_command(":copen")`
 
-### Apply edits and show results
-
-1. Use native tools to edit files
-2. `neovim_vim_file_open(<path>)` to show the result
-3. `neovim_vim_command(":checktime")` to reload buffers
-
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
 | Using MCP to edit instead of native tools | Use native edit/write |
+| Opening a file without the **Window Focus Step** | Always run it first — the file opens in the AI terminal otherwise |
 | Not opening file after editing | `neovim_vim_file_open` so user sees result |
 | Using MCP for code navigation | Use native read/grep |

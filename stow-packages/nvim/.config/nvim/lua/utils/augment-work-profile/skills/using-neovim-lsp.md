@@ -6,6 +6,15 @@ LSP through Neovim MCP is for **reading context** (hover info, diagnostics, chec
 
 **Requires:** Neovim MCP active. See `using-neovim` skill.
 
+## Window Focus Step
+
+LSP operations require being in a normal file window. **Always run this before any LSP
+command** to ensure focus is on a file buffer, not the AI terminal panel:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+```
+
 ## Check LSP Status
 
 `neovim_vim_status()` — returns "lspInfo" field.
@@ -13,6 +22,8 @@ LSP through Neovim MCP is for **reading context** (hover info, diagnostics, chec
 If `lspInfo` is "LSP information unavailable", no LSP client is attached.
 
 ## Quick Reference (Read-Only Operations)
+
+**Always run the Window Focus Step before these.**
 
 | Operation | Command |
 |-----------|---------|

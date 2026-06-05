@@ -13,6 +13,17 @@ Neovim MCP exists for **visualization and context sharing**, not for executing f
 - **MCP tools** are used ONLY to show results in Neovim and read user context.
 - Do NOT use MCP to edit, search, or navigate files — native tools are faster and more reliable.
 
+## Window Focus Step
+
+**Always run this BEFORE any operation that opens a file, runs an LSP command, or switches buffers.**
+It ensures the action happens in a normal file window, not the AI terminal panel:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+```
+
+This finds the first window containing a normal file buffer and makes it active. Safe to call even if focus is already correct.
+
 ## Tools Reference
 
 | Tool | MCP Name | Purpose |
@@ -41,7 +52,8 @@ Do NOT use these MCP tools — native alternatives are superior:
 
 1. Use native `edit`/`write` to modify the file on disk.
 2. Run the formatter (if configured).
-3. Open in Neovim so the user sees the result:
+3. **Window Focus Step** (see above).
+4. Open in Neovim so the user sees the result:
    - `neovim_vim_file_open(<path>)` or
    - `neovim_vim_command(":e <path>")`
 
@@ -49,9 +61,10 @@ Do NOT use these MCP tools — native alternatives are superior:
 
 When the user says "this line", "this file", or "here" without specifying a path:
 
-1. `neovim_vim_status` → returns active buffer filename, cursor position, LSP clients.
-2. `neovim_vim_buffer(<filename>)` → read the buffer content if you need more context.
-3. Respond. No window focus switching needed.
+1. **Window Focus Step** (see above).
+2. `neovim_vim_status` → returns active buffer filename, cursor position, LSP clients.
+3. `neovim_vim_buffer(<filename>)` → read the buffer content if you need more context.
+4. Respond.
 
 ### Project-wide search (show results in quickfix)
 
@@ -68,12 +81,15 @@ When the user says "this line", "this file", or "here" without specifying a path
 
 ### Open related files side by side
 
-1. `neovim_vim_file_open(<path>)` for each file.
-2. `neovim_vim_window("split")` or `neovim_vim_window("vsplit")` to arrange.
+1. **Window Focus Step** (see above).
+2. `neovim_vim_file_open(<path>)` for each file.
+3. `neovim_vim_window("split")` or `neovim_vim_window("vsplit")` to arrange.
 
 ## LSP Integration
 
-`neovim_vim_status` returns attached LSP clients via the `lspInfo` field. Use this to check which language server is active. For detailed LSP operations, see the `using-neovim-lsp` skill.
+`neovim_vim_status` returns attached LSP clients via the `lspInfo` field. LSP commands
+require being in a file window — always run the **Window Focus Step** before them.
+See the `using-neovim-lsp` skill for details.
 
 ## Quickfix List
 
@@ -84,7 +100,8 @@ neovim_vim_grep(<pattern>)
 neovim_vim_command(":copen")
 ```
 
-See the `using-quickfix` skill for details.
+Quickfix navigation commands (`:cn`, `:cp`, `:cfirst`) follow the focused window —
+**Window Focus Step** before navigating. See the `using-quickfix` skill for details.
 
 ## Common Mistakes
 
@@ -93,6 +110,6 @@ See the `using-quickfix` skill for details.
 | Using `neovim_vim_edit` instead of native tools | Use native `edit`/`write` |
 | Using `neovim_vim_search` for buffer search | Use native `grep`/`read` |
 | Using `neovim_vim_search_replace` | Use native `edit` |
+| Opening a file without the **Window Focus Step** | Always run it first — the file opens in the AI terminal otherwise |
 | Not opening the file after editing | Call `neovim_vim_file_open` so the user sees the result |
 | Using MCP for code navigation | Use native `read`/`grep`/`glob` |
-| Switching window focus before MCP calls | No need — MCP is for showing results, not doing work |

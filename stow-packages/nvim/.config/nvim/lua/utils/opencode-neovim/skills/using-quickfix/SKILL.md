@@ -11,6 +11,16 @@ The quickfix list lets the user navigate multi-file results with `:cn` / `:cp` /
 
 **Requires:** Neovim MCP active (`neovim_vim_*` tools available). See `using-neovim` skill.
 
+## Window Focus Step
+
+Quickfix navigation commands (`:cn`, `:cp`, `:cfirst`) open files in the focused window.
+**Always run this before navigating** to ensure files open in the main window, not the
+AI terminal:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+```
+
 ## When to Use
 
 - After a project-wide search via native `grep` — show results so user can browse
