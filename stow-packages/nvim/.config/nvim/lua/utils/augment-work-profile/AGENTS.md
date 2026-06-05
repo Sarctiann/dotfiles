@@ -60,8 +60,23 @@ and visible to the team working on HST projects.
 
 ## Agentic Skills
 
-**Before responding to any request, ALSO check `./skills/` for a matching skill.**
+**Before responding to any request, ALSO check `~/Documents/HST/.augment_work_profile/skills/` for a matching skill.**
 If a skill matches the request, follow it exactly — user-level skills take precedence over project-level skills.
+
+---
+
+## ⚠️ CRITICAL RULE: Neovim Window Focus (Read This Before Any MCP File Open)
+
+When opening a file in Neovim via MCP, you MUST focus a normal file window first.
+**If you skip this, the file opens in the AI terminal panel (unmodifiable, no line numbers).**
+
+Use a SINGLE combined command to avoid a round-trip pause:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
+```
+
+Replace `<path>` with the absolute file path. This also works before LSP commands or quickfix navigation (using the standalone focus variant in the `using-neovim` skill).
 
 ---
 
