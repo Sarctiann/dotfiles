@@ -8,6 +8,11 @@ return {
       servers = {},
     },
     init = function()
+      -- Ensure .mojo files are detected as filetype "mojo". Without this,
+      -- Neovim has no built-in rule and FileType never fires, which means
+      -- treesitter highlighting and LSP auto-start never activate for mojo.
+      vim.filetype.add({ extension = { mojo = "mojo" } })
+
       -- NOTE: vim.schedule defers this until after all plugins are loaded.
       -- Avoids a "Snacks global not found" error that occurs when
       -- require("lspconfig") runs during lazy.nvim's spec processing.
@@ -168,22 +173,36 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     opts = function(_, opts)
-      -- Register custom Mojo parser (not in nvim-treesitter's official registry).
-      -- NOTE: nvim-treesitter was rewritten in Apr 2026 (Neovim 0.12+). The old
-      -- get_parser_configs() API no longer exists. Instead we mutate the parsers
-      -- table directly (which is cached by require).
-      local parsers = require("nvim-treesitter.parsers")
-      parsers.mojo = {
-        install_info = {
-          url = "https://github.com/oaustegard/tree-sitter-mojo",
-          files = { "src/parser.c", "src/scanner.c" },
-        },
-        filetype = "mojo",
-      }
+      local function register_mojo_parser()
+        local parsers = require("nvim-treesitter.parsers")
+        if not parsers.mojo then
+          parsers.mojo = {
+            install_info = {
+              url = "https://github.com/oaustegard/tree-sitter-mojo",
+              revision = "v1.0",
+              queries = "queries",
+            },
+            filetype = "mojo",
+          }
+        end
+      end
+
+      register_mojo_parser()
+
+      -- NOTE: TS.install() calls reload_parsers() which clears the cached
+      -- parsers table and re-requires it from disk. Our in-memory mojo entry
+      -- would be lost before norm_languages() filters the install list.
+      -- The TSUpdate autocmd fires inside reload_parsers() right after the
+      -- re-require, letting us re-register mojo before norm_languages() runs.
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "TSUpdate",
+        callback = register_mojo_parser,
+      })
 
       if type(opts.ensure_installed) == "table" then
         vim.list_extend(opts.ensure_installed, { "mojo" })
       end
+      return opts
     end,
   },
 }
