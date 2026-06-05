@@ -44,14 +44,41 @@ return {
       -- does when it auto-activates the Python env in the integrated
       -- terminal. This makes `mojo`, `mojo-lsp-server`, etc. available
       -- without the user needing to run `pixi shell` manually.
+      --
+      -- Restricted to regular shell terminals only (not filepicker popups,
+      -- AI integration panels, or other non-shell terminal buffers).
       vim.api.nvim_create_autocmd("TermOpen", {
         callback = function()
           local buf = vim.api.nvim_get_current_buf()
+
           vim.schedule(function()
+            local win = vim.api.nvim_get_current_win()
+
+            -- Skip floating windows (filepickers, popup terminals) and narrow
+            -- side panels (< 40% of editor width) which are typically AI
+            -- integration panels rather than user-invoked terminals.
+            local win_config = vim.api.nvim_win_get_config(win)
+            if win_config.relative ~= ''
+              or vim.api.nvim_win_get_width(win) < vim.o.columns * 0.4
+            then
+              return
+            end
             local channel = vim.bo[buf].channel
             if not channel or channel <= 0 then
               return
             end
+
+            -- Only activate in regular shell terminals (not AI integration
+            -- panels running opencode / gemini / auggie, etc.)
+            local ok, info = pcall(vim.fn.job_info, channel)
+            if ok and info and info.cmd and #info.cmd > 0 then
+              local shell = vim.fn.fnamemodify(vim.o.shell, ":t")
+              local cmd = vim.fn.fnamemodify(info.cmd[1], ":t")
+              if cmd ~= shell then
+                return
+              end
+            end
+
             -- NOTE: vim.fn.getcwd() respects :lcd window-local dirs,
             -- so the terminal opens in the same directory the user sees.
             local env = require("utils.mojo-env").activate_in_terminal(
@@ -130,6 +157,27 @@ return {
         end
       end
       return opts
+    end,
+  },
+  {
+    "nvim-treesitter/nvim-treesitter",
+    opts = function(_, opts)
+      -- Register custom Mojo parser (not in nvim-treesitter's official registry).
+      -- NOTE: nvim-treesitter was rewritten in Apr 2026 (Neovim 0.12+). The old
+      -- get_parser_configs() API no longer exists. Instead we mutate the parsers
+      -- table directly (which is cached by require).
+      local parsers = require("nvim-treesitter.parsers")
+      parsers.mojo = {
+        install_info = {
+          url = "https://github.com/oaustegard/tree-sitter-mojo",
+          files = { "src/parser.c", "src/scanner.c" },
+        },
+        filetype = "mojo",
+      }
+
+      if type(opts.ensure_installed) == "table" then
+        vim.list_extend(opts.ensure_installed, { "mojo" })
+      end
     end,
   },
 }
