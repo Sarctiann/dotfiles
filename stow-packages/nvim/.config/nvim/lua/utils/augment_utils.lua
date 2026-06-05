@@ -2,15 +2,6 @@ local M = {}
 
 local WORK_PROFILE_SOURCE = vim.fn.expand("~/.config/nvim/lua/utils/augment-work-profile")
 
-local function _symlink_if_not_exists(source, target)
-  if vim.fn.filereadable(target) == 0 then
-    vim.fn.system({ "ln", "-sf", source, target })
-    if vim.v.shell_error ~= 0 then
-      vim.notify("augment-work-profile: failed to symlink " .. target, vim.log.levels.WARN)
-    end
-  end
-end
-
 -- WARN:
 -- configure your nvim-mcp-server to work with auggie by going to the directory
 -- where you have your augment cache dir and running this command in your terminal (only needs to be done once):
@@ -178,29 +169,27 @@ function M.manage_augment_sessions(show_all, cache_dir)
 end
 
 -- NOTE: Deploy tracked config files (AGENTS.md, skills) into the work profile
--- Uses symlinks so changes made by the agent are reflected in the tracked source
--- Skips files that already exist as regular files (manual customizations take precedence)
+-- Copies from stow-managed source so the work-profile gets the latest tracked
+-- version without exposing the source path (which may contain sensitive names).
+-- Runs on every auggie open — the stow source is the single source of truth.
 -- @param cache_dir string Path to the augment cache directory
 function M.deploy_work_profile_config(cache_dir)
   if vim.fn.isdirectory(WORK_PROFILE_SOURCE) == 0 then
     return
   end
 
-  local source_agents = WORK_PROFILE_SOURCE .. "/AGENTS.md"
-  local target_agents = cache_dir .. "/AGENTS.md"
-  if vim.fn.filereadable(source_agents) == 1 then
-    _symlink_if_not_exists(source_agents, target_agents)
+  vim.fn.mkdir(cache_dir, "p")
+  vim.fn.mkdir(cache_dir .. "/skills", "p")
+
+  local function cp(source, target)
+    if vim.fn.filereadable(source) == 1 then
+      vim.fn.system({ "cp", source, target })
+    end
   end
 
-  local source_skills = WORK_PROFILE_SOURCE .. "/skills"
-  local target_skills = cache_dir .. "/skills"
-  if vim.fn.isdirectory(source_skills) == 1 then
-    if vim.fn.isdirectory(target_skills) == 0 then
-      vim.fn.mkdir(target_skills, "p")
-    end
-    for _, file in ipairs(vim.fn.glob(source_skills .. "/*.md", false, true)) do
-      _symlink_if_not_exists(file, target_skills .. "/" .. vim.fn.fnamemodify(file, ":t"))
-    end
+  cp(WORK_PROFILE_SOURCE .. "/AGENTS.md", cache_dir .. "/AGENTS.md")
+  for _, file in ipairs(vim.fn.glob(WORK_PROFILE_SOURCE .. "/skills/*.md", false, true)) do
+    cp(file, cache_dir .. "/skills/" .. vim.fn.fnamemodify(file, ":t"))
   end
 end
 
