@@ -15,14 +15,21 @@ Neovim MCP exists for **visualization and context sharing**, not for executing f
 
 ## Window Focus Step
 
-**Always run this BEFORE any operation that opens a file, runs an LSP command, or switches buffers.**
-It ensures the action happens in a normal file window, not the AI terminal panel:
+**Always focus a normal file window before any operation that opens a file, runs an LSP command, or switches buffers.**
+
+### Standalone (focus only)
+Use before LSP commands, quickfix navigation, or buffer switches:
 
 ```
 neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
 ```
 
-This finds the first window containing a normal file buffer and makes it active. Safe to call even if focus is already correct.
+### Combined Focus + Open (preferred for file opening)
+**No round-trip pause.** Focuses a normal window and opens the file in a single MCP call:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
+```
 
 ## Tools Reference
 
@@ -52,10 +59,7 @@ Do NOT use these MCP tools — native alternatives are superior:
 
 1. Use native `edit`/`write` to modify the file on disk.
 2. Run the formatter (if configured).
-3. **Window Focus Step** (see above).
-4. Open in Neovim so the user sees the result:
-   - `neovim_vim_file_open(<path>)` or
-   - `neovim_vim_command(":e <path>")`
+3. Open in Neovim with **Combined Focus + Open** (see above).
 
 ### "What is the user looking at?"
 
@@ -81,9 +85,8 @@ When the user says "this line", "this file", or "here" without specifying a path
 
 ### Open related files side by side
 
-1. **Window Focus Step** (see above).
-2. `neovim_vim_file_open(<path>)` for each file.
-3. `neovim_vim_window("split")` or `neovim_vim_window("vsplit")` to arrange.
+1. Open each file with **Combined Focus + Open** (see above).
+2. `neovim_vim_window("split")` or `neovim_vim_window("vsplit")` to arrange.
 
 ## LSP Integration
 

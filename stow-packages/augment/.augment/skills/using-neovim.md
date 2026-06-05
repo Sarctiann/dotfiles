@@ -14,11 +14,20 @@ Neovim MCP must be connected first. If not connected, use the `editor-neovim` sk
 
 ## Window Focus Step
 
-**Always run this BEFORE any operation that opens a file, runs an LSP command, or switches buffers.**
-It ensures the action happens in a normal file window, not the AI terminal panel:
+**Always focus a normal file window before any operation that opens a file, runs an LSP command, or switches buffers.**
+
+### Standalone (focus only)
+Use before LSP commands, quickfix navigation, or buffer switches:
 
 ```
 neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+```
+
+### Combined Focus + Open (preferred for file opening)
+**No round-trip pause.** Focuses a normal window and opens the file in a single MCP call:
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
 ```
 
 ## Tools Reference
@@ -52,15 +61,15 @@ When the user says "this line", "this file", or "here" without specifying a path
 ### Apply edits and show results
 
 1. Use native tools to edit files.
-2. **Window Focus Step** (see above).
-3. Open in Neovim: `neovim_vim_file_open(<path>)`
-4. Reload changed buffers: `neovim_vim_command(":checktime")`
+2. Open in Neovim with **Combined Focus + Open** (see above).
+3. Reload changed buffers: `neovim_vim_command(":checktime")`
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
 | Using MCP to edit instead of native tools | Use native edit/write |
-| Opening a file without the **Window Focus Step** | Always run it first — the file opens in the AI terminal otherwise |
-| Not opening the file after editing | Call `neovim_vim_file_open` so the user sees the result |
+| Opening a file without the **Window Focus Step** | Always focus first — the file opens in the AI terminal otherwise |
+| Opening a file as two MCP calls (focus + open) | Use **Combined Focus + Open** — one call, no pause |
+| Not opening the file after editing | Call `neovim_vim_file_open` or **Combined Focus + Open** so the user sees the result |
 | Using MCP for code navigation | Use native read/grep |
