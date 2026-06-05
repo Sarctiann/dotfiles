@@ -37,11 +37,16 @@ vim_command_neovim(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 | File operations | Use native tools (not MCP) |
 | `vim_status_neovim` | Current buffer, cursor, LSP clients |
 | `vim_buffer_neovim` | Read buffer the user has open (for context) |
-| `vim_file_open_neovim` | Open a file in Neovim (show results) |
 | `vim_command_neovim` | Run Vim commands (`:e`, `:copen`, `:checktime`, `:lua ...`) |
 | `vim_grep_neovim` | Populate quickfix for user navigation |
 | `vim_window_neovim` | Split/vsplit management for showing files |
 | `vim_health_neovim` | Connection health check |
+
+## Deprecated Tools
+
+Do NOT use these MCP tools:
+
+- `vim_file_open_neovim` — use **Combined Focus + Open** instead (see above); standalone `vim_file_open` opens in the AI terminal panel
 
 ## Workflows
 
@@ -71,5 +76,5 @@ When the user says "this line", "this file", or "here" without specifying a path
 | Using MCP to edit instead of native tools | Use native edit/write |
 | Opening a file without the **Window Focus Step** | Always focus first — the file opens in the AI terminal otherwise |
 | Opening a file as two MCP calls (focus + open) | Use **Combined Focus + Open** — one call, no pause |
-| Not opening the file after editing | Call `vim_file_open_neovim` or **Combined Focus + Open** so the user sees the result |
+| Not opening the file after editing | Use **Combined Focus + Open** so the user sees the result |
 | Using MCP for code navigation | Use native read/grep |

@@ -38,7 +38,6 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 | File operations | — | Use native `edit`/`write`/`grep`/`read`/`glob` |
 | `vim_status` | `neovim_vim_status` | Current buffer, cursor, LSP clients |
 | `vim_buffer` | `neovim_vim_buffer` | Read buffer the user has open (for context) |
-| `vim_file_open` | `neovim_vim_file_open` | Open a file in Neovim (show results) |
 | `vim_command` | `neovim_vim_command` | Run Vim commands (`:e`, `:copen`, `:checktime`, `:lua ...`) |
 | `vim_grep` | `neovim_vim_grep` | Populate quickfix for user navigation |
 | `vim_window` | `neovim_vim_window` | Split/vsplit management for showing files |
@@ -52,6 +51,7 @@ Do NOT use these MCP tools — native alternatives are superior:
 - `neovim_vim_buffer_save` — use native `write`
 - `neovim_vim_search` / `neovim_vim_search_replace` — use native `grep`/`edit`
 - `neovim_vim_mark` / `neovim_vim_visual` — broken (MCP server bug)
+- `neovim_vim_file_open` — use **Combined Focus + Open** instead (see above); standalone `vim_file_open` opens in the AI terminal panel
 
 ## Workflows
 
@@ -114,5 +114,5 @@ Quickfix navigation commands (`:cn`, `:cp`, `:cfirst`) follow the focused window
 | Using `neovim_vim_search` for buffer search | Use native `grep`/`read` |
 | Using `neovim_vim_search_replace` | Use native `edit` |
 | Opening a file without the **Window Focus Step** | Always run it first — the file opens in the AI terminal otherwise |
-| Not opening the file after editing | Call `neovim_vim_file_open` so the user sees the result |
+| Not opening the file after editing | Use **Combined Focus + Open** so the user sees the result |
 | Using MCP for code navigation | Use native `read`/`grep`/`glob` |

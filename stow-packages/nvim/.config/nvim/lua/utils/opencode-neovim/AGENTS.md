@@ -7,7 +7,7 @@ This file only adds rules for OpenCode sessions launched from Neovim. Global use
 Neovim MCP exists for **visualization and context sharing**, NOT for executing file operations.
 
 ### Use MCP only for:
-- **Showing results** — after native edits, open the file so the user sees it
+- **Showing results** — after native edits, use **Combined Focus + Open** so the user sees it
 - **Reading user context** — call `neovim_vim_status` when the user says "this line" / "this file" without specifying paths
 - **Populating quickfix** — `neovim_vim_grep` + `:copen` after project-wide work so the user can navigate results
 
@@ -28,6 +28,7 @@ Invoke the `using-neovim` skill for detailed guidance on visualization patterns.
 - `neovim_vim_buffer_save` — use native `write`
 - `neovim_vim_search` / `neovim_vim_search_replace` — use native `grep`/`edit`
 - `neovim_vim_mark` / `neovim_vim_visual` — broken (MCP server bug)
+- `neovim_vim_file_open` — use **Combined Focus + Open** instead (opens in the AI terminal panel otherwise)
 
 ---
 
