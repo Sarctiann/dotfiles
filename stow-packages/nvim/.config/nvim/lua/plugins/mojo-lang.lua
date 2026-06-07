@@ -9,13 +9,6 @@ return {
     dir = plugin_dir,
     main = "mojo",
     --- @type Mojo-lang.Config
-    opts = {
-      filetype = { enabled = true },
-      treesitter = { enabled = true },
-      lsp = { enabled = true },
-      format = { enabled = true },
-      terminal = { enabled = true, auto_activate = true },
-      completion = { enabled = true },
-    },
+    opts = {},
   },
 }
