@@ -30,6 +30,11 @@ elif [[ "$OS" == "Linux" ]]; then
     command -v "$pkg" &>/dev/null || missing_pkgs+=("$pkg")
   done
 
+  # Ensure en_US.UTF-8 locale (common issue on minimal WSL installs)
+  if command -v locale-gen &>/dev/null; then
+    locale -a 2>/dev/null | grep -qi en_US.UTF-8 || sudo locale-gen en_US.UTF-8
+  fi
+
   if [ ${#missing_pkgs[@]} -gt 0 ]; then
     if command -v apt &>/dev/null; then
       sudo apt update

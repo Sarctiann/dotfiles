@@ -60,10 +60,11 @@ def install_nerd_font(font_name: str) -> bool:
 
         target.mkdir(parents=True, exist_ok=True)
         count = 0
-        for f in (tmpdir / font_name).glob("*.ttf"):
-            shutil.copy2(f, target / f.name)
-            count += 1
-        print(f"   Copied {count} .ttf files")
+        for f in (tmpdir / font_name).glob("*"):
+            if f.suffix.lower() in (".ttf", ".otf"):
+                shutil.copy2(f, target / f.name)
+                count += 1
+        print(f"   Copied {count} font files")
         print(f"✅ {font_name} Nerd Font installed")
         return True
     finally:

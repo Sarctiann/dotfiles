@@ -1,24 +1,13 @@
-export PATH=/usr/local/opt/openssl@1.1/bin:$PATH
-export PATH=/opt/homebrew/bin:$PATH
-export PATH=/usr/local/bin:$PATH
+# ~/.local/bin added for user-level tools (uv, pipx, etc.)
+export PATH="$PATH:$HOME/.local/bin"
+
+# rbenv (only if installed)
+if command -v rbenv &>/dev/null; then
+  eval "$(rbenv init - --no-rehash zsh)"
+fi
 
 autoload -Uz compinit
 compinit
-
-# ~/.local/bin added for user-level tools (uv, pipx, etc.)
-export PATH="$PATH:/Users/sebastianrodriguezcapurro/.local/bin"
-
-# Added by `rbenv init` on Mon Dec  1 18:42:01 -03 2025
-eval "$(rbenv init - --no-rehash zsh)"
-
-##
-# Your previous /Users/sebastianrodriguezcapurro/.zprofile file was backed up as /Users/sebastianrodriguezcapurro/.zprofile.macports-saved_2026-03-12_at_13:17:08
-##
-
-# MacPorts Installer addition on 2026-03-12_at_13:17:08: adding an appropriate PATH variable for use with MacPorts.
-export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
-# Finished adapting your PATH environment variable for use with MacPorts.
-
 
 #compdef opencode
 ###-begin-opencode-completions-###

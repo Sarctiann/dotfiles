@@ -20,7 +20,7 @@ def _asset_pattern(tool_name: str, os_name: str, arch: str) -> str | None:
         "neovim": f"^nvim-{os_name}-{arch}\\.tar\\.gz$",
         "ripgrep": {
             "macos": f"^ripgrep-.*-{rz_arch()}-apple-darwin\\.tar\\.gz$",
-            "linux": f"^ripgrep-.*-{rz_arch()}-unknown-linux-gnu\\.tar\\.gz$",
+            "linux": f"^ripgrep-.*-{rz_arch()}-unknown-linux-(gnu|musl)\\.tar\\.gz$",
         },
         "fd": {
             "macos": f"^fd-.*-{rz_arch()}-apple-darwin\\.tar\\.gz$",
@@ -107,10 +107,24 @@ def _find_binary(dir_path: Path, binary_name: str) -> Path | None:
     return None
 
 
+def _find_runtime_dir(dir_path: Path) -> Path | None:
+    for path in dir_path.rglob("runtime"):
+        if path.is_dir() and (path / "lua" / "vim" / "uri.lua").is_file():
+            return path
+    return None
+
+
+def _neovim_runtime_missing() -> bool:
+    runtime_dir = BIN_DIR.parent / "share" / "nvim" / "runtime"
+    return not (runtime_dir / "lua" / "vim" / "uri.lua").is_file()
+
+
 def install_release_binary(repo: str, binary: str, pattern: str) -> bool:
     if which(binary):
-        print(f"✅ {binary} already installed")
-        return True
+        if binary != "nvim" or not _neovim_runtime_missing():
+            print(f"✅ {binary} already installed")
+            return True
+        print(f"   nvim found but runtime missing — reinstalling")
 
     print(f"📥 Installing {binary} from {repo}")
 
@@ -145,6 +159,18 @@ def install_release_binary(repo: str, binary: str, pattern: str) -> bool:
         shutil.copy2(found, BIN_DIR / binary)
         (BIN_DIR / binary).chmod(0o755)
         print(f"   → {BIN_DIR / binary}")
+
+        # Neovim: also install runtime files (vim.uri, syntax, etc.)
+        if binary == "nvim":
+            runtime_src = _find_runtime_dir(tmpdir)
+            if runtime_src:
+                runtime_dst = BIN_DIR.parent / "share" / "nvim" / "runtime"
+                runtime_dst.parent.mkdir(parents=True, exist_ok=True)
+                if runtime_dst.exists():
+                    shutil.rmtree(runtime_dst)
+                shutil.copytree(runtime_src, runtime_dst)
+                print(f"   → {runtime_dst}")
+
         return True
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

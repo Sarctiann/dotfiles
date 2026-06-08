@@ -5,8 +5,8 @@ return {
   --- @module "mojo"
   {
     "Sarctiann/mojo.nvim",
-    dev = true,
-    dir = plugin_dir,
+ --   dev = true,
+ --   dir = plugin_dir,
     main = "mojo",
     --- @type Mojo-lang.Config
     opts = {},

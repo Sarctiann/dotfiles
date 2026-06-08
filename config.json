@@ -37,7 +37,7 @@
     "yazi": { "repo": "sxyazi/yazi", "binary": "yazi", "asset_pattern": null },
     "zig": { "repo": "ziglang/zig", "binary": "zig", "asset_pattern": null }
   },
-  "fonts": ["CodeNewRoman", "NerdFontsSymbolsOnly"],
+  "fonts": ["JetBrainsMono", "NerdFontsSymbolsOnly"],
   "runtimes": {
     "nvm": true,
     "bun": true,

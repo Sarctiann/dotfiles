@@ -123,8 +123,11 @@ def _install_windows_nerd_font(font_name: str) -> None:
         users_dir = Path("/mnt/c/Users")
         if not users_dir.is_dir():
             return
+        skip_users = {"Default", "Public", "All Users", "Default User"}
         win_user = None
         for u in users_dir.iterdir():
+            if u.name in skip_users:
+                continue
             if u.is_dir() and (u / "AppData").is_dir():
                 win_user = u.name
                 break
@@ -135,25 +138,46 @@ def _install_windows_nerd_font(font_name: str) -> None:
         font_dir.mkdir(parents=True, exist_ok=True)
 
         copied = 0
-        for f in (tmpdir / font_name).glob("*.ttf"):
-            shutil.copy2(f, font_dir / f.name)
-            copied += 1
+        for f in (tmpdir / font_name).glob("*"):
+            if f.suffix.lower() in (".ttf", ".otf"):
+                target = font_dir / f.name
+                if target.exists():
+                    print(f"   (skipped {f.name} — already exists)")
+                    copied += 1
+                    continue
+                try:
+                    shutil.copy2(f, target)
+                    copied += 1
+                except PermissionError:
+                    print(f"   ⚠  Permission denied: {target}")
+                    continue
 
         if copied:
-            print(f"   Copied {copied} .ttf to Windows Fonts folder for '{font_name}'")
+            print(f"   Copied {copied} font files to Windows Fonts folder for '{font_name}'")
             # Register fonts with Windows so they're recognized immediately
             run_optional([
                 "powershell.exe", "-NoProfile", "-Command",
                 f'''
                 $fontsDir = "$env:LOCALAPPDATA\\Microsoft\\Windows\\Fonts"
-                $regPath = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Fonts"
-                Get-ChildItem $fontsDir -Filter "*.ttf" | Where-Object {{ $_.Name -like "*{font_name.replace(' ', '')}*" }} | ForEach-Object {{
+                $regPath = "HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"
+                if (-not (Test-Path $regPath)) {{
+                    New-Item -Path $regPath -Force | Out-Null
+                }}
+                Get-ChildItem "$fontsDir\\*" -Include "*.ttf","*.otf" | Where-Object {{ $_.Name -like "*{font_name.replace(' ', '')}*" }} | ForEach-Object {{
                     $fontName = $_.BaseName
                     $regName = "$fontName (TrueType)"
-                    if (-not (Get-ItemProperty -Path $regPath -Name $regName -ErrorAction SilentlyContinue)) {{
-                        New-ItemProperty -Path $regPath -Name $regName -Value $_.Name -PropertyType String | Out-Null
-                    }}
+                    Set-ItemProperty -Path $regPath -Name $regName -Value $_.FullName -Type String
                 }}
+                # Broadcast WM_FONTCHANGE so Windows apps pick it up immediately
+                Add-Type -TypeDefinition @"
+                using System;
+                using System.Runtime.InteropServices;
+                public class FontUti {{
+                    [DllImport("user32.dll")]
+                    public static extern IntPtr SendMessageTimeout(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
+                }}
+"@
+                [void][FontUti]::SendMessageTimeout(-1, 0x001D, [IntPtr]::Zero, [IntPtr]::Zero, 2, 3000, [ref]0)
                 '''
             ])
             print(f"✅ {font_name} Nerd Font installed on Windows")

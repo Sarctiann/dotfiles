@@ -340,7 +340,7 @@ return {
         },
       }, keys_op)
     ),
-    dev = true,
-    dir = plugin_dir,
+    -- dev = true,
+    -- dir = plugin_dir,
   },
 }
