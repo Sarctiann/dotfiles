@@ -35,6 +35,17 @@ elif [[ "$OS" == "Linux" ]]; then
     locale -a 2>/dev/null | grep -qi en_US.UTF-8 || sudo locale-gen en_US.UTF-8
   fi
 
+  # Ensure pip3 is available (needed by tools like Ruff via Mason)
+  if ! command -v pip3 &>/dev/null; then
+    if command -v apt &>/dev/null; then
+      sudo apt install -y python3-pip
+    elif command -v pacman &>/dev/null; then
+      sudo pacman -Syu --noconfirm python-pip
+    elif command -v dnf &>/dev/null; then
+      sudo dnf install -y python3-pip
+    fi
+  fi
+
   if [ ${#missing_pkgs[@]} -gt 0 ]; then
     if command -v apt &>/dev/null; then
       sudo apt update

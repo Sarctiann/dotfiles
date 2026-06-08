@@ -50,6 +50,10 @@ def _asset_pattern(tool_name: str, os_name: str, arch: str) -> str | None:
             "macos": f"^fzf-.*-darwin_{gh_arch()}\\.tar\\.gz$",
             "linux": f"^fzf-.*-linux_{gh_arch()}\\.tar\\.gz$",
         },
+        "ruff": {
+            "macos": f"^ruff-{rz_arch()}-apple-darwin\\.tar\\.gz$",
+            "linux": f"^ruff-{rz_arch()}-unknown-linux-(gnu|musl)\\.tar\\.gz$",
+        },
         "yazi": {
             "macos": f"^yazi-{rz_arch()}-apple-darwin\\.zip$",
             "linux": f"^yazi-{rz_arch()}-unknown-linux-(gnu|musl)\\.zip$",

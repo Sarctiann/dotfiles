@@ -35,7 +35,8 @@
     "gh": { "repo": "cli/cli", "binary": "gh", "asset_pattern": null },
     "fzf": { "repo": "junegunn/fzf", "binary": "fzf", "asset_pattern": null },
     "yazi": { "repo": "sxyazi/yazi", "binary": "yazi", "asset_pattern": null },
-    "zig": { "repo": "ziglang/zig", "binary": "zig", "asset_pattern": null }
+    "zig": { "repo": "ziglang/zig", "binary": "zig", "asset_pattern": null },
+    "ruff": { "repo": "astral-sh/ruff", "binary": "ruff", "asset_pattern": null }
   },
   "fonts": ["JetBrainsMono", "NerdFontsSymbolsOnly"],
   "runtimes": {
