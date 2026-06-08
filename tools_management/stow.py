@@ -309,19 +309,28 @@ def stow_windows_terminal() -> None:
     if not pkg_dir.is_dir():
         return
 
-    wt_glob = list(
-        Path("/mnt/c/Users").glob(
-            "*/AppData/Local/Packages/Microsoft.WindowsTerminal_*"
-        )
-    )
-    if not wt_glob:
-        print("⚠️  Windows Terminal folder not found. Copy manually:")
-        print(
-            f"   cp '{pkg_dir / 'settings.json'}' '%LOCALAPPDATA%\\Packages\\Microsoft.WindowsTerminal_*\\LocalState\\settings.json'"
-        )
+    packages_dir = Path("/mnt/c/Users")
+    if not packages_dir.is_dir():
+        print("⚠️  /mnt/c/Users not found — is /mnt/c mounted?")
+        print(f"   Copy manually: cp '{pkg_dir / 'settings.json'}' to Windows Terminal LocalState")
         return
 
-    target = wt_glob[0] / "LocalState" / "settings.json"
+    # Search for any Windows Terminal package folder
+    wt_glob = list(packages_dir.glob("*/AppData/Local/Packages/*WindowsTerminal*"))
+    if not wt_glob:
+        print(f"   Searched: {packages_dir}/<user>/AppData/Local/Packages/*WindowsTerminal*")
+        print("⚠️  Windows Terminal package folder not found.")
+        print("   Open Windows Terminal once (it creates the folder), then re-run install.")
+        print(f"   Or copy manually: cp '{pkg_dir / 'settings.json'}' to the LocalState folder inside the Windows Terminal package.")
+        return
+
+    wt_pkg = wt_glob[0]
+    local_state = wt_pkg / "LocalState"
+    local_state.mkdir(parents=True, exist_ok=True)
+    target = local_state / "settings.json"
+
+    print(f"   Found package: {wt_pkg.name}")
+    print(f"   Settings path: {target}")
 
     # Remove broken symlink if one exists from a previous install
     if target.is_symlink():
@@ -329,13 +338,19 @@ def stow_windows_terminal() -> None:
         print("   (removed stale symlink)")
 
     # Back up existing file before copying
+    backup_restored = False
     if target.is_file():
         bak = target.with_suffix(".json.bak")
-        target.rename(bak)
-        print(f"   (backed up existing settings.json → {bak.name})")
+        # Don't overwrite an existing backup — it's the user's original
+        if not bak.exists():
+            target.rename(bak)
+            print(f"   (backed up existing settings.json → {bak.name})")
+            backup_restored = True
+        else:
+            print(f"   (backup already exists at {bak.name})")
 
     try:
         shutil.copy2(pkg_dir / "settings.json", target)
-        print(f"   → windows-terminal: copied to {target}")
+        print(f"   ✓ Copied settings.json to {target}")
     except (OSError, PermissionError) as e:
         print(f"   ⚠  Could not copy Windows Terminal settings: {e}")

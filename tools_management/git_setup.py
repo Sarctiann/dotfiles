@@ -113,7 +113,7 @@ def git_setup(config: dict, mode: str = "install") -> None:
 
     if mode == "install":
         print("🔧 Git setup...")
-        interactive = core.INTERACTIVE or os.environ.get("GIT_SETUP_INTERACTIVE") == "1"
+        interactive = core.INTERACTIVE or os.environ.get("GIT_SETUP_INTERACTIVE") == "1" or sys.stdin.isatty()
 
         # Try loading from credentials first
         _source_credentials()
