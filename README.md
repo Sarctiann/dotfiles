@@ -53,11 +53,11 @@ Examples:
 ./uninstall.sh [options]
 ```
 
-| Argument              | Description                      |
-| --------------------- | -------------------------------- |
-| `-f`, `--force`       | Skip confirmation prompt         |
-| `-i`, `--interactive` | Confirm each step before running |
-| `--just PKG [PKG ...]`| Only unstow specified packages + restore their backups |
+| Argument               | Description                                            |
+| ---------------------- | ------------------------------------------------------ |
+| `-f`, `--force`        | Skip confirmation prompt                               |
+| `-i`, `--interactive`  | Confirm each step before running                       |
+| `--just PKG [PKG ...]` | Only unstow specified packages + restore their backups |
 
 Example:
 
@@ -67,14 +67,127 @@ Example:
 
 ## Prerequisites
 
-**macOS**: Xcode Command Line Tools (installed automatically if missing).
+<details>
+<summary><b>macOS</b></summary>
 
-**Linux**: `git` (to clone) + either `curl` or `wget`. Everything else is bootstrapped.
+| Component                   | Notes                                              |
+| --------------------------- | -------------------------------------------------- |
+| macOS 14+ (Sonoma)          | Recommended, but 13+ should work                   |
+| Xcode Command Line Tools    | Installed automatically if missing by `install.sh` |
+| [Homebrew](https://brew.sh) | Installed automatically if missing by `install.sh` |
 
-**WSL2**:
+The script (`1_setup.sh`) handles everything: Xcode CLT → Homebrew → `python@3 curl unzip stow`.
 
-1. Install WSL2 + Ubuntu 24.04 from Microsoft Store
-2. Open Ubuntu terminal — `git` is all you need prepackaged
+No manual steps needed — just clone and run.
+
+</details>
+
+<details>
+<summary><b>Linux (apt / pacman / dnf)</b></summary>
+
+| Component        | Notes                                              |
+| ---------------- | -------------------------------------------------- |
+| `git`            | To clone the repo (usually pre-installed)          |
+| `curl` or `wget` | For downloading release assets                     |
+| `sudo`           | Required for `apt`/`pacman`/`dnf` during bootstrap |
+
+Everything else (`python3 curl unzip stow`) is installed automatically by `install.sh` via your distro's package manager.
+
+> Distros tested: Ubuntu 24.04 (apt), Arch (pacman), Fedora (dnf). Others may work but are untested.
+
+</details>
+
+<details>
+<summary><b>Windows (WSL2)</b></summary>
+
+Since `install.sh` is a bash script, it needs a Linux environment. The supported path is **WSL2 + Ubuntu 24.04 + Windows Terminal**.
+
+### Automated setup
+
+Copy-paste the entire block below into **PowerShell as Administrator**. It handles all Windows prerequisites and prints the final commands to clone and install inside WSL.
+
+```powershell
+#Requires -RunAsAdministrator
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "=== Setting up WSL2 + Windows Terminal for dotfiles ===" -ForegroundColor Cyan
+
+# --- 1. Enable WSL + VM features ---
+Write-Host "[1/4] Enabling Windows Subsystem for Linux..." -ForegroundColor Yellow
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+
+# --- 2. Check if restart is needed (dism returns 3010) ---
+Write-Host "[2/4] Checking if restart is required..." -ForegroundColor Yellow
+if ($LASTEXITCODE -eq 3010 -or (Test-Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations")) {
+    Write-Host "  -> Restart required. Reboot now, then re-run this script." -ForegroundColor Red
+    Write-Host "     After restart, the script will pick up from step 3." -ForegroundColor Yellow
+    pause
+    exit
+}
+
+# --- 3. Install Ubuntu 24.04 + Windows Terminal ---
+Write-Host "[3/4] Installing Ubuntu 24.04..." -ForegroundColor Yellow
+wsl --set-default-version 2
+wsl --install -d Ubuntu-24.04
+
+Write-Host ""
+Write-Host "=== Ubuntu was installed. It will launch automatically to finish setup. ===" -ForegroundColor Cyan
+Write-Host "Create your Linux user/password when prompted, then close the Ubuntu window." -ForegroundColor Yellow
+pause
+
+Write-Host "[4/4] Installing Windows Terminal..." -ForegroundColor Yellow
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    winget install --id Microsoft.WindowsTerminal --accept-source-agreements
+} else {
+    Write-Host "  -> winget not found. Install from: https://apps.microsoft.com/detail/9n0dx20hk701" -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "=== All done! ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "Now open Windows Terminal, select 'Ubuntu-24.04' from the tab dropdown, and run:" -ForegroundColor Cyan
+Write-Host ""
+Write-Host '  git clone <url-del-repo> ~/dotfiles' -ForegroundColor White
+Write-Host '  cd ~/dotfiles' -ForegroundColor White
+Write-Host '  ./install.sh' -ForegroundColor White
+Write-Host ""
+```
+
+> If you prefer to do it manually instead, each step is detailed below.
+
+### Manual steps
+
+#### 1. Enable WSL2
+
+```powershell
+# Enable WSL feature (if `wsl` command is not found)
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+# Restart, then:
+wsl --set-default-version 2
+wsl --install -d Ubuntu-24.04
+```
+
+#### 2. Install Windows Terminal
+
+```powershell
+winget install --id Microsoft.WindowsTerminal --accept-source-agreements
+```
+
+#### 3. Clone and install (inside WSL)
+
+```bash
+wsl -d Ubuntu-24.04
+git clone <repo-url> ~/dotfiles
+cd ~/dotfiles
+./install.sh
+```
+
+The installer detects WSL, uses `apt` for bootstrap packages, and sets up Windows Terminal config via `post_install.py`.
+
+</details>
 
 > **GitHub API rate limit**: The installer hits the GitHub API ~15 times for release assets.
 > Set `GITHUB_PERSONAL_ACCESS_TOKEN` in your environment to raise the limit from 60/h to 5000/h:
@@ -115,12 +228,12 @@ Example:
 
 ## Terminal strategy
 
-| OS          | Terminal             | Stow package                                                 |
-| ----------- | -------------------- | ------------------------------------------------------------ |
-| macOS       | Ghostty              | `ghostty/`                                                   |
-| Linux       | Ghostty              | `ghostty/`                                                   |
-| macOS/Linux | Alacritty or Wezterm | configure via `config.json` `stow.terminal` |
-| WSL         | Windows Terminal     | `windows-terminal/` (symlinked via post_install)             |
+| OS          | Terminal             | Stow package                                     |
+| ----------- | -------------------- | ------------------------------------------------ |
+| macOS       | Ghostty              | `ghostty/`                                       |
+| Linux       | Ghostty              | `ghostty/`                                       |
+| macOS/Linux | Alacritty or Wezterm | configure via `config.json` `stow.terminal`      |
+| WSL         | Windows Terminal     | `windows-terminal/` (symlinked via post_install) |
 
 Shell (zsh), editor (nvim), multiplexer (tmux), fonts (CodeNewRoman + NerdFontsSymbolsOnly), and Git are shared across all three.
 
@@ -178,8 +291,7 @@ The install runs in two stages:
 1. **macOS**: Xcode Command Line Tools → Homebrew → `brew install python@3 curl unzip stow`
 2. **Linux/WSL**: ensures `python3 curl unzip stow` via apt/pacman/dnf
 
-Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and `unzip` are installed here and not duplicated in Stage 2.
-3. Hands off to Stage 2
+Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and `unzip` are installed here and not duplicated in Stage 2. 3. Hands off to Stage 2
 
 **Stage 2** (`tools_management/2_management.py`) — Python orchestrator:
 
@@ -342,13 +454,13 @@ which is called automatically during `install.sh` (the "Git config" step).
 
 Define these in `~/.config/zsh/.credentials` (see [Credentials docs](stow-packages/zsh/.config/zsh/README.md)):
 
-| Variable | Purpose |
-|----------|---------|
-| `GIT_NAME` | Personal `[user] name` |
-| `GIT_EMAIL` | Personal `[user] email` |
-| `COMPANY_GIT_NAME` | Work identity (for `includeIf`) |
-| `COMPANY_GIT_EMAIL` | Work email (for `includeIf`) |
-| `COMPANY_DIR` | Path under which work identity applies |
+| Variable            | Purpose                                |
+| ------------------- | -------------------------------------- |
+| `GIT_NAME`          | Personal `[user] name`                 |
+| `GIT_EMAIL`         | Personal `[user] email`                |
+| `COMPANY_GIT_NAME`  | Work identity (for `includeIf`)        |
+| `COMPANY_GIT_EMAIL` | Work email (for `includeIf`)           |
+| `COMPANY_DIR`       | Path under which work identity applies |
 
 To regenerate manually:
 
@@ -406,12 +518,12 @@ sync_git_config.py
 The three Neovim MCP skills (`using-neovim`, `using-neovim-lsp`, `using-quickfix`) in
 `nvim/lua/utils/opencode-neovim/skills/` are **shared across all AI clients**:
 
-| Client | Location | Method |
-|--------|----------|--------|
-| OpenCode | `.../opencode-neovim/skills/<name>/SKILL.md` | Native (source of truth) |
-| Augment (user) | `~/.augment/skills/<name>.md` | Stow symlink |
-| Augment (work) | `<work-profile>/skills/<name>.md` | Neovim-deployed symlink |
-| Gemini | `~/.gemini/custom-skills/<name>/SKILL.md` | Stow symlink (+ `gemini skills link`) |
+| Client         | Location                                     | Method                                |
+| -------------- | -------------------------------------------- | ------------------------------------- |
+| OpenCode       | `.../opencode-neovim/skills/<name>/SKILL.md` | Native (source of truth)              |
+| Augment (user) | `~/.augment/skills/<name>.md`                | Stow symlink                          |
+| Augment (work) | `<work-profile>/skills/<name>.md`            | Neovim-deployed symlink               |
+| Gemini         | `~/.gemini/custom-skills/<name>/SKILL.md`    | Stow symlink (+ `gemini skills link`) |
 
 **Changes to any skill MUST be replicated to all four destinations** (opencode source,
 augment user-level, augment work-profile, gemini). The content is identical except for
