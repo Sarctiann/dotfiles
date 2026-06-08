@@ -163,7 +163,7 @@ Write-Host "=== All done! ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "Now open Windows Terminal, select 'Ubuntu-24.04' from the tab dropdown, and run:" -ForegroundColor Cyan
 Write-Host ""
-Write-Host '  git clone <url-del-repo> ~/dotfiles' -ForegroundColor White
+Write-Host '  git clone https://github.com/Sarctiann/dotfiles.git ~/dotfiles' -ForegroundColor White
 Write-Host '  cd ~/dotfiles' -ForegroundColor White
 Write-Host '  ./install.sh' -ForegroundColor White
 Write-Host ""
