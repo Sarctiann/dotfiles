@@ -315,23 +315,27 @@ def stow_windows_terminal() -> None:
         )
     )
     if not wt_glob:
-        print("⚠️  Windows Terminal folder not found. Link manually:")
+        print("⚠️  Windows Terminal folder not found. Copy manually:")
         print(
-            f"   {pkg_dir / 'settings.json'} → %LOCALAPPDATA%\\Packages\\Microsoft.WindowsTerminal_*\\LocalState\\settings.json"
+            f"   cp '{pkg_dir / 'settings.json'}' '%LOCALAPPDATA%\\Packages\\Microsoft.WindowsTerminal_*\\LocalState\\settings.json'"
         )
         return
 
     target = wt_glob[0] / "LocalState" / "settings.json"
 
-    if target.is_file() and not target.is_symlink():
+    # Remove broken symlink if one exists from a previous install
+    if target.is_symlink():
+        target.unlink()
+        print("   (removed stale symlink)")
+
+    # Back up existing file before copying
+    if target.is_file():
         bak = target.with_suffix(".json.bak")
         target.rename(bak)
         print(f"   (backed up existing settings.json → {bak.name})")
 
     try:
-        target.symlink_to(pkg_dir / "settings.json")
-        print(f"   → windows-terminal: linked to {target}")
+        shutil.copy2(pkg_dir / "settings.json", target)
+        print(f"   → windows-terminal: copied to {target}")
     except (OSError, PermissionError) as e:
-        print(f"   ⚠  Could not symlink Windows Terminal settings: {e}")
-        print("   ℹ️  Enable Developer Mode in Windows Settings → For developers")
-        print("      or run as Administrator, then re-run '~/dotfiles/install.sh'")
+        print(f"   ⚠  Could not copy Windows Terminal settings: {e}")

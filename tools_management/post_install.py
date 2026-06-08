@@ -41,9 +41,9 @@ def _undo_windows_terminal() -> None:
         return
     target = wt_glob[0] / "LocalState" / "settings.json"
     bak = target.with_suffix(".json.bak")
-    if target.is_symlink():
+    if target.is_file():
         target.unlink()
-        print("   removed Windows Terminal symlink")
+        print("   removed Windows Terminal settings.json")
     if bak.is_file():
         bak.rename(target)
         print("   restored preexisting Windows Terminal settings.json")
