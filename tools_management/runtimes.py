@@ -152,6 +152,11 @@ def _uninstall_nvm() -> None:
     if nvm_dir.is_dir():
         shutil.rmtree(nvm_dir)
         print("   removed ~/.nvm")
+    for name in ("node", "npm", "npx"):
+        link = BIN_DIR / name
+        if link.is_symlink():
+            link.unlink()
+            print(f"   removed {link}")
     _clean_path_from_rc("NVM_DIR")
     _clean_path_from_rc(".nvm")
 
