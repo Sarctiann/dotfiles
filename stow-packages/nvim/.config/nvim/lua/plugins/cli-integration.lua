@@ -5,32 +5,23 @@ local gemini_utils = require("utils.gemini_utils")
 local augment_utils = require("utils.augment_utils")
 local opencode_utils = require("utils.opencode_utils")
 
-local company_dirs_str = os.getenv("COMPANY_DIR") or ""
-local company_dirs = {}
-if company_dirs_str ~= "" then
-  for dir in company_dirs_str:gmatch("[^:]+") do
-    table.insert(company_dirs, vim.fn.expand(dir))
-  end
+local company_dir_str = os.getenv("COMPANY_DIR") or ""
+local company_dir = ""
+if company_dir_str ~= "" then
+  company_dir = vim.fn.expand(company_dir_str)
 end
 
 local current_dir = vim.fn.getcwd()
 
 local function is_company_project()
-  for _, dir in ipairs(company_dirs) do
-    local _, found = string.find(current_dir, dir)
-    if found then
-      return true
-    end
-  end
-  return false
+  if company_dir == "" then return false end
+  return (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/"
 end
 
 local function get_cache_dir()
-  for _, dir in ipairs(company_dirs) do
-    local _, found = string.find(current_dir, dir)
-    if found then
-      return string.sub(current_dir, 1, found) .. "/.augment_work_profile"
-    end
+  if company_dir == "" then return nil end
+  if (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/" then
+    return company_dir .. "/.augment_work_profile"
   end
   return nil
 end
