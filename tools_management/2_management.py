@@ -166,7 +166,10 @@ def cmd_install(args: argparse.Namespace) -> None:
         p.name for p in DOTFILES_DIR.joinpath("stow-packages").iterdir() if p.is_dir()
     )
     print(f"📦 Stow packages active: {', '.join(stow_dirs)}")
-    print(f"🖥️  Terminal: {conf.get('stow', {}).get('terminal', 'ghostty')}")
+    if is_wsl():
+        print("🖥️  Terminal: Windows Terminal")
+    else:
+        print(f"🖥️  Terminal: {conf.get('stow', {}).get('terminal', 'ghostty')}")
 
 
 def cmd_uninstall(args: argparse.Namespace) -> None:

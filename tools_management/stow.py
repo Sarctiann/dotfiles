@@ -328,5 +328,10 @@ def stow_windows_terminal() -> None:
         target.rename(bak)
         print(f"   (backed up existing settings.json → {bak.name})")
 
-    target.symlink_to(pkg_dir / "settings.json")
-    print(f"   → windows-terminal: linked to {target}")
+    try:
+        target.symlink_to(pkg_dir / "settings.json")
+        print(f"   → windows-terminal: linked to {target}")
+    except (OSError, PermissionError) as e:
+        print(f"   ⚠  Could not symlink Windows Terminal settings: {e}")
+        print("   ℹ️  Enable Developer Mode in Windows Settings → For developers")
+        print("      or run as Administrator, then re-run '~/dotfiles/install.sh'")
