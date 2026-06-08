@@ -1,7 +1,12 @@
 from pathlib import Path
 
+import subprocess
+import tempfile
+import shutil
+from pathlib import Path
+
 import manifest as mf
-from core import is_wsl, run, safe_rmtree, which
+from core import download, is_wsl, run, run_optional, safe_rmtree, which
 from stow import stow_windows_terminal
 
 TPM_DIR = Path.home() / ".tmux" / "plugins" / "tpm"
@@ -103,6 +108,59 @@ def _undo_post_install(_: dict) -> None:
     mf.save(manifest)
 
 
+def _install_windows_nerd_font(font_name: str) -> None:
+    """Install a Nerd Font from WSL into Windows so Windows Terminal can use it."""
+    nf_version = "3.4.0"
+    url = f"https://github.com/ryanoasis/nerd-fonts/releases/download/v{nf_version}/{font_name}.zip"
+    tmpdir = Path(tempfile.mkdtemp())
+
+    try:
+        archive = tmpdir / f"{font_name}.zip"
+        download(url, archive)
+        run(["unzip", "-q", str(archive), "-d", str(tmpdir / font_name), "-x", "*.txt", "*.md", "LICENSE"])
+
+        # Find Windows user profile via /mnt/c/Users
+        users_dir = Path("/mnt/c/Users")
+        if not users_dir.is_dir():
+            return
+        win_user = None
+        for u in users_dir.iterdir():
+            if u.is_dir() and (u / "AppData").is_dir():
+                win_user = u.name
+                break
+        if not win_user:
+            return
+
+        font_dir = users_dir / win_user / "AppData" / "Local" / "Microsoft" / "Windows" / "Fonts"
+        font_dir.mkdir(parents=True, exist_ok=True)
+
+        copied = 0
+        for f in (tmpdir / font_name).glob("*.ttf"):
+            shutil.copy2(f, font_dir / f.name)
+            copied += 1
+
+        if copied:
+            print(f"   Copied {copied} .ttf to Windows Fonts folder for '{font_name}'")
+            # Register fonts with Windows so they're recognized immediately
+            run_optional([
+                "powershell.exe", "-NoProfile", "-Command",
+                f'''
+                $fontsDir = "$env:LOCALAPPDATA\\Microsoft\\Windows\\Fonts"
+                $regPath = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Fonts"
+                Get-ChildItem $fontsDir -Filter "*.ttf" | Where-Object {{ $_.Name -like "*{font_name.replace(' ', '')}*" }} | ForEach-Object {{
+                    $fontName = $_.BaseName
+                    $regName = "$fontName (TrueType)"
+                    if (-not (Get-ItemProperty -Path $regPath -Name $regName -ErrorAction SilentlyContinue)) {{
+                        New-ItemProperty -Path $regPath -Name $regName -Value $_.Name -PropertyType String | Out-Null
+                    }}
+                }}
+                '''
+            ])
+            print(f"✅ {font_name} Nerd Font installed on Windows")
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def run_post_install(config: dict, mode: str = "install") -> None:
     if mode == "check":
         print("🔄 Post-install:")
@@ -128,9 +186,14 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     manifest = mf.load()
 
     if is_wsl() and config.get("post_install", {}).get("windows_terminal", True):
-        print("🪟  Linking Windows Terminal config...")
+        print("🪟  Setting up Windows Terminal...")
         stow_windows_terminal()
         manifest["post_install"]["windows_terminal_linked"] = True
+
+    if is_wsl():
+        print("🔤 Installing Nerd Fonts on Windows...")
+        for name in config.get("fonts", []):
+            _install_windows_nerd_font(name)
 
     if config.get("post_install", {}).get("tpm", True):
         install_tpm()

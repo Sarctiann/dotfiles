@@ -1,5 +1,5 @@
 {
-  "system_packages": ["tmux", "git"],
+  "system_packages": ["tmux", "git", "zsh"],
   "conditional_system_packages": {
     "luarocks": ["zsh"]
   },
@@ -86,7 +86,7 @@
     }
   },
   "verify": {
-    "essential": ["stow", "nvim", "tmux", "rg", "fd", "bat", "gh", "git"],
+    "essential": ["stow", "nvim", "tmux", "rg", "fd", "bat", "gh", "git", "zsh"],
     "optional": [
       "lazygit",
       "lazydocker",
