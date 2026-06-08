@@ -28,8 +28,31 @@ def _latest_github_release(repo: str) -> str | None:
         return None
 
 
+def _symlink_nvm_bins() -> None:
+    """Symlink node/npm/npx into ~/.local/bin so they're available in non-interactive PATH."""
+    node_versions = sorted(
+        (Path.home() / ".nvm" / "versions" / "node").glob("v*")
+    )
+    if not node_versions:
+        return
+    latest = node_versions[-1]
+    src_dir = latest / "bin"
+    if not src_dir.is_dir():
+        return
+    BIN_DIR.mkdir(parents=True, exist_ok=True)
+    for name in ("node", "npm", "npx"):
+        src = src_dir / name
+        if src.exists():
+            link = BIN_DIR / name
+            if link.is_symlink() or link.exists():
+                link.unlink()
+            link.symlink_to(src)
+
+
 def install_nvm() -> None:
-    if Path.home().joinpath(".nvm").is_dir():
+    nvm_dir = Path.home() / ".nvm"
+    if nvm_dir.is_dir():
+        _symlink_nvm_bins()
         print("✅ nvm already installed")
         return
     print("📋 Installing nvm...")
@@ -42,7 +65,6 @@ def install_nvm() -> None:
             f"curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/{tag}/install.sh | bash",
         ]
     )
-    nvm_dir = Path.home() / ".nvm"
     nvm_sh = nvm_dir / "nvm.sh"
     if nvm_sh.exists():
         import os
@@ -55,6 +77,7 @@ def install_nvm() -> None:
                 f"source {nvm_sh} --no-use && nvm install --lts && nvm alias default 'lts/*'",
             ]
         )
+        _symlink_nvm_bins()
 
 
 def install_opencode() -> None:
