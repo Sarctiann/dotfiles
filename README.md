@@ -112,6 +112,8 @@ Copy-paste the entire block below into **PowerShell as Administrator**. It handl
 $ErrorActionPreference = "Stop"
 
 Write-Host "=== Setting up WSL2 + Windows Terminal for dotfiles ===" -ForegroundColor Cyan
+Write-Host "(Safe to re-run — completed steps are skipped)" -ForegroundColor Gray
+Write-Host ""
 
 # --- 1. Enable WSL + VM features ---
 Write-Host "[1/4] Enabling Windows Subsystem for Linux..." -ForegroundColor Yellow
@@ -122,26 +124,38 @@ dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /nores
 Write-Host "[2/4] Checking if restart is required..." -ForegroundColor Yellow
 if ($LASTEXITCODE -eq 3010 -or (Test-Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations")) {
     Write-Host "  -> Restart required. Reboot now, then re-run this script." -ForegroundColor Red
-    Write-Host "     After restart, the script will pick up from step 3." -ForegroundColor Yellow
+    Write-Host "     Already completed steps will be skipped automatically." -ForegroundColor Yellow
     pause
     exit
 }
 
-# --- 3. Install Ubuntu 24.04 + Windows Terminal ---
-Write-Host "[3/4] Installing Ubuntu 24.04..." -ForegroundColor Yellow
-wsl --set-default-version 2
-wsl --install -d Ubuntu-24.04
+# --- 3. Install Ubuntu 24.04 ---
+$ubuntuInstalled = wsl -l -v 2>$null | Select-String -Pattern "Ubuntu-24.04" -Quiet
+if (-not $ubuntuInstalled) {
+    Write-Host "[3/4] Setting WSL2 as default and installing Ubuntu 24.04..." -ForegroundColor Yellow
+    wsl --set-default-version 2
+    wsl --install -d Ubuntu-24.04
 
-Write-Host ""
-Write-Host "=== Ubuntu was installed. It will launch automatically to finish setup. ===" -ForegroundColor Cyan
-Write-Host "Create your Linux user/password when prompted, then close the Ubuntu window." -ForegroundColor Yellow
-pause
+    Write-Host ""
+    Write-Host "=== Ubuntu was installed. It will launch automatically to finish setup. ===" -ForegroundColor Cyan
+    Write-Host "Create your Linux user/password when prompted, then close the Ubuntu window." -ForegroundColor Yellow
+    pause
+}
+else {
+    Write-Host "[3/4] Ubuntu 24.04 already installed — skipping." -ForegroundColor Green
+}
 
-Write-Host "[4/4] Installing Windows Terminal..." -ForegroundColor Yellow
-if (Get-Command winget -ErrorAction SilentlyContinue) {
-    winget install --id Microsoft.WindowsTerminal --accept-source-agreements
-} else {
-    Write-Host "  -> winget not found. Install from: https://apps.microsoft.com/detail/9n0dx20hk701" -ForegroundColor Yellow
+# --- 4. Install Windows Terminal ---
+if (-not (Get-Command wt.exe -ErrorAction SilentlyContinue)) {
+    Write-Host "[4/4] Installing Windows Terminal..." -ForegroundColor Yellow
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        winget install --id Microsoft.WindowsTerminal --accept-source-agreements
+    } else {
+        Write-Host "  -> winget not found. Install from: https://apps.microsoft.com/detail/9n0dx20hk701" -ForegroundColor Yellow
+    }
+}
+else {
+    Write-Host "[4/4] Windows Terminal already installed — skipping." -ForegroundColor Green
 }
 
 Write-Host ""
