@@ -14,12 +14,16 @@ end
 local current_dir = vim.fn.getcwd()
 
 local function is_company_project()
-  if company_dir == "" then return false end
+  if company_dir == "" then
+    return false
+  end
   return (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/"
 end
 
 local function get_cache_dir()
-  if company_dir == "" then return nil end
+  if company_dir == "" then
+    return nil
+  end
   if (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/" then
     return company_dir .. "/.augment_work_profile"
   end
@@ -245,6 +249,7 @@ return {
       show_help_on_open = true,
       new_lines_amount = 1,
       start_insert_on_click = true,
+      enable_bufferline_integration = true,
       list_buffer = false,
       window_width = 40,
       window_padding = 1,
