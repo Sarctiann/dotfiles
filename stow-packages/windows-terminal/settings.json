@@ -28,7 +28,7 @@
     "copyFormatting": "none",
     "copyOnSelect": true,
     "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
-    "launchMode": "maximizedFocus",
+    "startupActions": "focusMode()",
     "disableAnimations": true,
     "newTabMenu":
     [
@@ -45,8 +45,9 @@
                 "antialiasingMode": "cleartype",
                 "colorScheme": "TokyoNight",
                 "commandline": "wsl.exe ~ tmux new-session -A -D -s main",
-                "initialCols": 200,
-                "initialRows": 60,
+                "initialPosition": "1,1",
+                "initialCols": 170,
+                "initialRows": 57,
                 "cursorHeight": 25,
                 "cursorShape": "bar",
                 "elevate": false,
@@ -63,7 +64,7 @@
                 "hidden": false,
                 "name": "Sarc WSL",
                 "opacity": 95,
-                "padding": "10",
+                "padding": "4",
                 "scrollbarState": "hidden",
                 "snapOnInput": false,
                 "useAcrylic": false
