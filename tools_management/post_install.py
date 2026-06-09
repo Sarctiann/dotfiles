@@ -1,8 +1,7 @@
-from pathlib import Path
-
+import re
+import shutil
 import subprocess
 import tempfile
-import shutil
 from pathlib import Path
 
 import manifest as mf
@@ -207,6 +206,118 @@ def _disable_win_fullscreen_optimizations() -> None:
         print("   🖥️  Fullscreen optimizations disabled for known apps")
 
 
+# Windows timezone ID → IANA timezone ID mapping
+_WINDOWS_TO_IANA: dict[str, str] = {
+    # South America (UTC-3)
+    "Argentina Standard Time": "America/Argentina/Buenos_Aires",
+    "E. South America Standard Time": "America/Sao_Paulo",
+    "SA Eastern Standard Time": "America/Cayenne",
+    "Paraguay Standard Time": "America/Asuncion",
+    "Uruguay Standard Time": "America/Montevideo",
+    "Montevideo Standard Time": "America/Montevideo",
+    "Chile Standard Time": "America/Santiago",
+    "Pacific SA Standard Time": "America/Caracas",
+    "Venezuela Standard Time": "America/Caracas",
+    "Bahia Standard Time": "America/Bahia",
+    "Central Brazilian Standard Time": "America/Cuiaba",
+    "Amazon Standard Time": "America/Manaus",
+    # North America
+    "Eastern Standard Time": "America/New_York",
+    "Central Standard Time": "America/Chicago",
+    "Mountain Standard Time": "America/Denver",
+    "Pacific Standard Time": "America/Los_Angeles",
+    "Alaskan Standard Time": "America/Anchorage",
+    "Hawaiian Standard Time": "Pacific/Honolulu",
+    "Atlantic Standard Time": "America/Halifax",
+    "Newfoundland Standard Time": "America/St_Johns",
+    # Europe
+    "W. Europe Standard Time": "Europe/Madrid",
+    "Central European Standard Time": "Europe/Paris",
+    "Central Europe Standard Time": "Europe/Berlin",
+    "E. Europe Standard Time": "Europe/Bucharest",
+    "Eastern European Standard Time": "Europe/Bucharest",
+    "GMT Standard Time": "Europe/London",
+    "Turkey Standard Time": "Europe/Istanbul",
+    "Moscow Standard Time": "Europe/Moscow",
+    "FLE Standard Time": "Europe/Helsinki",
+    # Asia
+    "China Standard Time": "Asia/Shanghai",
+    "India Standard Time": "Asia/Kolkata",
+    "Japan Standard Time": "Asia/Tokyo",
+    "Korea Standard Time": "Asia/Seoul",
+    "Singapore Standard Time": "Asia/Singapore",
+    "Taipei Standard Time": "Asia/Taipei",
+    "W. Australia Standard Time": "Australia/Perth",
+    "AUS Eastern Standard Time": "Australia/Sydney",
+    "Central Australia Standard Time": "Australia/Adelaide",
+    # General
+    "Coordinated Universal Time": "Etc/UTC",
+    "UTC": "Etc/UTC",
+    "Morocco Standard Time": "Africa/Casablanca",
+    "South Africa Standard Time": "Africa/Johannesburg",
+}
+
+
+def _parse_windows_utc_offset(win_tz: str) -> str | None:
+    """Parse 'UTC-03', 'UTC+05:30' style IDs into IANA Etc/GMT zones."""
+    m = re.search(r"UTC([+-])(\d{2})(?::(\d{2}))?", win_tz)
+    if not m:
+        return None
+    sign = m.group(1)
+    hours = int(m.group(2))
+    mins = int(m.group(3)) if m.group(3) else 0
+    if mins:
+        return None
+    # Etc/GMT inverts the sign: Etc/GMT+3 = UTC-3
+    iana_hours = hours
+    if sign == "+":
+        iana_hours = -hours
+    else:
+        iana_hours = hours
+    label = f"Etc/GMT{iana_hours:+d}" if iana_hours != 0 else "Etc/UTC"
+    return label
+
+
+def _map_windows_to_iana(win_tz: str) -> str | None:
+    win_tz = win_tz.strip()
+    if win_tz in _WINDOWS_TO_IANA:
+        return _WINDOWS_TO_IANA[win_tz]
+    # Try "UTC+/-XX" pattern
+    result = _parse_windows_utc_offset(win_tz)
+    if result:
+        return result
+    return None
+
+
+def _sync_wsl_timezone() -> None:
+    if not is_wsl():
+        return
+    result = run_optional([
+        "powershell.exe", "-NoProfile", "-Command",
+        "[System.TimeZoneInfo]::Local.Id",
+    ], capture_output=True, text=True)
+    if result is None or not result.stdout.strip():
+        print("   ⚠  Could not detect Windows timezone")
+        return
+    win_tz = result.stdout.strip()
+    print(f"   🕐 Windows timezone: {win_tz}")
+    iana_tz = _map_windows_to_iana(win_tz)
+    if not iana_tz:
+        print(f"   ⚠  Unknown timezone '{win_tz}' — skipping")
+        return
+    current = run_optional([
+        "timedatectl", "show", "-p", "Timezone", "--value",
+    ], capture_output=True, text=True)
+    current_tz = current.stdout.strip() if current else None
+    if current_tz == iana_tz:
+        print(f"   ✅ WSL timezone already set to {iana_tz}")
+    else:
+        print(f"   🕐 Setting WSL timezone to {iana_tz}...")
+        run_optional(["sudo", "timedatectl", "set-timezone", iana_tz])
+    # Sync clock from Windows RTC
+    run_optional(["sudo", "hwclock", "-s"])
+
+
 def run_post_install(config: dict, mode: str = "install") -> None:
     if mode == "check":
         print("🔄 Post-install:")
@@ -241,6 +352,7 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         print("🔤 Installing Nerd Fonts on Windows...")
         for name in config.get("fonts", []):
             _install_windows_nerd_font(name)
+        _sync_wsl_timezone()
 
     if config.get("post_install", {}).get("tpm", True):
         install_tpm()
