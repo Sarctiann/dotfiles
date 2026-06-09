@@ -47,7 +47,7 @@
                 "commandline": "wsl.exe ~ tmux new-session -A -D -s main",
                 "cursorHeight": 25,
                 "cursorShape": "bar",
-                "elevate": true,
+                "elevate": false,
                 "font":
                 {
                     "face": "JetBrainsMono Nerd Font Propo",
