@@ -99,6 +99,8 @@ def _undo_post_install(_: dict) -> None:
         _undo_windows_terminal()
     if post.get("zsh_plugins_installed"):
         _undo_zsh_plugins(post["zsh_plugins_installed"])
+    if is_wsl():
+        _undo_ssh_agent()
     manifest["post_install"] = {
         "tpm_installed": False,
         "windows_terminal_linked": False,
@@ -327,6 +329,60 @@ def _sync_wsl_timezone() -> None:
 
 
 
+SSH_AGENT_SERVICE_UNIT = """\
+[Unit]
+Description=SSH key agent
+Before=default.target
+
+[Service]
+Type=forking
+Environment=SSH_AUTH_SOCK=%%t/ssh-agent.socket
+ExecStart=/usr/bin/ssh-agent -a %%t/ssh-agent.socket -t 12h
+
+[Install]
+WantedBy=default.target
+"""
+
+
+def _setup_ssh_agent() -> None:
+    ssh_dir = Path.home() / ".ssh"
+    ssh_dir.mkdir(mode=0o700, exist_ok=True)
+
+    config_path = ssh_dir / "config"
+    config_text = config_path.read_text() if config_path.is_file() else ""
+    if "AddKeysToAgent" not in config_text:
+        with open(config_path, "a") as f:
+            f.write("\nHost *\n  AddKeysToAgent yes\n")
+        config_path.chmod(0o600)
+        print("   🔑 Added AddKeysToAgent yes to ~/.ssh/config")
+    else:
+        print("   🔑 AddKeysToAgent already set in ~/.ssh/config")
+
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    unit_dir.mkdir(parents=True, exist_ok=True)
+    unit_path = unit_dir / "ssh-agent.service"
+
+    unit_path.write_text(SSH_AGENT_SERVICE_UNIT.replace("%%t", "%t"))
+    run_optional(["systemctl", "--user", "daemon-reload"])
+    result = run_optional(["systemctl", "--user", "enable", "--now", "ssh-agent.service"])
+    if result:
+        print("   🔑 ssh-agent systemd service enabled and started")
+    else:
+        print("   ⚠  Could not start ssh-agent service (might need a login session)")
+
+    public_key = ssh_dir / "id_ed25519.pub"
+    if public_key.is_file():
+        print("   📢 Run once to cache your passphrase:  ssh-add")
+
+
+def _undo_ssh_agent() -> None:
+    run_optional(["systemctl", "--user", "disable", "--now", "ssh-agent.service"])
+    unit_path = Path.home() / ".config" / "systemd" / "user" / "ssh-agent.service"
+    if unit_path.is_file():
+        unit_path.unlink()
+    run_optional(["systemctl", "--user", "daemon-reload"])
+
+
 def run_post_install(config: dict, mode: str = "install") -> None:
     if mode == "check":
         print("🔄 Post-install:")
@@ -362,6 +418,7 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         for name in config.get("fonts", []):
             _install_windows_nerd_font(name)
         _sync_wsl_timezone()
+        _setup_ssh_agent()
 
     if config.get("post_install", {}).get("tpm", True):
         install_tpm()

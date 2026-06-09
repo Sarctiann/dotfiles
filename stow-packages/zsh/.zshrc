@@ -159,6 +159,9 @@ export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/.opencode/bin:$PATH"
 
+# ─── SSH agent ─────────────────────────────────────────────────
+export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$UID}/ssh-agent.socket"
+
 # ─── API keys & credentials ────────────────────────────────────
 # All env vars are defined in ~/.config/zsh/.credentials (see README.md there)
 set -a
