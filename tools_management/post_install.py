@@ -324,14 +324,7 @@ def _sync_wsl_timezone() -> None:
     else:
         print(f"   🕐 Setting WSL timezone to {iana_tz}...")
         run_optional(["sudo", "timedatectl", "set-timezone", iana_tz])
-    # Sync clock — try hwclock first (reads Windows RTC), fall back to NTP restart
-    hwclock_path = shutil.which("hwclock")
-    if hwclock_path:
-        run_optional(["sudo", hwclock_path, "-s"])
-    else:
-        print("   ⚡ hwclock not found — restarting systemd-timesyncd instead")
-        run_optional(["sudo", "timedatectl", "set-ntp", "true"])
-        run_optional(["sudo", "systemctl", "restart", "systemd-timesyncd"])
+
 
 
 def run_post_install(config: dict, mode: str = "install") -> None:
