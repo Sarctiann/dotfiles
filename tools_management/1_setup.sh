@@ -25,40 +25,38 @@ if [[ "$OS" == "Darwin" ]]; then
 
 # Linux / WSL: ensure python3 + base packages
 elif [[ "$OS" == "Linux" ]]; then
-  missing_pkgs=()
-  for pkg in python3 curl unzip stow; do
-    command -v "$pkg" &>/dev/null || missing_pkgs+=("$pkg")
-  done
+  # Detect package manager
+  if command -v apt &>/dev/null; then
+    pm="apt"
+  elif command -v pacman &>/dev/null; then
+    pm="pacman"
+  elif command -v dnf &>/dev/null; then
+    pm="dnf"
+  else
+    echo "⚠️  No supported package manager found. Install manually: python3 curl unzip stow python3-pip"
+    exit 1
+  fi
+
+  # Update package repositories before installing anything
+  echo "🔄 Updating package repositories..."
+  case "$pm" in
+    apt) sudo apt update ;;
+    pacman) sudo pacman -Syu --noconfirm ;;
+    dnf) sudo dnf update -y ;;
+  esac
 
   # Ensure en_US.UTF-8 locale (common issue on minimal WSL installs)
   if command -v locale-gen &>/dev/null; then
     locale -a 2>/dev/null | grep -qi en_US.UTF-8 || sudo locale-gen en_US.UTF-8
   fi
 
-  # Ensure pip3 is available (needed by tools like Ruff via Mason)
-  if ! command -v pip3 &>/dev/null; then
-    if command -v apt &>/dev/null; then
-      sudo apt install -y python3-pip
-    elif command -v pacman &>/dev/null; then
-      sudo pacman -Syu --noconfirm python-pip
-    elif command -v dnf &>/dev/null; then
-      sudo dnf install -y python3-pip
-    fi
-  fi
-
-  if [ ${#missing_pkgs[@]} -gt 0 ]; then
-    if command -v apt &>/dev/null; then
-      sudo apt update
-      sudo apt install -y "${missing_pkgs[@]}"
-    elif command -v pacman &>/dev/null; then
-      sudo pacman -Syu --noconfirm "${missing_pkgs[@]}"
-    elif command -v dnf &>/dev/null; then
-      sudo dnf install -y "${missing_pkgs[@]}"
-    else
-      echo "⚠️  No package manager found. Install manually: ${missing_pkgs[*]}"
-      exit 1
-    fi
-  fi
+  # Install all required packages
+  echo "📦 Installing packages..."
+  case "$pm" in
+    apt) sudo apt install -y python3 curl unzip stow python3-pip ;;
+    pacman) sudo pacman -Syu --noconfirm python3 curl unzip stow python-pip ;;
+    dnf) sudo dnf install -y python3 curl unzip stow python3-pip ;;
+  esac
 fi
 
 echo ""
