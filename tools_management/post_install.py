@@ -289,17 +289,27 @@ def _map_windows_to_iana(win_tz: str) -> str | None:
     return None
 
 
+def _get_windows_tz() -> str | None:
+    commands = [
+        ["powershell.exe", "-NoProfile", "-Command", "[System.TimeZoneInfo]::Local.Id"],
+        ["/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe", "-NoProfile", "-Command", "[System.TimeZoneInfo]::Local.Id"],
+        ["cmd.exe", "/c", "tzutil", "/g"],
+        ["/mnt/c/Windows/System32/cmd.exe", "/c", "tzutil", "/g"],
+    ]
+    for cmd in commands:
+        result = run_optional(cmd, capture_output=True, text=True)
+        if result and result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    return None
+
+
 def _sync_wsl_timezone() -> None:
     if not is_wsl():
         return
-    result = run_optional([
-        "powershell.exe", "-NoProfile", "-Command",
-        "[System.TimeZoneInfo]::Local.Id",
-    ], capture_output=True, text=True)
-    if result is None or not result.stdout.strip():
-        print("   ⚠  Could not detect Windows timezone")
+    win_tz = _get_windows_tz()
+    if not win_tz:
+        print("   ⚠  Could not detect Windows timezone (is /mnt/c mounted?)")
         return
-    win_tz = result.stdout.strip()
     print(f"   🕐 Windows timezone: {win_tz}")
     iana_tz = _map_windows_to_iana(win_tz)
     if not iana_tz:
@@ -314,8 +324,14 @@ def _sync_wsl_timezone() -> None:
     else:
         print(f"   🕐 Setting WSL timezone to {iana_tz}...")
         run_optional(["sudo", "timedatectl", "set-timezone", iana_tz])
-    # Sync clock from Windows RTC
-    run_optional(["sudo", "hwclock", "-s"])
+    # Sync clock — try hwclock first (reads Windows RTC), fall back to NTP restart
+    hwclock_path = shutil.which("hwclock")
+    if hwclock_path:
+        run_optional(["sudo", hwclock_path, "-s"])
+    else:
+        print("   ⚡ hwclock not found — restarting systemd-timesyncd instead")
+        run_optional(["sudo", "timedatectl", "set-ntp", "true"])
+        run_optional(["sudo", "systemctl", "restart", "systemd-timesyncd"])
 
 
 def run_post_install(config: dict, mode: str = "install") -> None:

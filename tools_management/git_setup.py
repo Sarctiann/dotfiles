@@ -65,25 +65,21 @@ def _save_to_credentials(vars: dict[str, str]) -> None:
     written = set()
     result_lines: list[str] = []
     section_header = "# ─── Git ────────────────────────────────────────────────────────\n"
-    has_section = False
+    seen_section = False
     for line in existing:
+        matched_var = None
         for var in vars:
             if line.strip().startswith(f"export {var}="):
-                line = f'export {var}="{vars[var]}"\n'
-                written.add(var)
+                matched_var = var
                 break
-        # remove old section header if we're replacing it
-        if line == section_header:
-            has_section = True
-            continue
-        # skip old git vars that were already written
-        stripped = line.strip()
-        if stripped.startswith("export ") and "=" in stripped:
-            maybe_var = stripped[7:].split("=", 1)[0]
-            if maybe_var in vars:
-                continue
-        result_lines.append(line)
-    # append remaining vars that weren't in the file
+        if matched_var:
+            result_lines.append(f'export {matched_var}="{vars[matched_var]}"\n')
+            written.add(matched_var)
+        elif line.strip() == section_header.strip():
+            seen_section = True
+        else:
+            result_lines.append(line)
+    # append vars that weren't in the file
     new_vars = {k: v for k, v in vars.items() if k not in written}
     if new_vars:
         result_lines.append("\n")
