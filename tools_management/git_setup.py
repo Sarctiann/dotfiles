@@ -91,6 +91,10 @@ def _save_to_credentials(vars: dict[str, str]) -> None:
         for k, v in new_vars.items():
             result_lines.append(f'export {k}="{v}"\n')
     CREDENTIALS_PATH.write_text("".join(result_lines))
+    # Update process environment so sync script picks up latest values
+    for k, v in vars.items():
+        if v:
+            os.environ[k] = v
     print(f"  ✓ Saved to {CREDENTIALS_PATH}")
 
 

@@ -75,7 +75,7 @@ def should_skip_step(label: str, plan: set[str], config: dict) -> bool:
     return not (needs & plan)
 
 
-def cmd_check(args: argparse.Namespace) -> None:
+def cmd_check() -> None:
     conf = cfg.load()
 
     print("========================================")
@@ -107,7 +107,7 @@ def cmd_check(args: argparse.Namespace) -> None:
 
 def cmd_install(args: argparse.Namespace) -> None:
     if args.check:
-        cmd_check(args)
+        cmd_check()
         return
 
     if args.interactive:
@@ -140,8 +140,8 @@ def cmd_install(args: argparse.Namespace) -> None:
         if core.STOW_PLAN is not None and should_skip_step(label, core.STOW_PLAN, conf):
             print(f"   (skipped — not needed by {', '.join(args.just)})")
             continue
-        if core.STOW_PLAN is None and label not in changed and label != "Verification":
-            print(f"   (config unchanged — skipping)")
+        if not args.force and core.STOW_PLAN is None and label not in changed and label != "Verification":
+            print("   (config unchanged — skipping)")
             continue
         if core.INTERACTIVE and not core.confirm(f"▶ {label}?"):
             continue
@@ -229,6 +229,9 @@ def main() -> None:
     install_parser = subparsers.add_parser("install", help="Install dotfiles")
     install_parser.add_argument(
         "-i", "--interactive", action="store_true", help="ask before each step"
+    )
+    install_parser.add_argument(
+        "-f", "--force", action="store_true", help="run all steps even if config unchanged"
     )
     install_parser.add_argument(
         "--check",
