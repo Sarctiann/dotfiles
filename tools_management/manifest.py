@@ -94,6 +94,7 @@ STEP_CONFIG_KEYS: dict[str, list[str]] = {
     "CLI tools": ["cli_tools"],
     "Fonts": ["fonts"],
     "Stow symlinks": ["stow"],
+    "Git config": [],
     "Runtimes": ["runtimes"],
     "NPM packages": ["npm_packages"],
     "Post-install": ["post_install"],
