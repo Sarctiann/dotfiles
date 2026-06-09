@@ -254,9 +254,22 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     else:
         print("   all up to date")
 
-    # Ensure tree-sitter CLI is available in PATH (Mason installs it internally)
+    # Register ruff in Mason so mason-lspconfig doesn't reinstall via pip
     from core import BIN_DIR
-    ts_dir = Path.home() / ".local" / "share" / "nvim" / "mason" / "packages" / "tree-sitter-cli"
+    mason_pkgs = Path.home() / ".local" / "share" / "nvim" / "mason" / "packages"
+    mason_bin = Path.home() / ".local" / "share" / "nvim" / "mason" / "bin"
+    ruff_pkg = mason_pkgs / "ruff"
+    if (BIN_DIR / "ruff").exists():
+        ruff_pkg.mkdir(parents=True, exist_ok=True)
+        (ruff_pkg / "mason-receipt.json").write_text('{"id":"ruff","bin":["ruff"],"languages":["Python"],"spdx":"MIT"}')
+        mason_bin_ruff = mason_bin / "ruff"
+        if mason_bin_ruff.is_symlink() or mason_bin_ruff.exists():
+            mason_bin_ruff.unlink()
+        mason_bin_ruff.symlink_to(BIN_DIR / "ruff")
+        print("   📝 ruff registered in Mason")
+
+    # Ensure tree-sitter CLI is available in PATH (Mason installs it internally)
+    ts_dir = mason_pkgs / "tree-sitter-cli"
     if ts_dir.is_dir():
         ts_src = next(ts_dir.glob("tree-sitter-*"), None)
         ts_link = BIN_DIR / "tree-sitter"
