@@ -185,19 +185,26 @@ def _install_windows_nerd_font(font_name: str) -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def _disable_wt_fullscreen_optimizations() -> None:
-    """Disable Fullscreen Optimizations for Windows Terminal via registry."""
+def _disable_win_fullscreen_optimizations() -> None:
+    """Disable Fullscreen Optimizations for known apps via registry."""
     result = run_optional([
         "powershell.exe", "-NoProfile", "-Command",
         '''
-        $exe = (Get-AppxPackage Microsoft.WindowsTerminal).InstallLocation + "\\WindowsTerminal.exe"
-        $path = "HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers"
-        Set-ItemProperty -Path $path -Name $exe -Value "DISABLEFULLSCREENOPTIMIZATION" -Type String
-        Write-Output "done"
+        $regPath = "HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers"
+
+        $wtExe = (Get-AppxPackage Microsoft.WindowsTerminal).InstallLocation + "\\WindowsTerminal.exe"
+        Set-ItemProperty -Path $regPath -Name $wtExe -Value "DISABLEFULLSCREENOPTIMIZATION" -Type String
+        Write-Output "  disabled for Windows Terminal"
+
+        $zenExe = "C:\\Program Files\\Zen Browser\\zen.exe"
+        if (Test-Path $zenExe) {
+            Set-ItemProperty -Path $regPath -Name $zenExe -Value "DISABLEFULLSCREENOPTIMIZATION" -Type String
+            Write-Output "  disabled for Zen Browser"
+        }
         '''
     ])
     if result is not None:
-        print("   🖥️  Fullscreen optimizations disabled for Windows Terminal")
+        print("   🖥️  Fullscreen optimizations disabled for known apps")
 
 
 def run_post_install(config: dict, mode: str = "install") -> None:
@@ -227,7 +234,7 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     if is_wsl() and config.get("post_install", {}).get("windows_terminal", True):
         print("🪟  Setting up Windows Terminal...")
         stow_windows_terminal()
-        _disable_wt_fullscreen_optimizations()
+        _disable_win_fullscreen_optimizations()
         manifest["post_install"]["windows_terminal_linked"] = True
 
     if is_wsl():
