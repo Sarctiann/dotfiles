@@ -254,4 +254,14 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     else:
         print("   all up to date")
 
+    # Ensure tree-sitter CLI is available in PATH (Mason installs it internally)
+    from core import BIN_DIR
+    ts_dir = Path.home() / ".local" / "share" / "nvim" / "mason" / "packages" / "tree-sitter-cli"
+    if ts_dir.is_dir():
+        ts_src = next(ts_dir.glob("tree-sitter-*"), None)
+        ts_link = BIN_DIR / "tree-sitter"
+        if ts_src and not ts_link.is_file():
+            ts_link.symlink_to(ts_src)
+            print("   🔗 tree-sitter CLI linked to ~/.local/bin")
+
     mf.save(manifest)
