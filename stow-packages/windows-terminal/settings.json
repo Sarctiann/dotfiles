@@ -29,9 +29,9 @@
     "copyOnSelect": true,
     "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
     "disableAnimations": true,
-    "initialCols": 120,
-    "initialPosition": ",",
-    "initialRows": 40,
+    "initialCols": 171,
+    "initialPosition": "10,1",
+    "initialRows": 45,
     "launchMode": "maximizedFocus",
     "newTabMenu": 
     [
