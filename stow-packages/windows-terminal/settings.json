@@ -10,6 +10,18 @@
                 "input": "\u001b[13;2u"
             },
             "keys": "shift+enter"
+        },
+        {
+            "command":
+            {
+                "action": "copy",
+                "singleLine": false
+            },
+            "keys": "alt+c"
+        },
+        {
+            "command": "paste",
+            "keys": "alt+v"
         }
     ],
     "alwaysShowTabs": false,
@@ -17,6 +29,7 @@
     "copyOnSelect": true,
     "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
     "launchMode": "maximizedFocus",
+    "disableAnimations": true,
     "newTabMenu":
     [
         {
@@ -47,11 +60,11 @@
                 "guid": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
                 "hidden": false,
                 "name": "Sarc WSL",
-                "opacity": 90,
+                "opacity": 95,
                 "padding": "10",
                 "scrollbarState": "hidden",
                 "snapOnInput": false,
-                "useAcrylic": true
+                "useAcrylic": false
             }
         ]
     },
