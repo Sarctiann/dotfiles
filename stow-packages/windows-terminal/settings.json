@@ -20,6 +20,22 @@
         "singleLine": false
       },
       "keys": "alt+c"
+    },
+    {
+      "command": "unbound",
+      "keys": "ctrl+c"
+    },
+    {
+      "command": "unbound",
+      "keys": "ctrl+v"
+    },
+    {
+      "command": "unbound",
+      "keys": "shift+alt+left"
+    },
+    {
+      "command": "unbound",
+      "keys": "shift+alt+right"
     }
   ],
   "alwaysShowTabs": false,
