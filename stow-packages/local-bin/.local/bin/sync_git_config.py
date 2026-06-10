@@ -61,7 +61,7 @@ def main() -> None:
     company_dir = require("COMPANY_DIR")
 
     if company_dir:
-        company_dir = os.path.expanduser(company_dir)
+        company_dir = os.path.expanduser(company_dir).rstrip("/")
 
     if args.check:
         print(f"  GIT_NAME          = {git_name or '(not set)'}")
