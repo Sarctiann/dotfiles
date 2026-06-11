@@ -29,6 +29,12 @@ PROMPT+=$'\n'
 PROMPT+='%{%F{green}%}$(virtualenv_info)'
 PROMPT+='%{%F{cyan}%}%n%{%F{135}%}@%{%F{cyan}%}%m%{%F{yellow}%} > %{%F{white}%}'
 
+# ─── API keys & credentials ────────────────────────────────────
+# All env vars are defined in ~/.config/zsh/.credentials (see README.md there)
+set -a
+[ -f "$HOME/.config/zsh/.credentials" ] && source "$HOME/.config/zsh/.credentials"
+set +a
+
 # ─── Aliases ───────────────────────────────────────────────────
 alias 'cd..'='cd ..'
 alias 'cd-'='cd -'
@@ -161,8 +167,3 @@ export PATH="$HOME/.opencode/bin:$PATH"
 # ─── SSH agent ─────────────────────────────────────────────────
 export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$UID}/ssh-agent.socket"
 
-# ─── API keys & credentials ────────────────────────────────────
-# All env vars are defined in ~/.config/zsh/.credentials (see README.md there)
-set -a
-[ -f "$HOME/.config/zsh/.credentials" ] && source "$HOME/.config/zsh/.credentials"
-set +a
