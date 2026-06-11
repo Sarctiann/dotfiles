@@ -8,7 +8,7 @@ local opencode_utils = require("utils.opencode_utils")
 local company_dir_str = os.getenv("COMPANY_DIR") or ""
 local company_dir = ""
 if company_dir_str ~= "" then
-  company_dir = vim.fn.expand(company_dir_str)
+  company_dir = vim.fn.expand(company_dir_str):gsub("/+$", "")
 end
 
 local current_dir = vim.fn.getcwd()

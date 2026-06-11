@@ -32,7 +32,7 @@ function M.get_augment_cache_dir()
   local company_dir_str = os.getenv("COMPANY_DIR") or ""
 
   if company_dir_str ~= "" then
-    local company_dir = vim.fn.expand(company_dir_str)
+    local company_dir = vim.fn.expand(company_dir_str):gsub("/+$", "")
     if (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/" then
       return company_dir .. "/.augment_work_profile"
     end

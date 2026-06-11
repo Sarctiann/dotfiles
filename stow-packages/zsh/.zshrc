@@ -50,7 +50,7 @@ alias py="python3"
 alias auggie-work="auggie --augment-cache-dir $COMPANY_DIR.augment_work_profile"
 alias Claude="claude --dangerously-skip-permissions"
 alias oc="opencode"
-alias devlights-info="bat ~/Documents/MarkdownNotes/MISC/DEVLIGHTS_FISCAL.md"
+alias devlights-info="bat $DOCS_DIR/MarkdownNotes/MISC/DEVLIGHTS_FISCAL.md"
 alias tmux-help='bat -l markdown ~/.config/tmux/help.txt'
 
 # ─── Key bindings ──────────────────────────────────────────────
@@ -92,7 +92,6 @@ source "$ZSH_PLUGIN_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 # ─── Editor ────────────────────────────────────────────────────
 export EDITOR=nvim
 export VISUAL=nvim
-export DOCS_DIR="$HOME/Documents"
 
 # ─── Language runtimes ─────────────────────────────────────────
 export NVM_DIR="$HOME/.nvm"

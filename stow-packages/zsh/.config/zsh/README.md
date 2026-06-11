@@ -86,6 +86,16 @@ COMPANY_GIT_NAME="Your Work Name"
 COMPANY_GIT_EMAIL="your@work.com"
 ```
 
+### `DOCS_DIR`
+
+Documents directory path. Used by Neovim to locate custom plugins.
+
+```zsh
+DOCS_DIR="$HOME/Documents"
+```
+
+---
+
 ### `COMPANY_DIR`
 
 Company project root directory. Used by:
