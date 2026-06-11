@@ -87,6 +87,35 @@ def _undo_zsh_plugins(plugins: list[str]) -> None:
             print(f"   removed {ZSH_PLUGIN_DIR}/{name}")
 
 
+WINDOWS_PATH_ZSH = Path.home() / ".config" / "zsh" / ".windows_path.zsh"
+
+WINDOWS_PATH_SNIPPET = """\
+# WSL: add Windows System32 to PATH so markdown-preview.nvim (and other tools)
+# can use cmd.exe / start to open URLs in the Windows default browser.
+if [[ -d /mnt/c/Windows/System32 ]]; then
+  export PATH="/mnt/c/Windows/System32:$PATH"
+fi
+"""
+
+
+def _ensure_wsl_windows_path() -> None:
+    if not is_wsl():
+        return
+    sys32 = Path("/mnt/c/Windows/System32")
+    if not sys32.is_dir():
+        print("   ⚠  /mnt/c/Windows/System32 not found — cannot add Windows path")
+        return
+    WINDOWS_PATH_ZSH.parent.mkdir(parents=True, exist_ok=True)
+    WINDOWS_PATH_ZSH.write_text(WINDOWS_PATH_SNIPPET)
+    print(f"   🪟 Windows System32 path added to zsh config ({WINDOWS_PATH_ZSH})")
+
+
+def _undo_wsl_windows_path() -> None:
+    if WINDOWS_PATH_ZSH.is_file():
+        WINDOWS_PATH_ZSH.unlink()
+        print("   removed WSL Windows path config")
+
+
 def _undo_post_install(_: dict) -> None:
     manifest = mf.saved_version()
     if not manifest:
@@ -99,12 +128,15 @@ def _undo_post_install(_: dict) -> None:
         _undo_windows_terminal()
     if post.get("zsh_plugins_installed"):
         _undo_zsh_plugins(post["zsh_plugins_installed"])
+    if post.get("wsl_windows_path"):
+        _undo_wsl_windows_path()
     if is_wsl():
         _undo_ssh_agent()
     manifest["post_install"] = {
         "tpm_installed": False,
         "windows_terminal_linked": False,
         "zsh_plugins_installed": [],
+        "wsl_windows_path": False,
     }
     mf.save(manifest)
 
@@ -391,6 +423,9 @@ def run_post_install(config: dict, mode: str = "install") -> None:
             print(f"   {'✅' if TPM_DIR.is_dir() else '⬜'} TPM")
         if config.get("post_install", {}).get("windows_terminal", True) and is_wsl():
             print("   ⬜ Windows Terminal symlink")
+        if is_wsl():
+            wp_status = "✅" if WINDOWS_PATH_ZSH.is_file() else "⬜"
+            print(f"   {wp_status} WSL Windows path config")
         print("   📦 Zsh plugins:")
         for name in ZSH_PLUGINS:
             target = ZSH_PLUGIN_DIR / name
@@ -419,6 +454,8 @@ def run_post_install(config: dict, mode: str = "install") -> None:
             _install_windows_nerd_font(name)
         _sync_wsl_timezone()
         _setup_ssh_agent()
+        _ensure_wsl_windows_path()
+        manifest["post_install"]["wsl_windows_path"] = True
 
     if config.get("post_install", {}).get("tpm", True):
         install_tpm()
