@@ -5,6 +5,7 @@
 vim.opt.relativenumber = false
 
 -- Set cursor colors
+vim.api.nvim_command("highlight NormalCursor guibg=#c0caf5")
 vim.api.nvim_command("highlight CursorL guibg=#9ece6a")
 vim.api.nvim_command("highlight VisualCursor guibg=#bb9af7")
 vim.api.nvim_command("highlight ReplaceCursor guibg=#f7768e")

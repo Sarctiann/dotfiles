@@ -48,6 +48,7 @@ stow-packages/augment/.augment/session.json
 stow-packages/augment/.augment/sessions/
 stow-packages/augment/.augment/task-storage/
 stow-packages/augment/.augment/binaries/
+stow-packages/augment/.augment/prompt-history.jsonl
 
 # Gemini generated files (stow package)
 stow-packages/gemini/.gemini/state.json

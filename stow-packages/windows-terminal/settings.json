@@ -65,6 +65,7 @@
         "font": {
           "face": "JetBrainsMono Nerd Font Propo",
           "features": {
+            "calt": 0,
             "liga": 0
           },
           "size": 11.0
