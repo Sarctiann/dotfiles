@@ -243,11 +243,12 @@ return {
   --- @module 'cli-integration'
   {
     "Sarctiann/cli-integration.nvim",
+    dev = true,
+    dir = plugin_dir,
     --- @type Cli-Integration.Config
     opts = {
-      dev = true,
-      dir = plugin_dir,
       debug = false,
+      auto_clipboard = true,
       show_help_on_open = true,
       new_lines_amount = 1,
       start_insert_on_click = true,
