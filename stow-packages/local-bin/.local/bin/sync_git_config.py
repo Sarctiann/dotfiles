@@ -51,7 +51,9 @@ def require(var: str) -> str | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate ~/.gitconfig from env vars")
-    parser.add_argument("--check", action="store_true", help="show vars and exit without writing")
+    parser.add_argument(
+        "--check", action="store_true", help="show vars and exit without writing"
+    )
     args = parser.parse_args()
 
     git_name = require("GIT_NAME")
@@ -84,11 +86,7 @@ def main() -> None:
 
     if company_name and company_email and company_dir:
         work_path = Path.home() / ".gitconfig-work"
-        work_content = (
-            "[user]\n"
-            f"  name = {company_name}\n"
-            f"  email = {company_email}\n"
-        )
+        work_content = f"[user]\n  name = {company_name}\n  email = {company_email}\n"
         work_path.write_text(work_content)
         print(f"✓ Generated {work_path}")
 

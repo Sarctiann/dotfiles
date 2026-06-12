@@ -29,7 +29,6 @@ tt.*
 foo.*
 playground.lua
 company_dirs.lua
-settings.json.bak
 
 # Docs
 **/docs/agent-audits/
@@ -67,3 +66,4 @@ stow-packages/gemini/.gemini/history/
 # Repo artifacts
 manifest.json
 dotfiles-manifest.json
+settings.*.json.bak

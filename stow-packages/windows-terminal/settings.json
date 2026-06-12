@@ -15,8 +15,9 @@
   "copyOnSelect": true,
   "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
   "disableAnimations": true,
-  "initialCols": 172,
-  "initialPosition": "1,1",
+  "initialCols": 157,
+  "warning.largePaste": false,
+  "initialPosition": "4,1",
   "initialRows": 43,
   "keybindings": [
     {
@@ -28,24 +29,24 @@
       "keys": "alt+v"
     },
     {
-      "id": "Terminal.PasteFromClipboard",
-      "keys": "ctrl+shift+v"
-    },
-    {
       "id": null,
       "keys": "ctrl+c"
+    },
+    {
+      "id": "Terminal.PasteFromClipboard",
+      "keys": "ctrl+shift+v"
     },
     {
       "id": "Terminal.CopyToClipboard",
       "keys": "alt+c"
     },
     {
-      "id": "Terminal.CopyToClipboard",
-      "keys": "ctrl+shift+c"
-    },
-    {
       "id": null,
       "keys": "alt+shift+right"
+    },
+    {
+      "id": "Terminal.CopyToClipboard",
+      "keys": "ctrl+shift+c"
     },
     {
       "id": null,
@@ -56,7 +57,7 @@
       "keys": "alt+shift+left"
     }
   ],
-  "launchMode": "maximizedFocus",
+  "launchMode": "focus",
   "newTabMenu": [
     {
       "type": "remainingProfiles"

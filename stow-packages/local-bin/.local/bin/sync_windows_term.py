@@ -64,16 +64,17 @@ def sync(dry_run: bool) -> int:
         newer, older, label = wt_target, STOW_SOURCE, "Windows Terminal → stow source"
 
     newer_time = newer.stat().st_mtime
-    print(f"  → Newer: {newer.name} ({datetime.fromtimestamp(newer_time).strftime('%Y-%m-%d %H:%M:%S')})")
+    print(
+        f"  → Newer: {newer.name} ({datetime.fromtimestamp(newer_time).strftime('%Y-%m-%d %H:%M:%S')})"
+    )
     print(f"  → Syncing: {label}")
 
     if dry_run:
         print("  (dry-run, skipped)")
         return 0
 
-    backup = older.with_suffix(".json.bak")
-    if backup.exists():
-        backup = older.parent / f"{older.stem}.{time.time_ns()}.bak"
+    timestamp = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
+    backup = STOW_SOURCE.parent / f"{older.stem}.{timestamp}.json.bak"
     shutil.copy2(older, backup)
     shutil.copy2(newer, older)
     print(f"  ✅ Synced. Backup saved as {backup.name}")
