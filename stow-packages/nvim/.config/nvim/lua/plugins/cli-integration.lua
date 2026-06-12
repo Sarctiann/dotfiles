@@ -245,11 +245,14 @@ return {
     "Sarctiann/cli-integration.nvim",
     --- @type Cli-Integration.Config
     opts = {
+      dev = true,
+      dir = plugin_dir,
       debug = false,
       show_help_on_open = true,
       new_lines_amount = 1,
       start_insert_on_click = true,
       enable_bufferline_integration = true,
+      forward_mouse = true,
       list_buffer = false,
       window_width = 40,
       window_padding = 1,
@@ -340,7 +343,5 @@ return {
         },
       }, keys_op)
     ),
-    -- dev = true,
-    -- dir = plugin_dir,
   },
 }

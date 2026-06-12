@@ -552,44 +552,42 @@ local function parse_timestamp(ts_ms)
   return iso, date, time
 end
 
--- NOTE: Query all sessions from the SQLite database.
+-- NOTE: Query all sessions via `opencode db --format json`.
+-- Uses opencode's own database access instead of calling the external sqlite3 CLI,
+-- which avoids a system dependency and is robust against ~/.sqliterc format changes.
 local function get_sessions()
   local sessions = {}
-  local cmd = string.format(
-    'sqlite3 %s "SELECT id, title, directory, time_updated FROM session ORDER BY time_updated DESC;"',
-    vim.fn.shellescape(OPENCODE_DB)
-  )
-  local result = vim.fn.system(cmd)
+  local result = vim.fn.system({
+    "opencode", "db", "--format", "json",
+    "SELECT id, title, directory, time_updated FROM session ORDER BY time_updated DESC;"
+  })
   if vim.v.shell_error ~= 0 or result == "" then
     return sessions
   end
 
-  for line in vim.gsplit(result, "\n", { trimempty = true }) do
-    local id, rest = line:match("^(ses_[^|]+)|(.+)$")
-    if id and rest then
-      local ts = rest:match("|(%d+)$")
-      local without_ts = rest:match("^(.+)|%d+$")
-      local directory = without_ts and without_ts:match("|(/[^|]+)$")
-      local title = (without_ts and directory) and without_ts:match("^(.+)|" .. vim.pesc(directory) .. "$")
+  local ok, data = pcall(vim.json.decode, result)
+  if not ok or type(data) ~= "table" then
+    return sessions
+  end
 
-      if ts and directory and title then
-        local iso, date, time = parse_timestamp(ts)
-        local project_name = vim.fn.fnamemodify(directory, ":t")
-        if #project_name > 30 then
-          project_name = "..." .. project_name:sub(-27)
-        end
-        local display_title = title:gsub("\n", " "):sub(1, 50)
-        if #title > 50 then
-          display_title = display_title .. "..."
-        end
-
-        table.insert(sessions, {
-          id = id,
-          modified = iso,
-          workspace = directory,
-          display = string.format("[%s %s] (%s) %s", date, time, project_name, display_title),
-        })
+  for _, row in ipairs(data) do
+    if row.id and row.title and row.directory and row.time_updated then
+      local iso, date, time = parse_timestamp(row.time_updated)
+      local project_name = vim.fn.fnamemodify(row.directory, ":t")
+      if #project_name > 30 then
+        project_name = "..." .. project_name:sub(-27)
       end
+      local display_title = row.title:gsub("\n", " "):sub(1, 50)
+      if #row.title > 50 then
+        display_title = display_title .. "..."
+      end
+
+      table.insert(sessions, {
+        id = row.id,
+        modified = iso,
+        workspace = row.directory,
+        display = string.format("[%s %s] (%s) %s", date, time, project_name, display_title),
+      })
     end
   end
   return sessions
@@ -604,9 +602,7 @@ function M.manage_opencode_sessions(show_all)
     show_all = show_all,
     get_sessions = get_sessions,
     delete_cmd = function(session)
-      local cmd =
-        string.format("sqlite3 %s \"DELETE FROM session WHERE id='%s';\"", vim.fn.shellescape(OPENCODE_DB), session.id)
-      vim.fn.system(cmd)
+      vim.fn.system({ "opencode", "session", "delete", session.id })
       vim.notify("✓ Session deleted: " .. session.id, vim.log.levels.INFO)
     end,
   })
@@ -653,9 +649,7 @@ function M.delete_all_opencode_sessions()
       if confirm and confirm:match("^Yes") then
         local deleted = 0
         for _, id in ipairs(session_ids) do
-          local cmd =
-            string.format("sqlite3 %s \"DELETE FROM session WHERE id='%s';\"", vim.fn.shellescape(OPENCODE_DB), id)
-          vim.fn.system(cmd)
+          vim.fn.system({ "opencode", "session", "delete", id })
           if vim.v.shell_error == 0 then
             deleted = deleted + 1
           end
