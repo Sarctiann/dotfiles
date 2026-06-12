@@ -4,5 +4,6 @@
 **/.gitkeep
 .DS_Store
 **/.DS_Store
+**/opencode-notifier.json
 **/opencode-notifier-state.json
 **/.playwright-mcp

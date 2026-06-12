@@ -118,6 +118,7 @@ def _undo_wsl_windows_path() -> None:
 
 
 def _undo_post_install(_: dict) -> None:
+    _undo_opencode_notifier()
     manifest = mf.saved_version()
     if not manifest:
         print("⚠️  No manifest found.")
@@ -150,6 +151,66 @@ def _full_font(base: str) -> str:
 def _ghostty_font(base: str) -> str:
     """Font name for ghostty (uses 'Nerd Font' without 'Propo')."""
     return f"{base} Nerd Font"
+
+
+def _resolve_primary_terminal(config: dict) -> str:
+    """Return the first enabled terminal name."""
+    stow_cfg = config.get("stow", {})
+    if stow_cfg.get("ghostty_or_windowsTerminal", True):
+        return "windows-terminal" if is_wsl() else "ghostty"
+    if stow_cfg.get("alacritty", False):
+        return "alacritty"
+    if stow_cfg.get("wezterm", False):
+        return "wezterm"
+    return "ghostty"
+
+
+def _write_notifier_config(config: dict) -> None:
+    """Generate opencode-notifier.json with the primary terminal."""
+    notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
+    primary = _resolve_primary_terminal(config)
+
+    if notifier_path.is_symlink():
+        notifier_path.unlink()
+
+    notifier_path.parent.mkdir(parents=True, exist_ok=True)
+
+    notifier_cfg = {
+        "sound": True,
+        "notification": True,
+        "timeout": 5,
+        "showProjectName": True,
+        "showSessionTitle": True,
+        "suppressWhenFocused": True,
+        "suppressGhosttySound": False,
+        "minDuration": 5,
+        "linux": {"grouping": True},
+        "events": {
+            "complete": {"sound": True, "notification": True, "command": True},
+            "error": {"sound": True, "notification": True, "command": True},
+            "permission": {"sound": True, "notification": True, "command": True},
+            "question": {"sound": True, "notification": True, "command": True},
+            "plan_exit": {"sound": True, "notification": True, "command": True},
+            "session_started": {"sound": True, "notification": False, "command": True},
+            "user_message": {"sound": True, "notification": False, "command": True},
+            "subagent_complete": {"sound": False, "notification": False, "command": True},
+            "user_cancelled": {"sound": False, "notification": False, "command": True},
+            "client_connected": {"sound": True, "notification": False, "command": True},
+        },
+    }
+
+    if primary == "ghostty":
+        notifier_cfg["notificationSystem"] = "ghostty"
+
+    notifier_path.write_text(json.dumps(notifier_cfg, indent=2) + "\n")
+    print(f"   ✓ opencode-notifier config written (notificationSystem: {primary})")
+
+
+def _undo_opencode_notifier() -> None:
+    notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
+    if notifier_path.is_file():
+        notifier_path.unlink()
+        print("   removed opencode-notifier.json")
 
 
 def _generate_terminal_font_overrides(config: dict) -> None:
@@ -485,6 +546,16 @@ def run_post_install(config: dict, mode: str = "install") -> None:
             target = ZSH_PLUGIN_DIR / name
             status = "✅" if target.is_dir() and any(target.iterdir()) else "⬜"
             print(f"      {status} {name}")
+        notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
+        if notifier_path.is_file():
+            try:
+                data = json.loads(notifier_path.read_text())
+                ns = data.get("notificationSystem", "?")
+                print(f"   🔔 opencode-notifier: notificationSystem={ns}")
+            except Exception:
+                print("   ⚠  opencode-notifier.json: invalid")
+        else:
+            print("   ⬜ opencode-notifier.json: not found")
         print()
         return
 
@@ -500,6 +571,9 @@ def run_post_install(config: dict, mode: str = "install") -> None:
 
     print("🔤 Generating terminal font overrides...")
     _generate_terminal_font_overrides(config)
+
+    print("🔔 Writing opencode-notifier config...")
+    _write_notifier_config(config)
 
     if is_wsl() and stow_cfg.get("ghostty_or_windowsTerminal", True):
         print("🪟  Setting up Windows Terminal...")
