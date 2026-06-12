@@ -1,14 +1,19 @@
 local DOCS_DIR = os.getenv("DOCS_DIR")
 local plugin_dir = DOCS_DIR and (DOCS_DIR .. "/SARCTIANN/LuaCode/custom_plugins/mojo.nvim/") or nil
 
-return {
+local plugin_spec = {
   --- @module "mojo"
   {
     "Sarctiann/mojo.nvim",
- --   dev = true,
- --   dir = plugin_dir,
     main = "mojo",
     --- @type Mojo-lang.Config
     opts = {},
   },
 }
+
+if plugin_dir and vim.fn.isdirectory(plugin_dir) == 1 then
+  plugin_spec[1].dev = true
+  plugin_spec[1].dir = plugin_dir
+end
+
+return plugin_spec

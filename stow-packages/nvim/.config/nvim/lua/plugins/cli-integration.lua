@@ -239,12 +239,10 @@ else
   }
 end
 
-return {
+local plugin_spec = {
   --- @module 'cli-integration'
   {
     "Sarctiann/cli-integration.nvim",
-    dev = true,
-    dir = plugin_dir,
     --- @type Cli-Integration.Config
     opts = {
       debug = false,
@@ -345,3 +343,10 @@ return {
     ),
   },
 }
+
+if plugin_dir and vim.fn.isdirectory(plugin_dir) == 1 then
+  plugin_spec[1].dev = true
+  plugin_spec[1].dir = plugin_dir
+end
+
+return plugin_spec
