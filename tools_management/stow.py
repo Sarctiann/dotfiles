@@ -1,3 +1,4 @@
+import json
 import re
 import shutil
 from pathlib import Path, PurePosixPath
@@ -229,7 +230,10 @@ def stow_packages(config: dict, mode: str = "install") -> None:
     ignore_pats = _load_stowignore()
 
     plan = core.STOW_PLAN
-    terminal = config.get("stow", {}).get("terminal", "ghostty")
+    stow_cfg = config.get("stow", {})
+    ghostty_enabled = stow_cfg.get("ghostty_or_windowsTerminal", True)
+    alacritty_enabled = stow_cfg.get("alacritty", False)
+    wezterm_enabled = stow_cfg.get("wezterm", False)
     wsl = is_wsl()
 
     if plan is None:
@@ -246,12 +250,17 @@ def stow_packages(config: dict, mode: str = "install") -> None:
         print("🔗 Stow symlinks (dry-run):")
         for pkg_name in candidates:
             if plan is None:
-                if pkg_name in ("ghostty", "alacritty", "wezterm"):
-                    if wsl:
-                        print(f"   (skipped {pkg_name} — WSL)")
+                if pkg_name == "ghostty":
+                    if wsl or not ghostty_enabled:
+                        print(f"   (skipped {pkg_name} — {'WSL' if wsl else 'not selected'})")
                         continue
-                    if pkg_name != terminal:
-                        print(f"   (skipped {pkg_name} — using {terminal})")
+                elif pkg_name == "alacritty":
+                    if not alacritty_enabled:
+                        print(f"   (skipped {pkg_name} — not selected)")
+                        continue
+                elif pkg_name == "wezterm":
+                    if not wezterm_enabled:
+                        print(f"   (skipped {pkg_name} — not selected)")
                         continue
             if pkg_name == "windows-terminal":
                 continue
@@ -274,12 +283,17 @@ def stow_packages(config: dict, mode: str = "install") -> None:
 
     for pkg_name in candidates:
         if plan is None:
-            if pkg_name in ("ghostty", "alacritty", "wezterm"):
-                if wsl:
-                    print(f"   (skipped {pkg_name} — WSL)")
+            if pkg_name == "ghostty":
+                if wsl or not ghostty_enabled:
+                    print(f"   (skipped {pkg_name} — {'WSL' if wsl else 'not selected'})")
                     continue
-                if pkg_name != terminal:
-                    print(f"   (skipped {pkg_name} — using {terminal})")
+            elif pkg_name == "alacritty":
+                if not alacritty_enabled:
+                    print(f"   (skipped {pkg_name} — not selected)")
+                    continue
+            elif pkg_name == "wezterm":
+                if not wezterm_enabled:
+                    print(f"   (skipped {pkg_name} — not selected)")
                     continue
         if pkg_name == "windows-terminal":
             continue
@@ -304,7 +318,15 @@ def stow_packages(config: dict, mode: str = "install") -> None:
     mf.save(manifest)
 
 
-def stow_windows_terminal() -> None:
+def _patch_wt_font(settings: dict, font_base: str) -> None:
+    """Patch the font family in a windows-terminal settings dict."""
+    full = f"{font_base} Nerd Font Propo"
+    for profile in settings.get("profiles", {}).get("list", []):
+        if "font" in profile:
+            profile["font"]["face"] = full
+
+
+def stow_windows_terminal(terminal_font: str | None = None) -> None:
     pkg_dir = STOW_DIR / "windows-terminal"
     if not pkg_dir.is_dir():
         return
@@ -350,7 +372,14 @@ def stow_windows_terminal() -> None:
             print(f"   (backup already exists at {bak.name})")
 
     try:
-        shutil.copy2(pkg_dir / "settings.json", target)
+        source = pkg_dir / "settings.json"
+        if terminal_font:
+            wt_settings = json.loads(source.read_text())
+            _patch_wt_font(wt_settings, terminal_font)
+            target.write_text(json.dumps(wt_settings, indent=2))
+            print(f"   ✓ Patched font to '{terminal_font}'")
+        else:
+            shutil.copy2(source, target)
         print(f"   ✓ Copied settings.json to {target}")
     except (OSError, PermissionError) as e:
         print(f"   ⚠  Could not copy Windows Terminal settings: {e}")

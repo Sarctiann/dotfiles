@@ -242,14 +242,16 @@ The installer detects WSL, uses `apt` for bootstrap packages, and sets up Window
 
 ## Terminal strategy
 
-| OS          | Terminal             | Stow package                                     |
-| ----------- | -------------------- | ------------------------------------------------ |
-| macOS       | Ghostty              | `ghostty/`                                       |
-| Linux       | Ghostty              | `ghostty/`                                       |
-| macOS/Linux | Alacritty or Wezterm | configure via `config.json` `stow.terminal`      |
-| WSL         | Windows Terminal     | `windows-terminal/` (symlinked via post_install) |
+| OS          | Terminal         | Config flag                        |
+| ----------- | ---------------- | ---------------------------------- |
+| macOS/Linux | Ghostty          | `stow.ghostty_or_windowsTerminal`  |
+| WSL         | Windows Terminal | `stow.ghostty_or_windowsTerminal`  |
+| macOS/Linux | Alacritty        | `stow.alacritty`                   |
+| macOS/Linux | Wezterm          | `stow.wezterm`                     |
 
-Shell (zsh), editor (nvim), multiplexer (tmux), fonts (CodeNewRoman + NerdFontsSymbolsOnly), and Git are shared across all three.
+Multiple terminals can be enabled at once. The terminal font is set via `terminal_font` (default: `CodeNewRoman`), which also drives the Nerd Font installation. The full font name is assembled during install: `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
+
+Shell (zsh), editor (nvim), multiplexer (tmux), and Git are shared across all three.
 
 ## Structure
 
@@ -291,7 +293,7 @@ dotfiles/
 │   ├── cli_tools.py        ← CLI tools aggregator
 │   ├── npm_packages.py     ← npm global packages (auggie, gemini-cli)
 │   ├── runtimes.py         ← nvm/bun/rust/opencode/uv
-│   ├── post_install.py     ← TPM, Windows Terminal
+│   ├── post_install.py     ← TPM, Windows Terminal, font overrides
 │   └── verify.py           ← post-install verification
 └── README.md
 ```
@@ -311,12 +313,12 @@ Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and 
 
 1.  **System packages** — brew/apt/pacman packages (tmux, git)
 2.  **CLI tools** — neovim, ripgrep, fd, bat, lazygit, lazydocker, lazysql, gh, fzf, yazi, zig
-3.  **Fonts** — installs CodeNewRoman and NerdFontsSymbolsOnly Nerd Fonts
+3.  **Fonts** — installs the Nerd Font specified by `terminal_font` in `config.json`
 4.  **Stow** — creates symlinks for all stow packages
 5.  **Git config** — prompts for identity vars, generates `~/.gitconfig` via `sync_git_config.py`
 6.  **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode, uv
 7.  **NPM packages** — auggie, gemini-cli (via bun, fallback npm)
-8.  **Post-install** — TPM, Windows Terminal symlink (WSL)
+8.  **Post-install** — TPM, Windows Terminal sync (WSL), terminal font overrides
 9.  **Verify** — checks essential commands are in PATH
 
 All steps can be toggled on/off via `config.json`. Run with `-i` for interactive mode (confirms each step before proceeding). Use `--just PKG` to run only the steps needed by one or more stow packages (skips unrelated phases).
@@ -344,15 +346,15 @@ The resolver handles circular deps (nvim ↔ opencode) gracefully.
 
 ### Terminal selection
 
-Only one terminal package is active at a time, set via `config.json → stow.terminal`:
+Configure which terminals to stow via boolean flags in `config.json → stow`:
 
-| Value               | Alternative                                   |
-| ------------------- | --------------------------------------------- |
-| `ghostty` (default) | Stows ghostty/, skips alacritty/ and wezterm/ |
-| `alacritty`         | Stows alacritty/, skips the others            |
-| `wezterm`           | Stows wezterm/, skips the others              |
+| Flag                        | true (default) →                |
+| --------------------------- | ------------------------------- |
+| `ghostty_or_windowsTerminal`| ghostty (Linux/macOS) or Windows Terminal (WSL) |
+| `alacritty`                 | stow alacritty                  |
+| `wezterm`                   | stow wezterm                    |
 
-On WSL, all three are skipped — Windows Terminal is handled separately by `post_install.py`.
+Multiple terminals can be active at once. The terminal font (`terminal_font` at the top level of `config.json`, e.g. `CodeNewRoman`) is written to local override files during post-install (ghostty: `local_config`, alacritty: `local.toml`, wezterm: `local.lua`, Windows Terminal: patched during copy). The full font name is assembled as `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
 
 ### Base packages
 
@@ -363,7 +365,7 @@ On WSL, all three are skipped — Windows Terminal is handled separately by `pos
 Regardless of `--just`, these steps always execute:
 
 - **System packages** — tmux, git
-- **Fonts** — Nerd Fonts (CodeNewRoman, NerdFontsSymbolsOnly)
+- **Fonts** — Nerd Font from `terminal_font`
 - **Stow** — symlink creation
 
 ### Conditional steps (skipped if not needed)
@@ -373,7 +375,7 @@ Regardless of `--just`, these steps always execute:
 | CLI tools     | nvim, bat              |
 | NPM packages  | nvim, zsh              |
 | Runtimes      | nvim, opencode, zsh    |
-| Post-install  | tmux, windows-terminal |
+| Post-install  | tmux, ghostty, alacritty, wezterm, windows-terminal |
 
 ### Backup and restore
 
@@ -426,7 +428,7 @@ What gets removed:
 - **CLI tools** — only those installed by the script (not pre-existing ones)
 - **NPM packages** — auggie, gemini-cli (only if not pre-existing)
 - **Runtimes** — nvm, Bun, Rust, OpenCode, uv (only if not pre-existing)
-- **Fonts** — CodeNewRoman and NerdFontsSymbolsOnly font files
+- **Fonts** — Nerd Font files (derived from `terminal_font`)
 - **Post-install** — TPM, Windows Terminal symlink (WSL)
 
 System packages (stow, tmux, git via brew/apt) are **not** removed.

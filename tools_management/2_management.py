@@ -52,15 +52,27 @@ def print_summary(conf: dict) -> None:
     print()
     print("  The following will be installed:")
     tools = list(conf.get("cli_tools", {}).keys())
-    print(f"  • CLI tools: {', '.join(tools)}")
+    if tools:
+        print(f"  • CLI tools: {', '.join(tools)}")
     npm_pkgs = list(conf.get("npm_packages", {}).keys())
     if npm_pkgs:
         print(f"  • NPM packages: {', '.join(npm_pkgs)}")
     runtimes = [k for k, v in conf.get("runtimes", {}).items() if v]
     if runtimes:
         print(f"  • Runtimes: {', '.join(runtimes)}")
-    if conf.get("fonts"):
-        print(f"  • Fonts: {', '.join(conf['fonts'])}")
+    font = conf.get("terminal_font", "")
+    if font:
+        print(f"  • Terminal font: {font} Nerd Font")
+    stow_cfg = conf.get("stow", {})
+    terminals = []
+    if stow_cfg.get("ghostty_or_windowsTerminal"):
+        terminals.append("ghostty" if not is_wsl() else "windows-terminal")
+    if stow_cfg.get("alacritty"):
+        terminals.append("alacritty")
+    if stow_cfg.get("wezterm"):
+        terminals.append("wezterm")
+    if terminals:
+        print(f"  • Terminals: {', '.join(terminals)}")
     print()
 
 
@@ -159,17 +171,23 @@ def cmd_install(args: argparse.Namespace) -> None:
     print("   - Open Neovim so Lazy can install plugins")
     print("   - In tmux, press Prefix + I to install TPM plugins")
     print()
-    if wsl:
-        print("📌 WSL: Install CodeNewRoman Nerd Font on Windows manually")
-        print("   https://www.nerdfonts.com/font-downloads")
     stow_dirs = sorted(
         p.name for p in DOTFILES_DIR.joinpath("stow-packages").iterdir() if p.is_dir()
     )
     print(f"📦 Stow packages active: {', '.join(stow_dirs)}")
-    if is_wsl():
-        print("🖥️  Terminal: Windows Terminal")
-    else:
-        print(f"🖥️  Terminal: {conf.get('stow', {}).get('terminal', 'ghostty')}")
+    font = conf.get("terminal_font", "")
+    if font:
+        print(f"🔤 Terminal font: {font} Nerd Font")
+    stow_cfg = conf.get("stow", {})
+    terminals = []
+    if stow_cfg.get("ghostty_or_windowsTerminal"):
+        terminals.append("windows-terminal" if wsl else "ghostty")
+    if stow_cfg.get("alacritty"):
+        terminals.append("alacritty")
+    if stow_cfg.get("wezterm"):
+        terminals.append("wezterm")
+    if terminals:
+        print(f"🖥️  Terminals: {', '.join(terminals)}")
 
 
 def cmd_uninstall(args: argparse.Namespace) -> None:

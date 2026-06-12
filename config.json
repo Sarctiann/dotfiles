@@ -36,9 +36,13 @@
     "fzf": { "repo": "junegunn/fzf", "binary": "fzf", "asset_pattern": null },
     "yazi": { "repo": "sxyazi/yazi", "binary": "yazi", "asset_pattern": null },
     "zig": { "repo": "ziglang/zig", "binary": "zig", "asset_pattern": null },
-    "ruff": { "repo": "astral-sh/ruff", "binary": "ruff", "asset_pattern": null }
+    "ruff": {
+      "repo": "astral-sh/ruff",
+      "binary": "ruff",
+      "asset_pattern": null
+    }
   },
-  "fonts": ["JetBrainsMono", "NerdFontsSymbolsOnly"],
+  "terminal_font": "CodeNewRoman",
   "runtimes": {
     "nvm": true,
     "bun": true,
@@ -48,7 +52,9 @@
   },
   "stow": {
     "enabled": true,
-    "terminal": "ghostty",
+    "ghostty_or_windowsTerminal": true,
+    "alacritty": false,
+    "wezterm": false,
     "base": ["local-bin"],
     "deps": {
       "zsh": ["nvim", "opencode", "mojo"],
@@ -73,8 +79,7 @@
     "Post-install": ["tmux", "windows-terminal"]
   },
   "post_install": {
-    "tpm": true,
-    "windows_terminal": true
+    "tpm": true
   },
   "npm_packages": {
     "auggie": {
@@ -87,7 +92,17 @@
     }
   },
   "verify": {
-    "essential": ["stow", "nvim", "tmux", "rg", "fd", "bat", "gh", "git", "zsh"],
+    "essential": [
+      "stow",
+      "nvim",
+      "tmux",
+      "rg",
+      "fd",
+      "bat",
+      "gh",
+      "git",
+      "zsh"
+    ],
     "optional": [
       "lazygit",
       "lazydocker",

@@ -108,24 +108,24 @@ def install_fonts(config: dict, mode: str = "install") -> None:
     if mode == "uninstall":
         _uninstall_fonts(config)
         return
-    fonts = config.get("fonts", [])
-    if not fonts:
+
+    font_name = config.get("terminal_font", "")
+    if not font_name:
         return
 
     if mode == "check":
         target = _fonts_dir()
         print("🔤 Fonts:")
-        for name in fonts:
-            status = "✅" if _font_installed(name, target) else "⬜"
-            print(f"   {status} {name} Nerd Font")
+        full = f"{font_name} Nerd Font"
+        status = "✅" if _font_installed(font_name, target) else "⬜"
+        print(f"   {status} {full}")
         print()
         return
 
     manifest = mf.load()
     installed = []
-    for name in fonts:
-        if install_nerd_font(name):
-            installed.append(name)
+    if install_nerd_font(font_name):
+        installed.append(font_name)
     mf.record_installed(manifest, "fonts", installed)
     mf.save(manifest)
     update_cache()

@@ -1,3 +1,4 @@
+import json
 import re
 import shutil
 import subprocess
@@ -5,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 import manifest as mf
-from core import download, is_wsl, run, run_optional, safe_rmtree, which
+from core import STOW_DIR, download, is_wsl, run, run_optional, safe_rmtree, which
 from stow import stow_windows_terminal
 
 TPM_DIR = Path.home() / ".tmux" / "plugins" / "tpm"
@@ -139,6 +140,57 @@ def _undo_post_install(_: dict) -> None:
         "wsl_windows_path": False,
     }
     mf.save(manifest)
+
+
+def _full_font(base: str) -> str:
+    """Full font name for most terminals (alacritty, wezterm, windows-terminal)."""
+    return f"{base} Nerd Font Propo"
+
+
+def _ghostty_font(base: str) -> str:
+    """Font name for ghostty (uses 'Nerd Font' without 'Propo')."""
+    return f"{base} Nerd Font"
+
+
+def _generate_terminal_font_overrides(config: dict) -> None:
+    """Generate local override files for each enabled terminal with the configured font."""
+    stow_cfg = config.get("stow", {})
+    base = config.get("terminal_font", "CodeNewRoman")
+    if not base:
+        return
+
+    targets: list[tuple[str, str, str]] = []
+
+    if stow_cfg.get("ghostty_or_windowsTerminal", True) and not is_wsl():
+        targets.append((
+            "ghostty",
+            "local_config",
+            f"font-family = {_ghostty_font(base)}\n",
+        ))
+
+    if stow_cfg.get("alacritty", False):
+        targets.append((
+            "alacritty",
+            "local.toml",
+            f"[font]\nnormal = {{ family = \"{_full_font(base)}\", style = \"Regular\" }}\nbuiltin_box_drawing = false\n",
+        ))
+
+    if stow_cfg.get("wezterm", False):
+        targets.append((
+            "wezterm",
+            "local.lua",
+            f"""local wezterm = require("wezterm")
+local config = wezterm.config_builder()
+config.font = wezterm.font("{_full_font(base)}")
+return config
+""",
+        ))
+
+    for pkg_name, filename, content in targets:
+        override_path = STOW_DIR / pkg_name / ".config" / pkg_name / filename
+        override_path.parent.mkdir(parents=True, exist_ok=True)
+        override_path.write_text(content)
+        print(f"   ✓ {pkg_name}: generated {filename}")
 
 
 def _install_windows_nerd_font(font_name: str) -> None:
@@ -421,8 +473,10 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         tpm_enabled = config.get("post_install", {}).get("tpm", True)
         if tpm_enabled:
             print(f"   {'✅' if TPM_DIR.is_dir() else '⬜'} TPM")
-        if config.get("post_install", {}).get("windows_terminal", True) and is_wsl():
-            print("   ⬜ Windows Terminal symlink")
+        stow_cfg = config.get("stow", {})
+        wt_enabled = stow_cfg.get("ghostty_or_windowsTerminal", True)
+        if wt_enabled and is_wsl():
+            print("   ⬜ Windows Terminal sync")
         if is_wsl():
             wp_status = "✅" if WINDOWS_PATH_ZSH.is_file() else "⬜"
             print(f"   {wp_status} WSL Windows path config")
@@ -441,17 +495,21 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         return
 
     manifest = mf.load()
+    stow_cfg = config.get("stow", {})
+    terminal_font = config.get("terminal_font", "CodeNewRoman Nerd Font Propo")
 
-    if is_wsl() and config.get("post_install", {}).get("windows_terminal", True):
+    print("🔤 Generating terminal font overrides...")
+    _generate_terminal_font_overrides(config)
+
+    if is_wsl() and stow_cfg.get("ghostty_or_windowsTerminal", True):
         print("🪟  Setting up Windows Terminal...")
-        stow_windows_terminal()
+        stow_windows_terminal(terminal_font)
         _disable_win_fullscreen_optimizations()
         manifest["post_install"]["windows_terminal_linked"] = True
 
     if is_wsl():
-        print("🔤 Installing Nerd Fonts on Windows...")
-        for name in config.get("fonts", []):
-            _install_windows_nerd_font(name)
+        print("🔤 Installing Nerd Font on Windows...")
+        _install_windows_nerd_font(terminal_font)
         _sync_wsl_timezone()
         _setup_ssh_agent()
         _ensure_wsl_windows_path()
