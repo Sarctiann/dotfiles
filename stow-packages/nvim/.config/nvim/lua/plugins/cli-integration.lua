@@ -252,7 +252,6 @@ return {
       new_lines_amount = 1,
       start_insert_on_click = true,
       enable_bufferline_integration = true,
-      forward_mouse = true,
       list_buffer = false,
       window_width = 40,
       window_padding = 1,

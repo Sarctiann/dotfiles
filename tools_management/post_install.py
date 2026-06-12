@@ -166,44 +166,24 @@ def _resolve_primary_terminal(config: dict) -> str:
 
 
 def _write_notifier_config(config: dict) -> None:
-    """Generate opencode-notifier.json with the primary terminal."""
+    """Write opencode-notifier.json only when ghostty is the primary terminal."""
     notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
     primary = _resolve_primary_terminal(config)
+
+    if primary != "ghostty":
+        if notifier_path.exists():
+            notifier_path.unlink()
+            print("   ✓ removed stale opencode-notifier.json")
+        return
 
     if notifier_path.is_symlink():
         notifier_path.unlink()
 
     notifier_path.parent.mkdir(parents=True, exist_ok=True)
-
-    notifier_cfg = {
-        "sound": True,
-        "notification": True,
-        "timeout": 5,
-        "showProjectName": True,
-        "showSessionTitle": True,
-        "suppressWhenFocused": True,
-        "suppressGhosttySound": False,
-        "minDuration": 5,
-        "linux": {"grouping": True},
-        "events": {
-            "complete": {"sound": True, "notification": True, "command": True},
-            "error": {"sound": True, "notification": True, "command": True},
-            "permission": {"sound": True, "notification": True, "command": True},
-            "question": {"sound": True, "notification": True, "command": True},
-            "plan_exit": {"sound": True, "notification": True, "command": True},
-            "session_started": {"sound": True, "notification": False, "command": True},
-            "user_message": {"sound": True, "notification": False, "command": True},
-            "subagent_complete": {"sound": False, "notification": False, "command": True},
-            "user_cancelled": {"sound": False, "notification": False, "command": True},
-            "client_connected": {"sound": True, "notification": False, "command": True},
-        },
-    }
-
-    if primary == "ghostty":
-        notifier_cfg["notificationSystem"] = "ghostty"
-
-    notifier_path.write_text(json.dumps(notifier_cfg, indent=2) + "\n")
-    print(f"   ✓ opencode-notifier config written (notificationSystem: {primary})")
+    notifier_path.write_text(
+        json.dumps({"notificationSystem": "ghostty"}, indent=2) + "\n"
+    )
+    print("   ✓ notificationSystem set to 'ghostty'")
 
 
 def _undo_opencode_notifier() -> None:
