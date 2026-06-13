@@ -1,5 +1,6 @@
 # Sarctiann's configuration
 
+command = "/opt/homebrew/bin/tmux new-session -A -D -s main"
 theme = "TokyoNight Night"
 
 maximize = true
@@ -19,22 +20,20 @@ confirm-close-surface = false
 keybind = shift+enter=text:\x1b[13;2u
 keybind = ctrl+enter=text:\x1b[13;5u
 
-config-file = "./local_config"
-### command = "/opt/homebrew/bin/tmux new-session -A -D -s main"
-###
-### font-family = "CodeNewRoman Nerd Font Propo"
-### font-family = "Symbols Nerd Font Mono"
-### adjust-cell-width = 5%
-### adjust-cell-height = 5%
-### font-size = 15
-### font-thicken = true
-### font-thicken-strength = 255
-###
-### background-opacity = 0.90
-### background-blur = 10
-###
-### macos-non-native-fullscreen = padded-notch
-### macos-titlebar-style = hidden
-### macos-window-buttons = hidden
-### macos-option-as-alt = left
 
+adjust-cell-width = 5%
+adjust-cell-height = 5%
+font-size = 13.5
+font-thicken = true
+font-thicken-strength = 255
+
+background-opacity = 0.90
+background-blur = 10
+
+macos-non-native-fullscreen = padded-notch
+macos-titlebar-style = hidden
+macos-window-buttons = hidden
+macos-option-as-alt = left
+
+# Override the default config file path to use a local config file in the current directory
+config-file = "./local_config"
