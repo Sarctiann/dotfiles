@@ -15,9 +15,7 @@ decorations = "None"
 startup_mode = 'Maximized'
 option_as_alt = 'OnlyLeft'
 
-[font]
-normal = { family = "CodeNewRoman Nerd Font Propo", style = "Regular" }
-builtin_box_drawing = false
+# font is resolved dynamically to local.toml via post_install
 
 [colors.primary]
 background = '#1a1b26'

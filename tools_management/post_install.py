@@ -203,10 +203,14 @@ def _generate_terminal_font_overrides(config: dict) -> None:
     targets: list[tuple[str, str, str]] = []
 
     if stow_cfg.get("ghostty_or_windowsTerminal", True) and not is_wsl():
+        ghostty_lines = [f"font-family = {_ghostty_font(base)}"]
+        tmux_path = shutil.which("tmux")
+        if tmux_path:
+            ghostty_lines.append(f'command = "{tmux_path} new-session -A -D -s main"')
         targets.append((
             "ghostty",
             "local_config",
-            f"font-family = {_ghostty_font(base)}\n",
+            "\n".join(ghostty_lines) + "\n",
         ))
 
     if stow_cfg.get("alacritty", False):

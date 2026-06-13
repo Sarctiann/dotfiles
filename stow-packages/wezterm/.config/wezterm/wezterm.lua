@@ -2,7 +2,7 @@ local wezterm = require("wezterm")
 local config = {}
 
 config.color_scheme = "TokyoNight Night"
-config.font = wezterm.font("CodeNewRoman Nerd Font Propo")
+-- font is resolved dynamically to local.lua via post_install
 config.font_size = 13.0
 config.line_height = 1.1
 

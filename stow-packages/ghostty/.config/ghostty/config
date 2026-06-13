@@ -1,6 +1,6 @@
 # Sarctiann's configuration
 
-command = "/opt/homebrew/bin/tmux new-session -A -D -s main"
+# command and font-family are resolved dynamically to local_config via post_install
 theme = "TokyoNight Night"
 
 maximize = true
