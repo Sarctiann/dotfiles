@@ -15,6 +15,7 @@ bun.lock
 
 # Secrets / state
 .credentials
+opencode-notifier.json
 opencode-notifier-state.json
 .playwright-mcp
 
