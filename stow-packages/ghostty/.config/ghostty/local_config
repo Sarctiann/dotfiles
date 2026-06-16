@@ -1,0 +1,36 @@
+# Ghostty main configuration (tracked in git)
+# Loaded via config-file directive. Override any value in ~/.config/ghostty/config.
+
+# --- Theme ---
+theme = "TokyoNight Night"
+
+# --- Window ---
+maximize = true
+window-padding-x = 5
+window-padding-y = 3
+window-padding-balance = true
+window-padding-color = background
+adjust-cell-width = 5%
+adjust-cell-height = 5%
+
+# --- Cursor ---
+cursor-style = "bar"
+cursor-style-blink = true
+
+# --- Shader ---
+custom-shader = "./shaders/cursor_smear.glsl"
+font-thicken = true
+font-thicken-strength = 255
+
+# --- macOS ---
+macos-non-native-fullscreen = padded-notch
+macos-titlebar-style = hidden
+macos-window-buttons = hidden
+macos-option-as-alt = left
+
+# --- Behavior ---
+confirm-close-surface = false
+
+# --- Keybindings ---
+keybind = shift+enter=text:\x1b[13;2u
+keybind = ctrl+enter=text:\x1b[13;5u

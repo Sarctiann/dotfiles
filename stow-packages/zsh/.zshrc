@@ -3,6 +3,12 @@ export CLICOLOR=1
 export LC_ALL=en_US.UTF-8
 export VIRTUAL_ENV_DISABLE_PROMPT=1
 
+# Source .zprofile if not a login shell (tmux on Linux/WSL)
+# macOS Terminal.app starts zsh as login shell; Linux generally doesn't.
+if [[ ! -o login ]] && [[ -f "$HOME/.zprofile" ]]; then
+  source "$HOME/.zprofile"
+fi
+
 # ─── Prompt setup ──────────────────────────────────────────────
 autoload -Uz promptinit
 promptinit

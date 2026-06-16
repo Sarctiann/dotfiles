@@ -69,7 +69,9 @@
       "mojo": [],
       "augment": [],
       "gemini": [],
-      "local-bin": []
+      "local-bin": [],
+      "lazygit": [],
+      "lazydocker": []
     }
   },
   "step_deps": {

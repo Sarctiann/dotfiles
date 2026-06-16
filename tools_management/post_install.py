@@ -193,6 +193,126 @@ def _undo_opencode_notifier() -> None:
         print("   removed opencode-notifier.json")
 
 
+def _ghostty_config_path() -> Path:
+    return Path.home() / ".config" / "ghostty" / "config"
+
+
+def _ghostty_local_config_path() -> Path:
+    return STOW_DIR / "ghostty" / ".config" / "ghostty" / "local_config"
+
+
+def _build_ghostty_config() -> str:
+    """Build config content by commenting all active settings from local_config.
+
+    font-family and command are left as commented placeholders — the installer
+    uncomments and updates them later. Everything else from local_config is
+    copied as a commented reference so the user knows what can be overridden.
+    """
+    lines = [
+        "# Ghostty local overrides (machine-specific)",
+        "# This file is gitignored \u2014 modify freely without affecting the repo.",
+        "# All shared settings live in local_config (tracked in git).",
+        "#",
+        "# The installer manages font-family and command below. Uncomment any",
+        "# other setting to override the value from local_config.",
+        "",
+        'config-file = "./local_config"',
+        "",
+        '# font-family = "CodeNewRoman Nerd Font"',
+        '# command = "/opt/homebrew/bin/tmux new-session -A -D -s main"',
+        "",
+        "# --- Override any value below ---",
+        "",
+    ]
+
+    lc = _ghostty_local_config_path()
+    if lc.is_file():
+        for line in lc.read_text().split("\n"):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            lines.append(f"# {line}")
+
+    return "\n".join(lines) + "\n"
+
+
+_CONFIG_SENTINEL = "# --- Override any value below ---"
+
+
+def _ensure_ghostty_config() -> None:
+    """Ensure ~/.config/ghostty/config exists with commented reference of all local_config settings.
+
+    On first run the file is built dynamically from local_config. On subsequent
+    runs the sentinel line is checked; if missing the file is rebuilt (migration
+    from old installer). font-family and command are re-applied by the caller.
+    """
+    if is_wsl():
+        return
+    config_path = _ghostty_config_path()
+
+    if config_path.is_file() or config_path.is_symlink():
+        if _CONFIG_SENTINEL in config_path.read_text():
+            return
+        config_path.write_text(_build_ghostty_config())
+        print("   \u2713 ghostty: rebuilt config with current local_config settings")
+        return
+
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(_build_ghostty_config())
+    print("   \u2713 ghostty: created ~/.config/ghostty/config")
+
+
+def _set_or_add_line(path: Path, key: str, new_line: str) -> bool:
+    """Replace key= line (commented or not) with new_line, or append if missing.
+    Returns True if the line was found and updated, False if appended.
+    """
+    content = path.read_text()
+    lines = content.split("\n")
+    for i, line in enumerate(lines):
+        stripped = line.strip().lstrip("#").strip()
+        if stripped.startswith(f"{key} "):
+            lines[i] = new_line
+            path.write_text("\n".join(lines))
+            return True
+        if stripped.startswith(f"{key}="):
+            lines[i] = new_line
+            path.write_text("\n".join(lines))
+            return True
+    lines.append(new_line)
+    path.write_text("\n".join(lines))
+    return False
+
+
+def _update_ghostty_font(config: dict) -> None:
+    """Set font-family in ghostty config (machine-specific file)."""
+    stow_cfg = config.get("stow", {})
+    if not stow_cfg.get("ghostty_or_windowsTerminal", True) or is_wsl():
+        return
+    base = config.get("terminal_font", "CodeNewRoman")
+    if not base:
+        return
+    config_path = _ghostty_config_path()
+    if not config_path.is_file():
+        return
+    font_name = _ghostty_font(base)
+    new_line = f"font-family = \"{font_name}\""
+    _set_or_add_line(config_path, "font-family", new_line)
+    print(f"   \u2713 ghostty: font-family set to '{font_name}'")
+
+
+def _update_ghostty_command() -> None:
+    """Set tmux command in ghostty config on macOS."""
+    import platform
+    if platform.system() != "Darwin":
+        return
+    config_path = _ghostty_config_path()
+    if not config_path.is_file():
+        return
+    tmux_cmd = 'command = "/opt/homebrew/bin/tmux new-session -A -D -s main"'
+    _set_or_add_line(config_path, "command", tmux_cmd)
+    print("   \u2713 ghostty: tmux command enabled")
+
+
 def _generate_terminal_font_overrides(config: dict) -> None:
     """Generate local override files for each enabled terminal with the configured font."""
     stow_cfg = config.get("stow", {})
@@ -200,18 +320,10 @@ def _generate_terminal_font_overrides(config: dict) -> None:
     if not base:
         return
 
-    targets: list[tuple[str, str, str]] = []
+    # Ghostty: update font-family in existing local_config (don't overwrite)
+    _update_ghostty_font(config)
 
-    if stow_cfg.get("ghostty_or_windowsTerminal", True) and not is_wsl():
-        ghostty_lines = [f"font-family = {_ghostty_font(base)}"]
-        tmux_path = shutil.which("tmux")
-        if tmux_path:
-            ghostty_lines.append(f'command = "{tmux_path} new-session -A -D -s main"')
-        targets.append((
-            "ghostty",
-            "local_config",
-            "\n".join(ghostty_lines) + "\n",
-        ))
+    targets: list[tuple[str, str, str]] = []
 
     if stow_cfg.get("alacritty", False):
         targets.append((
@@ -553,8 +665,14 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     stow_cfg = config.get("stow", {})
     terminal_font = config.get("terminal_font", "CodeNewRoman Nerd Font Propo")
 
+    print("🐚 Ensuring ghostty config bootstrap...")
+    _ensure_ghostty_config()
+
     print("🔤 Generating terminal font overrides...")
     _generate_terminal_font_overrides(config)
+
+    print("⚡ Setting ghostty tmux command...")
+    _update_ghostty_command()
 
     print("🔔 Writing opencode-notifier config...")
     _write_notifier_config(config)

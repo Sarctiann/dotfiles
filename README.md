@@ -271,6 +271,8 @@ dotfiles/
 │   ├── augment/            ← Augment user-level config (AGENTS.md, skills)
 │   ├── gemini/             ← Gemini CLI config (policies, custom-skills)
 │   ├── bat/                ← bat theme (.config/bat/config)
+│   ├── lazygit/            ← lazygit config with tokyonight theme
+│   ├── lazydocker/         ← lazydocker config with tokyonight theme
 │   ├── local-bin/          ← local scripts (includes sync_git_config.py)
 │   ├── mojo/               ← Mojo + Pixi config
 │   └── ...
@@ -356,6 +358,8 @@ Configure which terminals to stow via boolean flags in `config.json → stow`:
 
 Multiple terminals can be active at once. The terminal font (`terminal_font` at the top level of `config.json`, e.g. `CodeNewRoman`) is written to local override files during post-install (ghostty: `local_config`, alacritty: `local.toml`, wezterm: `local.lua`, Windows Terminal: patched during copy). The full font name is assembled as `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
 
+Ghostty uses a two-file config split: `local_config` (tracked in git) holds all shared settings, while `config` (gitignored, created by installer) holds only `config-file = "./local_config"` plus commented reference overrides for local customization.
+
 ### Base packages
 
 `stow.base` (default: `["local-bin"]`) always gets stowed regardless of `--just`.
@@ -389,6 +393,7 @@ Before stow overwrites an existing file, `stow.py` copies it to `~/.local/share/
 **/.gitkeep
 .DS_Store
 **/.playwright-mcp
+.config/ghostty/config     # gitignored, created by installer
 ```
 
 ## Adding a new stow package
