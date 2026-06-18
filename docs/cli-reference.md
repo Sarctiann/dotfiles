@@ -9,8 +9,8 @@ Entry point for installing dotfiles. Calls `1_setup.sh` (bootstrap) then `2_mana
 ```bash
 ./install.sh                        # Full install
 ./install.sh -i                     # Interactive (confirm each step)
-./install.sh --just nvim            # Only steps needed by nvim + base steps
-./install.sh --just nvim tmux       # Multiple packages + their deps
+./install.sh --just lazyvim         # Only steps needed by lazyvim + base steps
+./install.sh --just lazyvim tmux    # Multiple packages + their deps
 ```
 
 ### `uninstall.sh`
@@ -20,7 +20,7 @@ Entry point for uninstalling dotfiles. Calls `1_uninstall.sh` then `2_management
 ```bash
 ./uninstall.sh                      # Full uninstall (with confirmation)
 ./uninstall.sh -f                   # Skip confirmation prompt
-./uninstall.sh --just nvim          # Only unstow nvim + restore backups
+./uninstall.sh --just lazyvim       # Only unstow lazyvim + restore backups
 ```
 
 ## Pipeline Scripts

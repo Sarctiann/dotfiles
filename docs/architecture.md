@@ -138,7 +138,7 @@ dotfiles/
 ├── config.json                         # All pipeline config
 ├── dotfiles-manifest.json              # (generated) Last install snapshot
 ├── stow-packages/                      # Source for stow symlinks
-│   ├── nvim/
+│   ├── lazyvim/
 │   ├── zsh/
 │   ├── tmux/
 │   ├── ghostty/

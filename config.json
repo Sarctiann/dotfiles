@@ -1,5 +1,5 @@
 {
-  "system_packages": ["tmux", "git", "zsh", "xclip"],
+  "system_packages": ["tmux", "git", "zsh", "xclip", "chafa"],
   "conditional_system_packages": {
     "luarocks": ["zsh"]
   },
@@ -35,7 +35,6 @@
     "gh": { "repo": "cli/cli", "binary": "gh", "asset_pattern": null },
     "fzf": { "repo": "junegunn/fzf", "binary": "fzf", "asset_pattern": null },
     "yazi": { "repo": "sxyazi/yazi", "binary": "yazi", "asset_pattern": null },
-    "zig": { "repo": "ziglang/zig", "binary": "zig", "asset_pattern": null },
     "ruff": {
       "repo": "astral-sh/ruff",
       "binary": "ruff",
@@ -57,27 +56,28 @@
     "wezterm": false,
     "base": ["local-bin"],
     "deps": {
-      "zsh": ["nvim", "opencode", "mojo"],
+      "zsh": ["lazyvim", "opencode", "mojo"],
       "tmux": ["zsh"],
       "ghostty": ["tmux", "zsh"],
       "alacritty": ["tmux", "zsh"],
       "wezterm": ["tmux", "zsh"],
       "windows-terminal": ["tmux", "zsh"],
-      "nvim": ["opencode"],
-      "opencode": ["nvim"],
+      "lazyvim": ["opencode"],
+      "opencode": ["lazyvim"],
       "bat": [],
       "mojo": [],
       "augment": [],
       "gemini": [],
       "local-bin": [],
       "lazygit": [],
-      "lazydocker": []
+      "lazydocker": [],
+      "yazi": ["zsh", "bat"]
     }
   },
   "step_deps": {
-    "CLI tools": ["nvim", "bat"],
-    "NPM packages": ["nvim", "zsh"],
-    "Runtimes": ["nvim", "opencode", "zsh"],
+      "CLI tools": ["lazyvim", "bat"],
+      "NPM packages": ["lazyvim", "zsh"],
+      "Runtimes": ["lazyvim", "opencode", "zsh"],
     "Post-install": ["tmux", "windows-terminal"]
   },
   "post_install": {
@@ -110,7 +110,6 @@
       "lazydocker",
       "lazysql",
       "yazi",
-      "zig",
       "nvm",
       "bun",
       "cargo",

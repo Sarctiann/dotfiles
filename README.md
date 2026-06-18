@@ -12,7 +12,7 @@ cd ~/dotfiles
 
 - Edit `config.json` to toggle steps or change terminal
 - Use `./install.sh -i` to confirm each step interactively
-- Use `./install.sh --just nvim` for a minimal install (only what nvim needs)
+- Use `./install.sh --just lazyvim` for a minimal install (only what lazyvim needs)
 
 ## Usage
 
@@ -37,8 +37,8 @@ Examples:
 # Confirm each step
 ./install.sh -i
 
-# Minimal: only stow nvim + its deps (opencode, fonts, runtimes)
-./install.sh --just nvim
+# Minimal: only stow lazyvim + its deps (opencode, fonts, runtimes)
+./install.sh --just lazyvim
 
 # Single terminal package
 ./install.sh --just ghostty
@@ -228,7 +228,7 @@ The installer detects WSL, uses `apt` for bootstrap packages, and sets up Window
 ├─────────────────────────────────────────┤
 │  Tools: ripgrep, fd, bat, fzf,          │
 │  lazygit, lazydocker, lazysql,          │
-│  yazi, gh, zig, uv, bun, rust, nvm,     │
+│  yazi, gh, uv, bun, rust, nvm,          │
 │  auggie, gemini-cli                     │
 ├─────────────────────────────────────────┤
 │  AI: OpenCode + custom agents,          │
@@ -251,7 +251,7 @@ The installer detects WSL, uses `apt` for bootstrap packages, and sets up Window
 
 Multiple terminals can be enabled at once. The terminal font is set via `terminal_font` (default: `CodeNewRoman`), which also drives the Nerd Font installation. The full font name is assembled during install: `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
 
-Shell (zsh), editor (nvim), multiplexer (tmux), and Git are shared across all three.
+Shell (zsh), editor (lazyvim), multiplexer (tmux), and Git are shared across all three.
 
 ## Structure
 
@@ -260,7 +260,7 @@ dotfiles/
 ├── install.sh              ← entry point (delegates to tools_management/1_setup.sh)
 ├── uninstall.sh            ← entry point (delegates to tools_management/1_uninstall.sh)
 ├── stow-packages/          ← stow packages (one per program)
-│   ├── nvim/               ← LazyVim config + plugins + opencode-neovim integration
+│   ├── lazyvim/            ← LazyVim config + plugins + opencode-neovim integration
 │   ├── zsh/                ← .zshrc, aliases, env
 │   ├── tmux/               ← .tmux.conf + TPM
 │   ├── ghostty/            ← Ghostty config + GLSL shaders
@@ -273,6 +273,7 @@ dotfiles/
 │   ├── bat/                ← bat theme (.config/bat/config)
 │   ├── lazygit/            ← lazygit config with tokyonight theme
 │   ├── lazydocker/         ← lazydocker config with tokyonight theme
+│   ├── yazi/               ← Yazi config (preview, tasks)
 │   ├── local-bin/          ← local scripts (includes sync_git_config.py)
 │   ├── mojo/               ← Mojo + Pixi config
 │   └── ...
@@ -314,7 +315,7 @@ Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and 
 **Stage 2** (`tools_management/2_management.py`) — Python orchestrator:
 
 1.  **System packages** — brew/apt/pacman packages (tmux, git)
-2.  **CLI tools** — neovim, ripgrep, fd, bat, lazygit, lazydocker, lazysql, gh, fzf, yazi, zig
+2.  **CLI tools** — neovim, ripgrep, fd, bat, lazygit, lazydocker, lazysql, gh, fzf, yazi
 3.  **Fonts** — installs the Nerd Font specified by `terminal_font` in `config.json`
 4.  **Stow** — creates symlinks for all stow packages
 5.  **Git config** — prompts for identity vars, generates `~/.gitconfig` via `sync_git_config.py`
@@ -330,7 +331,7 @@ All steps can be toggled on/off via `config.json`. Run with `-i` for interactive
 The core of this project. Each folder under `stow-packages/` mirrors part of `$HOME`:
 
 ```
-stow-packages/nvim/.config/nvim/init.lua  →  $HOME/.config/nvim/init.lua
+stow-packages/lazyvim/.config/nvim/init.lua  →  $HOME/.config/nvim/init.lua
 stow-packages/zsh/.zshrc                  →  $HOME/.zshrc
 ```
 
@@ -341,10 +342,10 @@ When `stow` runs, it creates symlinks from `$HOME` into the repo. Removing the s
 Packages can declare dependencies in `config.json → stow.deps`. When you use `--just PKG`, the system computes a transitive closure:
 
 ```
---just ghostty → ghostty + tmux + zsh + nvim + opencode + mojo + local-bin
+--just ghostty → ghostty + tmux + zsh + lazyvim + opencode + mojo + local-bin
 ```
 
-The resolver handles circular deps (nvim ↔ opencode) gracefully.
+The resolver handles circular deps (lazyvim ↔ opencode) gracefully.
 
 ### Terminal selection
 
@@ -376,9 +377,9 @@ Regardless of `--just`, these steps always execute:
 
 | Pipeline step | Needed by              |
 | ------------- | ---------------------- |
-| CLI tools     | nvim, bat              |
-| NPM packages  | nvim, zsh              |
-| Runtimes      | nvim, opencode, zsh    |
+| CLI tools     | lazyvim, bat           |
+| NPM packages  | lazyvim, zsh           |
+| Runtimes      | lazyvim, opencode, zsh |
 | Post-install  | tmux, ghostty, alacritty, wezterm, windows-terminal |
 
 ### Backup and restore
@@ -403,7 +404,7 @@ Before stow overwrites an existing file, `stow.py` copies it to `~/.local/share/
 3. If it needs other packages, add deps to `config.json → stow.deps`:
 
    ```json
-   "my-app": ["nvim"]
+   "my-app": ["lazyvim"]
    ```
 
 4. If it needs specific pipeline steps (CLI tools, runtimes, etc.), update `should_skip_step()` in `2_management.py`
@@ -413,10 +414,10 @@ Before stow overwrites an existing file, `stow.py` copies it to `~/.local/share/
 
 ```bash
 # Stow a single package (create symlinks)
-stow -R -t $HOME nvim
+stow -R -t $HOME lazyvim
 
 # Remove symlinks for a package
-stow -D -t $HOME nvim
+stow -D -t $HOME lazyvim
 ```
 
 ## Uninstall

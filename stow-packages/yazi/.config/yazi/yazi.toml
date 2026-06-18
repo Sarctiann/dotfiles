@@ -1,0 +1,12 @@
+[mgr]
+show_hidden = true
+
+[preview]
+max_width = 600
+max_height = 900
+image_filter = "lanczos3"
+image_quality = 90
+image_delay = 30
+
+[tasks]
+image_alloc = 1073741824

@@ -64,7 +64,7 @@ def gh_arch() -> str:
 
 
 def rz_arch() -> str:
-    """ripgrep/fd/bat/zig convention: aarch64 for arm64, x86_64 otherwise."""
+    """ripgrep/fd/bat convention: aarch64 for arm64, x86_64 otherwise."""
     return "aarch64" if detect_arch() == "arm64" else detect_arch()
 
 

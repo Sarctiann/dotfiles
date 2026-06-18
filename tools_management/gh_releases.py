@@ -190,22 +190,7 @@ def remove_binary(binary_name: str) -> bool:
     return False
 
 
-def _install_zig(info: dict) -> bool:
-    binary = info["binary"]
-    if which(binary):
-        print(f"✅ {binary} already installed")
-        return True
-    os_name = detect_os()
-    if os_name == "macos" and which("brew"):
-        run(["brew", "install", "zig"])
-        return True
-    print(f"⚠️  Zig not available on {os_name} — install manually: https://ziglang.org/download")
-    return False
-
-
 def install_cli_tool(tool_name: str, info: dict) -> bool:
-    if tool_name == "zig":
-        return _install_zig(info)
     os_name = detect_os()
     arch = detect_arch()
     pattern = info.get("asset_pattern")

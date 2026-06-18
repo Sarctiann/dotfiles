@@ -117,8 +117,7 @@ Two locations, written simultaneously after every successful install:
       "lazygit",
       "lazydocker",
       "lazysql",
-      "yazi",
-      "zig"
+      "yazi"
     ]
   },
   "runtimes": {
@@ -129,9 +128,9 @@ Two locations, written simultaneously after every successful install:
     "installed": ["CodeNewRoman", "NerdFontsSymbolsOnly"]
   },
   "stow": {
-    "packages": ["zsh", "nvim", "tmux", "ghostty", "local-bin"],
+    "packages": ["zsh", "lazyvim", "tmux", "ghostty", "local-bin"],
     "backups": {
-      ".config/nvim/init.lua": "/Users/sebas/.local/share/dotfiles/backups/nvim/init.lua",
+      ".config/nvim/init.lua": "/Users/sebas/.local/share/dotfiles/backups/lazyvim/init.lua",
       ".zshrc": "/Users/sebas/.local/share/dotfiles/backups/zsh/.zshrc"
     }
   },
@@ -183,7 +182,7 @@ Before `stow -R`, each stow package is inspected:
 
 1. List all files in `stow-packages/<pkg>/` recursively
 2. For each file, compute its target path: `$HOME / <relative-path-under-pkg>`
-   - Example: `stow-packages/nvim/.config/nvim/init.lua` → `~/.config/nvim/init.lua`
+   - Example: `stow-packages/lazyvim/.config/nvim/init.lua` → `~/.config/nvim/init.lua`
 3. If the target exists and is NOT already a symlink pointing to our stow dir:
    - Copy to `~/.local/share/dotfiles/backups/<pkg>/<relative-path>`
    - Record in manifest: `stow.backups["<relative-path>"] = "<backup-abs-path>"`

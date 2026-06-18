@@ -17,14 +17,14 @@ Extend the `"stow"` section:
     "terminal": "ghostty",
     "base": ["local-bin"],
     "deps": {
-      "zsh": ["nvim", "opencode", "mojo"],
+      "zsh": ["lazyvim", "opencode", "mojo"],
       "tmux": ["zsh"],
       "ghostty": ["tmux", "zsh"],
       "alacritty": ["tmux", "zsh"],
       "wezterm": ["tmux", "zsh"],
       "windows-terminal": ["tmux", "zsh"],
-      "nvim": ["opencode"],
-      "opencode": ["nvim"],
+      "lazyvim": ["opencode"],
+      "opencode": ["lazyvim"],
       "bat": [],
       "mojo": [],
       "local-bin": []
@@ -136,10 +136,10 @@ def main():
 | Step            | Skip condition                                                                    |
 | --------------- | --------------------------------------------------------------------------------- |
 | System packages | Never skips (base deps always needed)                                             |
-| CLI tools       | Skip if no tool in the plan requires it (e.g., `nvim` needs neovim binary)        |
+| CLI tools       | Skip if no tool in the plan requires it (e.g., `lazyvim` needs neovim binary)     |
 | Fonts           | Skip if no package in the plan uses Nerd Font                                     |
 | Stow            | Never skips (main action of `--just`)                                             |
-| Runtimes        | Skip if no runtime in the plan is needed (e.g., `nvim` → node, `opencode` → node) |
+| Runtimes        | Skip if no runtime in the plan is needed (e.g., `lazyvim` → node, `opencode` → node) |
 | Post-install    | Skip if TPM/windows-terminal not in plan                                          |
 | Verify          | Only verify tools relevant to the plan                                            |
 

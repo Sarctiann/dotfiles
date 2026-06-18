@@ -154,8 +154,7 @@ asks before each step; non-interactive mode runs all steps without prompting.
     "lazysql": { "repo": "jorgerojas26/lazysql", "binary": "lazysql" },
     "gh": { "repo": "cli/cli", "binary": "gh" },
     "fzf": { "repo": "junegunn/fzf", "binary": "fzf" },
-    "yazi": { "repo": "sxyazi/yazi", "binary": "yazi" },
-    "zig": { "repo": "ziglang/zig", "binary": "zig" }
+    "yazi": { "repo": "sxyazi/yazi", "binary": "yazi" }
   },
   "fonts": ["CodeNewRoman", "NerdFontsSymbolsOnly"],
   "runtimes": {
@@ -180,7 +179,6 @@ asks before each step; non-interactive mode runs all steps without prompting.
       "lazydocker",
       "lazysql",
       "yazi",
-      "zig",
       "nvm",
       "bun",
       "cargo",
