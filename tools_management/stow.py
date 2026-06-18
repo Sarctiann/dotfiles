@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import shutil
 from pathlib import Path, PurePosixPath
@@ -166,6 +167,12 @@ def _uninstall_stow(_: dict) -> None:
             print(f"   ⚠  package '{pkg_name}' not found, skipping")
             continue
         print(f"   → {pkg_name}")
+        if pkg_name == "lazyvim":
+            target = Path.home() / ".config" / "nvim"
+            if target.is_symlink():
+                target.unlink()
+                print(f"      removed ~/.config/nvim symlink")
+            continue
         run_optional(
             ["stow", "-D", "-t", str(Path.home()), pkg_name], cwd=str(STOW_DIR)
         )
@@ -213,6 +220,48 @@ def _config_package_diff(config: dict) -> None:
         print(
             f"   ⚠  stow-packages/{pkg} exists but not mentioned in config stow.deps"
         )
+
+
+def _deploy_nvim_symlink(pkg_name: str, manifest: dict, ignore_pats: list[str]) -> None:
+    """Deploy ~/.config/nvim as a direct symlink to the stow package.
+
+    GNU Stow cannot create top-level directory symlinks when the package
+    has nested subdirectories.  Instead of stowing individual files, this
+    creates a single symlink so the entire tree is managed as one unit.
+    """
+    target = Path.home() / ".config" / "nvim"
+    source = STOW_DIR / pkg_name / ".config" / "nvim"
+
+    if not source.is_dir():
+        print(f"   \u26a0  {pkg_name}: {source} not found")
+        return
+
+    if target.is_symlink() and target.resolve() == source.resolve():
+        print(f"   \u2192 {pkg_name} (symlink already correct)")
+        _record_stow_package(pkg_name, manifest)
+        return
+
+    if target.is_symlink() or target.is_file():
+        target.unlink()
+    elif target.is_dir():
+        print(f"   \u2192 {pkg_name} (replacing directory with symlink \u2014 backing up...)")
+        _backup_targets(pkg_name, manifest, ignore_pats)
+        run_optional(["stow", "-D", "-t", str(Path.home()), pkg_name], cwd=str(STOW_DIR))
+        if target.is_dir():
+            shutil.rmtree(target)
+    else:
+        print(f"   \u2192 {pkg_name}")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.symlink_to(source)
+    print(f"      \u2713 ~/.config/nvim -> {source}")
+    _record_stow_package(pkg_name, manifest)
+
+
+def _record_stow_package(pkg_name: str, manifest: dict) -> None:
+    pkgs = manifest.setdefault("stow", {}).setdefault("packages", [])
+    if pkg_name not in pkgs:
+        pkgs.append(pkg_name)
 
 
 def stow_packages(config: dict, mode: str = "install") -> None:
@@ -264,6 +313,13 @@ def stow_packages(config: dict, mode: str = "install") -> None:
                         continue
             if pkg_name == "windows-terminal":
                 continue
+            if pkg_name == "lazyvim":
+                pkg_dir = STOW_DIR / pkg_name
+                if not pkg_dir.is_dir():
+                    print(f"   ⚠  package '{pkg_name}' not found")
+                    continue
+                print(f"   → {pkg_name} (symlink: ~/.config/nvim -> lazyvim/.config/nvim)")
+                continue
             pkg_dir = STOW_DIR / pkg_name
             if not pkg_dir.is_dir():
                 print(f"   ⚠  package '{pkg_name}' not found")
@@ -297,6 +353,9 @@ def stow_packages(config: dict, mode: str = "install") -> None:
                     continue
         if pkg_name == "windows-terminal":
             continue
+        if pkg_name == "lazyvim":
+            _deploy_nvim_symlink(pkg_name, manifest, ignore_pats)
+            continue
 
         pkg_dir = STOW_DIR / pkg_name
         if not pkg_dir.is_dir():
@@ -311,9 +370,7 @@ def stow_packages(config: dict, mode: str = "install") -> None:
         stow_args.append(pkg_name)
         run(stow_args, cwd=str(STOW_DIR))
 
-        stow_pkgs = manifest.setdefault("stow", {}).setdefault("packages", [])
-        if pkg_name not in stow_pkgs:
-            stow_pkgs.append(pkg_name)
+        _record_stow_package(pkg_name, manifest)
 
     mf.save(manifest)
 
