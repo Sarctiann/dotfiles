@@ -5,40 +5,25 @@ local gemini_utils = require("utils.gemini_utils")
 local augment_utils = require("utils.augment_utils")
 local opencode_utils = require("utils.opencode_utils")
 
+-- Static check: are we inside COMPANY_DIR at load time?
+-- Uses augment_utils.get_augment_cache_dir() as canonical cache_dir source.
 local company_dir_str = os.getenv("COMPANY_DIR") or ""
-local company_dir = ""
+local is_company_project = false
 if company_dir_str ~= "" then
-  company_dir = vim.fn.expand(company_dir_str):gsub("/+$", "")
-end
-
-local current_dir = vim.fn.getcwd()
-
-local function is_company_project()
-  if company_dir == "" then
-    return false
-  end
-  return (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/"
-end
-
-local function get_cache_dir()
-  if company_dir == "" then
-    return nil
-  end
-  if (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/" then
-    return company_dir .. "/.augment_work_profile"
-  end
-  return nil
+  local company_dir = vim.fn.expand(company_dir_str):gsub("/+$", "")
+  local current_dir = vim.fn.getcwd()
+  is_company_project = (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/"
 end
 
 local integration_op
 local keys_op
 
-if is_company_project() then
-  local cache_dir = get_cache_dir()
+if is_company_project then
+  local cache_dir = augment_utils.get_augment_cache_dir()
 
   integration_op = {
     name = "Augment",
-    cli_cmd = "auggie --augment-cache-dir " .. cache_dir,
+    cli_cmd = "auggie --augment-cache-dir " .. vim.fn.shellescape(cache_dir),
     cli_ready_flags = { search_for = "Version" },
     start_doing = function(visual_text, actions)
       require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Augment")
@@ -73,16 +58,14 @@ if is_company_project() then
   keys_op = {
     {
       "<leader>aa",
-      ":CLIIntegration open_root Augment --dont-save-session<CR>",
+      function() augment_utils.new_session(cache_dir) end,
       desc = "Augment New Session",
       silent = true,
       mode = { "n", "v" },
     },
     {
       "<leader>aq",
-      function()
-        require("cli-integration").hooks.ask("Augment")
-      end,
+      function() augment_utils.ask_inline(cache_dir) end,
       desc = "Augment Ask (inline)",
       mode = { "n", "v" },
     },
@@ -94,25 +77,25 @@ if is_company_project() then
     },
     {
       "<leader>asc",
-      ":CLIIntegration open_root Augment -c<CR>",
+      function()
+        augment_utils.resume_last_session(cache_dir)
+      end,
       desc = "Augment Code Resume last session",
       silent = true,
     },
     {
       "<leader>asd",
-      augment_utils.delete_all_augment_sessions,
+      function()
+        augment_utils.delete_all_augment_sessions(cache_dir)
+      end,
       desc = "Augment Code Delete All sessions",
       silent = true,
     },
     {
-      "<leader>asr",
-      ":CLIIntegration open_root Augment session resume<CR>",
-      desc = "Augment Code Resume Session list",
-      silent = true,
-    },
-    {
       "<leader>ass",
-      augment_utils.manage_augment_sessions,
+      function()
+        augment_utils.manage_augment_sessions(false, cache_dir)
+      end,
       desc = "Augment Code Custom Session Manager",
       silent = true,
     },

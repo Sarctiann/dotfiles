@@ -43,19 +43,95 @@ function M.get_augment_cache_dir()
   return vim.fn.expand("~/.augment")
 end
 
+-- NOTE: Returns user-facing name based on current cache dir
+-- "Augment<work>" when using company work profile, "Augment" otherwise
+function M.get_display_name()
+  local cache_dir = M.get_augment_cache_dir()
+  if cache_dir:match("[/\\]%.augment_work_profile$") then
+    return "Augment<work>"
+  end
+  return "Augment"
+end
+
+-- NOTE: Show a floating notification at bottom-right, auto-dismisses after 2s
+-- Captures editor dimensions before any potential terminal split.
+-- @param msg string The message to display
+function M.show_notification(msg)
+  local cols = vim.o.columns
+  local lines = vim.o.lines
+  local width = #msg
+  vim.schedule(function()
+    local buf = vim.api.nvim_create_buf(false, true)
+    if buf == 0 or not buf then
+      return
+    end
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { msg })
+    local win = vim.api.nvim_open_win(buf, false, {
+      relative = "editor",
+      width = width,
+      height = 1,
+      row = lines - 4,
+      col = cols - width - 2,
+      style = "minimal",
+      border = "rounded",
+      focusable = false,
+    })
+    if not win then
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
+      return
+    end
+    vim.defer_fn(function()
+      pcall(vim.api.nvim_win_close, win, true)
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    end, 3500)
+  end)
+end
+
+-- NOTE: Resume last session (opens terminal with -c flag)
+-- @param cache_dir (optional) The augment cache directory path
+function M.resume_last_session(cache_dir)
+  cache_dir = cache_dir or M.get_augment_cache_dir()
+  local name = M.get_display_name()
+  local d = cache_dir:gsub(vim.fn.expand("~"), "~")
+  M.show_notification(" " .. name .. " (profile: <" .. d .. ">) ")
+  vim.cmd("CLIIntegration open_root Augment -c")
+end
+
+-- NOTE: New Augment session (opens terminal)
+-- @param cache_dir (optional) The augment cache directory path
+function M.new_session(cache_dir)
+  cache_dir = cache_dir or M.get_augment_cache_dir()
+  local name = M.get_display_name()
+  local d = cache_dir:gsub(vim.fn.expand("~"), "~")
+  M.show_notification(" " .. name .. " (profile: <" .. d .. ">) ")
+  vim.cmd("CLIIntegration open_root Augment --dont-save-session")
+end
+
+-- NOTE: Augment ask inline
+-- @param cache_dir (optional) The augment cache directory path
+function M.ask_inline(cache_dir)
+  cache_dir = cache_dir or M.get_augment_cache_dir()
+  local name = M.get_display_name()
+  local d = cache_dir:gsub(vim.fn.expand("~"), "~")
+  M.show_notification(" " .. name .. " (profile: <" .. d .. ">) ")
+  require("cli-integration").hooks.ask("Augment")
+end
+
 -- NOTE: Function to delete all Augment sessions with confirmation
 -- @param cache_dir (optional) The augment cache directory path. If nil, uses default or auto-detected path
 function M.delete_all_augment_sessions(cache_dir)
   cache_dir = cache_dir or M.get_augment_cache_dir()
+  local name = M.get_display_name()
 
   vim.ui.select({ "Yes", "No" }, {
-    prompt = "⚠️  Delete ALL Augment sessions? This action cannot be undone!",
+    prompt = "⚠️  Delete ALL " .. name .. " sessions? This action cannot be undone!",
   }, function(choice)
     if choice == "Yes" then
-      local cmd = cache_dir and string.format("! auggie --augment-cache-dir %s session delete --all", cache_dir)
+      local esc = vim.fn.shellescape(cache_dir)
+      local cmd = cache_dir and string.format("! auggie --augment-cache-dir %s session delete --all", esc)
         or "! auggie session delete --all"
       vim.cmd(cmd)
-      vim.notify("✓ All Augment sessions have been deleted", vim.log.levels.INFO)
+      vim.notify("✓ All " .. name .. " sessions have been deleted", vim.log.levels.INFO)
     else
       vim.notify("Deletion cancelled", vim.log.levels.INFO)
     end
@@ -67,25 +143,16 @@ end
 -- @param cache_dir (optional) The augment cache directory path. If nil, uses default or auto-detected path
 function M.manage_augment_sessions(show_all, cache_dir)
   cache_dir = cache_dir or M.get_augment_cache_dir()
+  local name = M.get_display_name()
 
   local sessions_dir = cache_dir and (cache_dir .. "/sessions") or vim.fn.expand("~/.augment/sessions")
 
-  -- Ensure the resume command passes the augment cache dir when available.
-  -- The cli-integration plugin will substitute the session id into the
-  -- "%s" placeholder. We must escape the %% when using string.format here.
-  local resume_cmd
-  if cache_dir then
-    -- Shell-escape the cache_dir to be safe for paths with spaces/special chars
-    local esc = vim.fn.shellescape(cache_dir)
-    -- Use '%%s' so that the eventual substitution performed by the hooks
-    -- (which replaces %s with the session id) still works.
-    resume_cmd = string.format("CLIIntegration open_root Augment session resume %%s --augment-cache-dir %s", esc)
-  else
-    resume_cmd = "CLIIntegration open_root Augment session resume %s"
-  end
+  -- NOTE: resume_cmd must NOT include --augment-cache-dir — the
+  -- cli-integration integration_op.cli_cmd already embeds it.
+  local resume_cmd = "CLIIntegration open_root Augment session resume %s"
 
   require("cli-integration.hooks").manage_sessions({
-    name = "Augment",
+    name = name,
     resume_cmd = resume_cmd,
     show_all = show_all,
     get_sessions = function()
