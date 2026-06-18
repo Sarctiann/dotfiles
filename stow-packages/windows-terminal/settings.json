@@ -14,9 +14,8 @@
   "copyFormatting": "none",
   "copyOnSelect": true,
   "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
-  "disableAnimations": true,
+  "disableAnimations": false,
   "initialCols": 157,
-  "warning.largePaste": false,
   "initialPosition": "4,1",
   "initialRows": 43,
   "keybindings": [
@@ -70,6 +69,7 @@
         "antialiasingMode": "cleartype",
         "colorScheme": "TokyoNight",
         "commandline": "wsl.exe ~ tmux new-session -A -D -s main",
+        "cursorColor": "#a9b1d6",
         "cursorHeight": 25,
         "cursorShape": "bar",
         "elevate": false,
@@ -83,6 +83,7 @@
         },
         "guid": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
         "hidden": false,
+        "icon": "\ue76c",
         "name": "Sarc WSL",
         "opacity": 90,
         "padding": "10,9",
@@ -122,6 +123,7 @@
   "theme": "dark",
   "themes": [],
   "trimPaste": true,
+  "warning.largePaste": false,
   "windowingBehavior": "useAnyExisting"
 }
 
