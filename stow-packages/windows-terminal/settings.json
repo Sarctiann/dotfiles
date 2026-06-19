@@ -69,7 +69,7 @@
         "antialiasingMode": "cleartype",
         "colorScheme": "TokyoNight",
         "commandline": "wsl.exe ~ tmux new-session -A -D -s main",
-        "cursorColor": "#a9b1d6",
+        "cursorColor": "#A9B1D6",
         "cursorHeight": 25,
         "cursorShape": "bar",
         "elevate": false,
@@ -79,7 +79,8 @@
             "calt": 0,
             "liga": 0
           },
-          "size": 13
+          "size": 13,
+          "weight": "thin"
         },
         "guid": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
         "hidden": false,
