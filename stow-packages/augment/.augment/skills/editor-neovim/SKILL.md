@@ -60,7 +60,7 @@ After connecting, the `using-neovim` skill provides the **File Opening Protocol*
 1. Find files (native tools)
 2. Verify MCP is connected (this skill — already done)
 3. **Window Focus Step** — always target a normal file window (excludes Neo-tree, TUI)
-4. Open files: `:edit` for first, `:vsplit` for subsequent
+4. Open files: `:edit` for first, `:badd` for subsequent (no splits; navigate via bufferline)
 
 Never skip step 2 before step 3 — if MCP is disconnected the focus command will fail.
 

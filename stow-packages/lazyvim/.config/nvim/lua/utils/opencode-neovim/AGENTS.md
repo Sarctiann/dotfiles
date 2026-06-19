@@ -39,11 +39,21 @@ When opening a file in Neovim via MCP, you MUST focus a normal file window first
 
 Use a SINGLE combined command to avoid a round-trip pause:
 
+### Single file
+
 ```
 neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
 ```
 
-Replace `<path>` with the absolute file path. The `using-neovim` skill has details and a standalone variant for LSP/quickfix operations.
+Replace `<path>` with the absolute file path.
+
+### Multiple files — first `:edit`, rest `:badd`
+
+```
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path-1> | badd <path-2> | badd <path-3>')")
+```
+
+The `using-neovim` skill has details and a standalone variant for LSP/quickfix operations.
 
 ## Multi-Client Synchronization
 

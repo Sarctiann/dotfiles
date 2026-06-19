@@ -242,12 +242,12 @@ The installer detects WSL, uses `apt` for bootstrap packages, and sets up Window
 
 ## Terminal strategy
 
-| OS          | Terminal         | Config flag                        |
-| ----------- | ---------------- | ---------------------------------- |
-| macOS/Linux | Ghostty          | `stow.ghostty_or_windowsTerminal`  |
-| WSL         | Windows Terminal | `stow.ghostty_or_windowsTerminal`  |
-| macOS/Linux | Alacritty        | `stow.alacritty`                   |
-| macOS/Linux | Wezterm          | `stow.wezterm`                     |
+| OS          | Terminal         | Config flag                       |
+| ----------- | ---------------- | --------------------------------- |
+| macOS/Linux | Ghostty          | `stow.ghostty_or_windowsTerminal` |
+| WSL         | Windows Terminal | `stow.ghostty_or_windowsTerminal` |
+| macOS/Linux | Alacritty        | `stow.alacritty`                  |
+| macOS/Linux | Wezterm          | `stow.wezterm`                    |
 
 Multiple terminals can be enabled at once. The terminal font is set via `terminal_font` (default: `CodeNewRoman`), which also drives the Nerd Font installation. The full font name is assembled during install: `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
 
@@ -351,11 +351,11 @@ The resolver handles circular deps (lazyvim ↔ opencode) gracefully.
 
 Configure which terminals to stow via boolean flags in `config.json → stow`:
 
-| Flag                        | true (default) →                |
-| --------------------------- | ------------------------------- |
-| `ghostty_or_windowsTerminal`| ghostty (Linux/macOS) or Windows Terminal (WSL) |
-| `alacritty`                 | stow alacritty                  |
-| `wezterm`                   | stow wezterm                    |
+| Flag                         | true (default) →                                |
+| ---------------------------- | ----------------------------------------------- |
+| `ghostty_or_windowsTerminal` | ghostty (Linux/macOS) or Windows Terminal (WSL) |
+| `alacritty`                  | stow alacritty                                  |
+| `wezterm`                    | stow wezterm                                    |
 
 Multiple terminals can be active at once. The terminal font (`terminal_font` at the top level of `config.json`, e.g. `CodeNewRoman`) is written to local override files during post-install (ghostty: `local_config`, alacritty: `local.toml`, wezterm: `local.lua`, Windows Terminal: patched during copy). The full font name is assembled as `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
 
@@ -375,11 +375,11 @@ Regardless of `--just`, these steps always execute:
 
 ### Conditional steps (skipped if not needed)
 
-| Pipeline step | Needed by              |
-| ------------- | ---------------------- |
-| CLI tools     | lazyvim, bat           |
-| NPM packages  | lazyvim, zsh           |
-| Runtimes      | lazyvim, opencode, zsh |
+| Pipeline step | Needed by                                           |
+| ------------- | --------------------------------------------------- |
+| CLI tools     | lazyvim, bat                                        |
+| NPM packages  | lazyvim, zsh                                        |
+| Runtimes      | lazyvim, opencode, zsh                              |
 | Post-install  | tmux, ghostty, alacritty, wezterm, windows-terminal |
 
 ### Backup and restore

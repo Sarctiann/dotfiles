@@ -17,14 +17,18 @@ Neovim MCP must be connected first. If not connected, use the `editor-neovim` sk
 **When you need to open one or more files in Neovim, follow these steps in order:**
 
 ### Step 1 — Find files
+
 Use native tools (grep, glob, read) to locate which files to open. Collect their absolute paths.
 
 ### Step 2 — Verify MCP connection
+
 Confirm the Neovim MCP is active. If not, use `editor-neovim` skill first.
 
 ### Step 3 — Focus a normal file window
+
 **Always focus a window that contains a real file buffer.**
 The Lua code below explicitly excludes:
+
 - **Neo-tree** (and any `nofile`/`acwrite` buffers)
 - **TUI/integration terminals** (and any other special `buftype`)
 - **Empty / unnamed buffers** (no filename)
@@ -32,6 +36,7 @@ The Lua code below explicitly excludes:
 Only windows with `buftype == ''` and a non-empty filename qualify.
 
 #### Standalone (focus only)
+
 Use before LSP commands, quickfix navigation, or buffer switches:
 
 ```
@@ -41,6 +46,7 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 ### Step 4 — Open files in editable mode
 
 #### Single file — Combined Focus + Open (preferred)
+
 **No round-trip pause.** Focuses a normal window and opens the file in a single MCP call:
 
 ```
@@ -49,35 +55,37 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 
 Replace `<path>` with the absolute file path.
 
-#### Multiple files — first with `:edit`, rest with `:split`
-**Always use this pattern for multiple files** — it opens them vertically split in the focused window:
+#### Multiple files — first `:edit`, rest `:badd`
+
+**Always use this pattern for multiple files** — opens the first in the focused window and adds the rest to the buffer list. The user navigates between them via bufferline. **No splits are created.**
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path-1> | vsplit <path-2> | vsplit <path-3>')")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path-1> | badd <path-2> | badd <path-3>')")
 ```
 
 For 2 files:
-```
-neovim_vim_command(":lua ... vim.cmd('edit <path-A> | vsplit <path-B>')")
-```
-
-If you already focused a normal window in a previous step, you can use plain `:edit` / `:split` without re-running the focus:
 
 ```
-neovim_vim_command(":edit <path-1> | vsplit <path-2>")
+neovim_vim_command(":lua ... vim.cmd('edit <path-A> | badd <path-B>')")
+```
+
+If you already focused a normal window in a previous step:
+
+```
+neovim_vim_command(":edit <path-1> | badd <path-2>")
 ```
 
 ## Tools Reference
 
-| Tool | Purpose |
-|------|---------|
-| File operations | Use native tools (not MCP) |
-| `neovim_vim_status` | Current buffer, cursor, LSP clients |
-| `neovim_vim_buffer` | Read buffer the user has open (for context) |
+| Tool                 | Purpose                                                     |
+| -------------------- | ----------------------------------------------------------- |
+| File operations      | Use native tools (not MCP)                                  |
+| `neovim_vim_status`  | Current buffer, cursor, LSP clients                         |
+| `neovim_vim_buffer`  | Read buffer the user has open (for context)                 |
 | `neovim_vim_command` | Run Vim commands (`:e`, `:copen`, `:checktime`, `:lua ...`) |
-| `neovim_vim_grep` | Populate quickfix for user navigation |
-| `neovim_vim_window` | Split/vsplit management for showing files |
-| `neovim_vim_health` | Connection health check |
+| `neovim_vim_grep`    | Populate quickfix for user navigation                       |
+| `neovim_vim_window`  | Split/vsplit management for showing files                   |
+| `neovim_vim_health`  | Connection health check                                     |
 
 ## Deprecated Tools
 
@@ -108,11 +116,11 @@ When the user says "this line", "this file", or "here" without specifying a path
 
 ## Common Mistakes
 
-| Mistake | Fix |
-|---------|-----|
-| Using MCP to edit instead of native tools | Use native edit/write |
-| Opening a file without the **Window Focus Step** | Always focus first — the file opens in the AI terminal otherwise |
-| Opening a file as two MCP calls (focus + open) | Use **Combined Focus + Open** — one call, no pause |
-| Not opening the file after editing | Use **Combined Focus + Open** so the user sees the result |
-| Not splitting multiple files | Use `:edit path-A \| vsplit path-B` for multiple files |
-| Using MCP for code navigation | Use native read/grep |
+| Mistake                                          | Fix                                                                          |
+| ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Using MCP to edit instead of native tools        | Use native edit/write                                                        |
+| Opening a file without the **Window Focus Step** | Always focus first — the file opens in the AI terminal otherwise             |
+| Opening a file as two MCP calls (focus + open)   | Use **Combined Focus + Open** — one call, no pause                           |
+| Not opening the file after editing               | Use **Combined Focus + Open** so the user sees the result                    |
+| Creating splits for multiple files               | Use `:edit path-A \| badd path-B` — no splits, user navigates via bufferline |
+| Using MCP for code navigation                    | Use native read/grep                                                         |

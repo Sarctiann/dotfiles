@@ -8,7 +8,7 @@ When opening files in Neovim via MCP, you MUST follow this 4-step protocol:
 2. **Verify MCP** — confirm Neovim MCP is connected (use `connect-to-neovim` skill if not)
 3. **Focus a normal file window** — target a window with `buftype == ''` and non-empty name;
    the Lua code below **automatically excludes Neo-tree**, TUI terminals, and unnamed buffers
-4. **Open files** — `:edit` for the first file, `:vsplit` for subsequent ones
+4. **Open files** — `:edit` for the first file, `:badd` for subsequent ones (adds to buffer list without creating splits; navigate with bufferline)
 
 **If you skip step 3, files open in the AI terminal panel (unmodifiable, no line numbers).**
 
@@ -20,10 +20,10 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 
 Replace `<path>` with the absolute file path.
 
-### Multiple files (first `:edit`, rest `:vsplit`)
+### Multiple files — first `:edit`, rest `:badd`
 
 ```
-neovim_vim_command(":lua ... vim.cmd('edit <path-1> | vsplit <path-2> | vsplit <path-3>')")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path-1> | badd <path-2> | badd <path-3>')")
 ```
 
 See the `using-neovim` skill in `./skills/` for full details and the standalone focus variant for LSP/quickfix.
