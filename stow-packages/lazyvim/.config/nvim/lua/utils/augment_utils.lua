@@ -104,7 +104,7 @@ function M.new_session(cache_dir)
   local name = M.get_display_name()
   local d = cache_dir:gsub(vim.fn.expand("~"), "~")
   M.show_notification(" " .. name .. " (profile: <" .. d .. ">) ")
-  vim.cmd("CLIIntegration open_root Augment --dont-save-session")
+  vim.cmd("CLIIntegration open_root Augment")
 end
 
 -- NOTE: Augment ask inline

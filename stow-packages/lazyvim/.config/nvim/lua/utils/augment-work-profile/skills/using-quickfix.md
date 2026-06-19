@@ -10,7 +10,11 @@ The quickfix list lets the user navigate multi-file results with `:cn` / `:cp` /
 
 Quickfix navigation commands (`:cn`, `:cp`, `:cfirst`) open files in the focused window.
 **Always run this before navigating** to ensure files open in the main window, not the
-AI terminal:
+AI terminal.
+
+The Lua code explicitly excludes Neo-tree (`nofile`), TUI terminals (`terminal`), and
+any other special `buftype` — only windows with `buftype == ''` and a non-empty filename
+qualify:
 
 ```
 neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
