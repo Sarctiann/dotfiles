@@ -226,6 +226,7 @@ local plugin_spec = {
   --- @module 'cli-integration'
   {
     "Sarctiann/cli-integration.nvim",
+    cmd = "CLIIntegration",
     --- @type Cli-Integration.Config
     opts = {
       debug = false,
