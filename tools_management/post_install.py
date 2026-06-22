@@ -615,7 +615,8 @@ def _setup_ssh_agent() -> None:
         run_optional(["systemctl", "--user", "daemon-reload"])
         print("   🔑 Removed old systemd ssh-agent service")
 
-    # Install keychain (manages ssh-agent across terminals, prompts passphrase once per boot)
+    # Install keychain (manages ssh-agent across terminals; .zshrc uses mkdir lock
+    # so only the first terminal prompts for passphrase)
     if not which("keychain"):
         run(["sudo", "apt", "install", "-y", "keychain"])
     else:

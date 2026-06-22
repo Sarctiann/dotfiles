@@ -138,8 +138,10 @@ load-nvmrc() {
 
     if [ "$nvmrc_node_version" = "N/A" ]; then
       nvm install
+      nvm use
     elif [ "$nvmrc_node_version" != "$(nvm version)" ]; then
       nvm use
+      clear
     fi
   elif [ -n "$(PWD=$OLDPWD nvm_find_nvmrc)" ] && [ "$(nvm version)" != "$(nvm version default)" ]; then
     nvm use default
@@ -174,7 +176,14 @@ export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
 
 # ─── SSH agent (keychain) ──────────────────────────────────────
 # Manages ssh-agent across terminals; prompts for passphrase once per boot.
+# Uses mkdir as atomic lock so tmux session-resurrect doesn't prompt in all windows.
 if command -v keychain &>/dev/null; then
-  eval $(keychain --eval --quiet -Q --timeout 480 ~/.ssh/id_ed25519)
+  eval $(keychain --eval --quiet -Q --timeout 480)
+  if ! ssh-add -l &>/dev/null; then
+    if mkdir /tmp/ssh-add-lock 2>/dev/null; then
+      ssh-add ~/.ssh/id_ed25519 2>/dev/null
+      rmdir /tmp/ssh-add-lock 2>/dev/null
+    fi
+  fi
 fi
 
