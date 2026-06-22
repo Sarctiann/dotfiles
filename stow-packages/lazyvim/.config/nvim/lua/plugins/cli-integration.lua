@@ -23,7 +23,7 @@ if is_company_project then
 
   integration_op = {
     name = "Augment",
-    cli_cmd = "auggie --augment-cache-dir " .. vim.fn.shellescape(cache_dir),
+    cli_cmd = "auggie --augment-cache-dir=" .. vim.fn.shellescape(cache_dir),
     cli_ready_flags = { search_for = "Version" },
     start_doing = function(visual_text, actions)
       require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Augment")

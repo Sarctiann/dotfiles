@@ -5,7 +5,7 @@ local WORK_PROFILE_SOURCE = vim.fn.expand("~/.config/nvim/lua/utils/augment-work
 -- WARN:
 -- configure your nvim-mcp-server to work with auggie by going to the directory
 -- where you have your augment cache dir and running this command in your terminal (only needs to be done once):
---    auggie --augment-cache-dir .augment_work_profile mcp add nvim -- nvim-mcp --connect auto
+--    auggie --augment-cache-dir=.augment_work_profile mcp add nvim -- nvim-mcp --connect auto
 -- It should result in the following entry in your ~/.gemini/settings.json file:
 --   {
 --     ...
@@ -128,7 +128,7 @@ function M.delete_all_augment_sessions(cache_dir)
   }, function(choice)
     if choice == "Yes" then
       local esc = vim.fn.shellescape(cache_dir)
-      local cmd = cache_dir and string.format("! auggie --augment-cache-dir %s session delete --all", esc)
+      local cmd = cache_dir and string.format("! auggie --augment-cache-dir=%s session delete --all", esc)
         or "! auggie session delete --all"
       vim.cmd(cmd)
       vim.notify("✓ All " .. name .. " sessions have been deleted", vim.log.levels.INFO)
@@ -136,6 +136,19 @@ function M.delete_all_augment_sessions(cache_dir)
       vim.notify("Deletion cancelled", vim.log.levels.INFO)
     end
   end)
+end
+
+function M.resume_session(session_id)
+  local term = require("cli-integration.terminal")
+  local term_data = term.terminals["Augment"]
+  if term_data and term_data.term_buf and vim.api.nvim_buf_is_valid(term_data.term_buf) then
+    term.close_terminal(term_data.term_buf)
+  end
+  if session_id == "" then
+    vim.cmd("CLIIntegration open_root Augment")
+  else
+    vim.cmd("CLIIntegration open_root Augment session resume " .. session_id)
+  end
 end
 
 -- NOTE: Function to manage Augment sessions (Uses plugin hooks with Lazy Load)
@@ -147,9 +160,7 @@ function M.manage_augment_sessions(show_all, cache_dir)
 
   local sessions_dir = cache_dir and (cache_dir .. "/sessions") or vim.fn.expand("~/.augment/sessions")
 
-  -- NOTE: resume_cmd must NOT include --augment-cache-dir — the
-  -- cli-integration integration_op.cli_cmd already embeds it.
-  local resume_cmd = "CLIIntegration open_root Augment session resume %s"
+  local resume_cmd = "lua require('utils.augment_utils').resume_session([[%s]])"
 
   require("cli-integration.hooks").manage_sessions({
     name = name,
