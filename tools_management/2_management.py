@@ -125,6 +125,10 @@ def cmd_install(args: argparse.Namespace) -> None:
     if args.interactive:
         core.INTERACTIVE = True
 
+    if args.force_cold:
+        core.COLD = True
+        args.force = True
+
     conf = cfg.load()
 
     if args.just:
@@ -249,7 +253,10 @@ def main() -> None:
         "-i", "--interactive", action="store_true", help="ask before each step"
     )
     install_parser.add_argument(
-        "-f", "--force", action="store_true", help="run all steps even if config unchanged"
+        "-f", "--force", action="store_true", help="run all steps even if config unchanged (skips existing downloads)"
+    )
+    install_parser.add_argument(
+        "-F", "--force-cold", action="store_true", help="full reinstall: re-download everything, overwrite existing"
     )
     install_parser.add_argument(
         "--check",

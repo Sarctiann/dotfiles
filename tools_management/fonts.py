@@ -2,6 +2,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import core
 from core import detect_os, download, run, run_optional, which
 import manifest as mf
 
@@ -32,7 +33,7 @@ def _font_installed(font_name: str, target: Path) -> bool:
 
 def install_nerd_font(font_name: str) -> bool:
     target = _fonts_dir()
-    if _font_installed(font_name, target):
+    if not core.COLD and _font_installed(font_name, target):
         print(f"✅ {font_name} Nerd Font already installed")
         return True
 

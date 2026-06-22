@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+import core
 from core import BIN_DIR, detect_os, detect_arch, download, gh_arch, run, rz_arch, which
 
 GH_API = "https://api.github.com"
@@ -124,7 +125,7 @@ def _neovim_runtime_missing() -> bool:
 
 
 def install_release_binary(repo: str, binary: str, pattern: str) -> bool:
-    if which(binary):
+    if not core.COLD and which(binary):
         if binary != "nvim" or not _neovim_runtime_missing():
             print(f"✅ {binary} already installed")
             return True

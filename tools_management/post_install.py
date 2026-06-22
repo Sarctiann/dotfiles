@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import core
 import manifest as mf
 from core import STOW_DIR, download, is_wsl, run, run_optional, safe_rmtree, which
 from stow import stow_windows_terminal
@@ -350,8 +351,43 @@ return config
         print(f"   ✓ {pkg_name}: generated {filename}")
 
 
+def _windows_user_dir() -> Path | None:
+    """Return Windows user home directory via /mnt/c/Users, or None."""
+    users_dir = Path("/mnt/c/Users")
+    if not users_dir.is_dir():
+        return None
+    skip_users = {"Default", "Public", "All Users", "Default User"}
+    for u in users_dir.iterdir():
+        if u.name in skip_users:
+            continue
+        if u.is_dir() and (u / "AppData").is_dir():
+            return u
+    return None
+
+
+def _windows_font_dir() -> Path | None:
+    win_user = _windows_user_dir()
+    if win_user is None:
+        return None
+    return win_user / "AppData" / "Local" / "Microsoft" / "Windows" / "Fonts"
+
+
+def _windows_font_installed(font_name: str) -> bool:
+    font_dir = _windows_font_dir()
+    if font_dir is None or not font_dir.is_dir():
+        return False
+    for f in font_dir.iterdir():
+        if font_name.replace(" ", "") in f.name and f.suffix.lower() in (".ttf", ".otf"):
+            return True
+    return False
+
+
 def _install_windows_nerd_font(font_name: str) -> None:
     """Install a Nerd Font from WSL into Windows so Windows Terminal can use it."""
+    if not core.COLD and _windows_font_installed(font_name):
+        print(f"✅ {font_name} Nerd Font already installed on Windows")
+        return
+
     nf_version = "3.4.0"
     url = f"https://github.com/ryanoasis/nerd-fonts/releases/download/v{nf_version}/{font_name}.zip"
     tmpdir = Path(tempfile.mkdtemp())
@@ -361,22 +397,9 @@ def _install_windows_nerd_font(font_name: str) -> None:
         download(url, archive)
         run(["unzip", "-q", str(archive), "-d", str(tmpdir / font_name), "-x", "*.txt", "*.md", "LICENSE"])
 
-        # Find Windows user profile via /mnt/c/Users
-        users_dir = Path("/mnt/c/Users")
-        if not users_dir.is_dir():
+        font_dir = _windows_font_dir()
+        if font_dir is None:
             return
-        skip_users = {"Default", "Public", "All Users", "Default User"}
-        win_user = None
-        for u in users_dir.iterdir():
-            if u.name in skip_users:
-                continue
-            if u.is_dir() and (u / "AppData").is_dir():
-                win_user = u.name
-                break
-        if not win_user:
-            return
-
-        font_dir = users_dir / win_user / "AppData" / "Local" / "Microsoft" / "Windows" / "Fonts"
         font_dir.mkdir(parents=True, exist_ok=True)
 
         copied = 0
@@ -570,21 +593,6 @@ def _sync_wsl_timezone() -> None:
 
 
 
-SSH_AGENT_SERVICE_UNIT = """\
-[Unit]
-Description=SSH key agent
-Before=default.target
-
-[Service]
-Type=forking
-Environment=SSH_AUTH_SOCK=%%t/ssh-agent.socket
-ExecStart=/usr/bin/ssh-agent -a %%t/ssh-agent.socket -t 12h
-
-[Install]
-WantedBy=default.target
-"""
-
-
 def _setup_ssh_agent() -> None:
     ssh_dir = Path.home() / ".ssh"
     ssh_dir.mkdir(mode=0o700, exist_ok=True)
@@ -599,29 +607,37 @@ def _setup_ssh_agent() -> None:
     else:
         print("   🔑 AddKeysToAgent already set in ~/.ssh/config")
 
-    unit_dir = Path.home() / ".config" / "systemd" / "user"
-    unit_dir.mkdir(parents=True, exist_ok=True)
-    unit_path = unit_dir / "ssh-agent.service"
+    # Remove old systemd ssh-agent service if present
+    unit_path = Path.home() / ".config" / "systemd" / "user" / "ssh-agent.service"
+    if unit_path.is_file():
+        run_optional(["systemctl", "--user", "disable", "--now", "ssh-agent.service"])
+        unit_path.unlink()
+        run_optional(["systemctl", "--user", "daemon-reload"])
+        print("   🔑 Removed old systemd ssh-agent service")
 
-    unit_path.write_text(SSH_AGENT_SERVICE_UNIT.replace("%%t", "%t"))
-    run_optional(["systemctl", "--user", "daemon-reload"])
-    result = run_optional(["systemctl", "--user", "enable", "--now", "ssh-agent.service"])
-    if result:
-        print("   🔑 ssh-agent systemd service enabled and started")
+    # Install keychain (manages ssh-agent across terminals, prompts passphrase once per boot)
+    if not which("keychain"):
+        run(["sudo", "apt", "install", "-y", "keychain"])
     else:
-        print("   ⚠  Could not start ssh-agent service (might need a login session)")
+        print("   🔑 keychain already installed")
 
     public_key = ssh_dir / "id_ed25519.pub"
     if public_key.is_file():
-        print("   📢 Run once to cache your passphrase:  ssh-add")
+        print("   📢 Passphrase will be requested on first terminal — keychain caches it thereafter")
 
 
 def _undo_ssh_agent() -> None:
+    # Remove systemd service if present
     run_optional(["systemctl", "--user", "disable", "--now", "ssh-agent.service"])
     unit_path = Path.home() / ".config" / "systemd" / "user" / "ssh-agent.service"
     if unit_path.is_file():
         unit_path.unlink()
     run_optional(["systemctl", "--user", "daemon-reload"])
+
+    # Kill any keychain-managed agents
+    run_optional(["keychain", "--stop", "all"])
+    run_optional(["sudo", "apt", "remove", "-y", "keychain"])
+    print("   🔑 SSH agent (keychain) removed")
 
 
 def run_post_install(config: dict, mode: str = "install") -> None:

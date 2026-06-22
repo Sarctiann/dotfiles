@@ -20,6 +20,7 @@ if str(BIN_DIR) not in os.environ["PATH"]:
 
 INTERACTIVE = False
 STOW_PLAN: set[str] | None = None
+COLD = False
 
 
 def confirm(prompt: str, default: bool = True) -> bool:
