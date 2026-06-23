@@ -187,3 +187,6 @@ if command -v keychain &>/dev/null; then
   fi
 fi
 
+
+# bun completions
+[ -s "/home/sarctiann/.bun/_bun" ] && source "/home/sarctiann/.bun/_bun"

@@ -1,7 +1,6 @@
 import json
 import re
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 
@@ -296,22 +295,36 @@ def _update_ghostty_font(config: dict) -> None:
     if not config_path.is_file():
         return
     font_name = _ghostty_font(base)
-    new_line = f"font-family = \"{font_name}\""
+    new_line = f'font-family = "{font_name}"'
     _set_or_add_line(config_path, "font-family", new_line)
     print(f"   \u2713 ghostty: font-family set to '{font_name}'")
 
 
 def _update_ghostty_command() -> None:
-    """Set tmux command in ghostty config on macOS."""
+    """Set tmux command in ghostty config."""
+    config_path = _ghostty_config_path()
+    if not config_path.is_file():
+        return
+    tmux_bin = which("tmux")
+    if not tmux_bin:
+        return
+    if isinstance(tmux_bin, bool):
+        tmux_bin = shutil.which("tmux") or "tmux"
+    tmux_cmd = f'command = "{tmux_bin} new-session -A -D -s main"'
+    _set_or_add_line(config_path, "command", tmux_cmd)
+    print(f"   \u2713 ghostty: tmux command enabled ({tmux_bin})")
+
+
+def _update_ghostty_window_decoration() -> None:
+    """Set window-decoration = none on Linux (macOS uses macos-titlebar-style in local_config)."""
     import platform
-    if platform.system() != "Darwin":
+    if platform.system() == "Darwin" or is_wsl():
         return
     config_path = _ghostty_config_path()
     if not config_path.is_file():
         return
-    tmux_cmd = 'command = "/opt/homebrew/bin/tmux new-session -A -D -s main"'
-    _set_or_add_line(config_path, "command", tmux_cmd)
-    print("   \u2713 ghostty: tmux command enabled")
+    _set_or_add_line(config_path, "window-decoration", 'window-decoration = "none"')
+    print("   \u2713 ghostty: window-decoration set to 'none'")
 
 
 def _generate_terminal_font_overrides(config: dict) -> None:
@@ -327,22 +340,26 @@ def _generate_terminal_font_overrides(config: dict) -> None:
     targets: list[tuple[str, str, str]] = []
 
     if stow_cfg.get("alacritty", False):
-        targets.append((
-            "alacritty",
-            "local.toml",
-            f"[font]\nnormal = {{ family = \"{_full_font(base)}\", style = \"Regular\" }}\nbuiltin_box_drawing = false\n",
-        ))
+        targets.append(
+            (
+                "alacritty",
+                "local.toml",
+                f'[font]\nnormal = {{ family = "{_full_font(base)}", style = "Regular" }}\nbuiltin_box_drawing = false\n',
+            )
+        )
 
     if stow_cfg.get("wezterm", False):
-        targets.append((
-            "wezterm",
-            "local.lua",
-            f"""local wezterm = require("wezterm")
+        targets.append(
+            (
+                "wezterm",
+                "local.lua",
+                f"""local wezterm = require("wezterm")
 local config = wezterm.config_builder()
 config.font = wezterm.font("{_full_font(base)}")
 return config
 """,
-        ))
+            )
+        )
 
     for pkg_name, filename, content in targets:
         override_path = STOW_DIR / pkg_name / ".config" / pkg_name / filename
@@ -377,7 +394,10 @@ def _windows_font_installed(font_name: str) -> bool:
     if font_dir is None or not font_dir.is_dir():
         return False
     for f in font_dir.iterdir():
-        if font_name.replace(" ", "") in f.name and f.suffix.lower() in (".ttf", ".otf"):
+        if font_name.replace(" ", "") in f.name and f.suffix.lower() in (
+            ".ttf",
+            ".otf",
+        ):
             return True
     return False
 
@@ -395,7 +415,19 @@ def _install_windows_nerd_font(font_name: str) -> None:
     try:
         archive = tmpdir / f"{font_name}.zip"
         download(url, archive)
-        run(["unzip", "-q", str(archive), "-d", str(tmpdir / font_name), "-x", "*.txt", "*.md", "LICENSE"])
+        run(
+            [
+                "unzip",
+                "-q",
+                str(archive),
+                "-d",
+                str(tmpdir / font_name),
+                "-x",
+                "*.txt",
+                "*.md",
+                "LICENSE",
+            ]
+        )
 
         font_dir = _windows_font_dir()
         if font_dir is None:
@@ -418,11 +450,16 @@ def _install_windows_nerd_font(font_name: str) -> None:
                     continue
 
         if copied:
-            print(f"   Copied {copied} font files to Windows Fonts folder for '{font_name}'")
+            print(
+                f"   Copied {copied} font files to Windows Fonts folder for '{font_name}'"
+            )
             # Register fonts with Windows so they're recognized immediately
-            run_optional([
-                "powershell.exe", "-NoProfile", "-Command",
-                f'''
+            run_optional(
+                [
+                    "powershell.exe",
+                    "-NoProfile",
+                    "-Command",
+                    f"""
                 $fontsDir = "$env:LOCALAPPDATA\\Microsoft\\Windows\\Fonts"
                 $regPath = "HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"
                 if (-not (Test-Path $regPath)) {{
@@ -443,8 +480,9 @@ def _install_windows_nerd_font(font_name: str) -> None:
                 }}
 "@
                 [void][FontUti]::SendMessageTimeout(-1, 0x001D, [IntPtr]::Zero, [IntPtr]::Zero, 2, 3000, [ref]0)
-                '''
-            ])
+                """,
+                ]
+            )
             print(f"✅ {font_name} Nerd Font installed on Windows")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -452,9 +490,12 @@ def _install_windows_nerd_font(font_name: str) -> None:
 
 def _disable_win_fullscreen_optimizations() -> None:
     """Disable Fullscreen Optimizations for known apps via registry."""
-    result = run_optional([
-        "powershell.exe", "-NoProfile", "-Command",
-        '''
+    result = run_optional(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-Command",
+            """
         $regPath = "HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers"
 
         $wtExe = (Get-AppxPackage Microsoft.WindowsTerminal).InstallLocation + "\\WindowsTerminal.exe"
@@ -466,8 +507,9 @@ def _disable_win_fullscreen_optimizations() -> None:
             Set-ItemProperty -Path $regPath -Name $zenExe -Value "DISABLEFULLSCREENOPTIMIZATION" -Type String
             Write-Output "  disabled for Zen Browser"
         }
-        '''
-    ])
+        """,
+        ]
+    )
     if result is not None:
         print("   🖥️  Fullscreen optimizations disabled for known apps")
 
@@ -558,7 +600,12 @@ def _map_windows_to_iana(win_tz: str) -> str | None:
 def _get_windows_tz() -> str | None:
     commands = [
         ["powershell.exe", "-NoProfile", "-Command", "[System.TimeZoneInfo]::Local.Id"],
-        ["/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe", "-NoProfile", "-Command", "[System.TimeZoneInfo]::Local.Id"],
+        [
+            "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+            "-NoProfile",
+            "-Command",
+            "[System.TimeZoneInfo]::Local.Id",
+        ],
         ["cmd.exe", "/c", "tzutil", "/g"],
         ["/mnt/c/Windows/System32/cmd.exe", "/c", "tzutil", "/g"],
     ]
@@ -581,16 +628,23 @@ def _sync_wsl_timezone() -> None:
     if not iana_tz:
         print(f"   ⚠  Unknown timezone '{win_tz}' — skipping")
         return
-    current = run_optional([
-        "timedatectl", "show", "-p", "Timezone", "--value",
-    ], capture_output=True, text=True)
+    current = run_optional(
+        [
+            "timedatectl",
+            "show",
+            "-p",
+            "Timezone",
+            "--value",
+        ],
+        capture_output=True,
+        text=True,
+    )
     current_tz = current.stdout.strip() if current else None
     if current_tz == iana_tz:
         print(f"   ✅ WSL timezone already set to {iana_tz}")
     else:
         print(f"   🕐 Setting WSL timezone to {iana_tz}...")
         run_optional(["sudo", "timedatectl", "set-timezone", iana_tz])
-
 
 
 def _setup_ssh_agent() -> None:
@@ -624,7 +678,9 @@ def _setup_ssh_agent() -> None:
 
     public_key = ssh_dir / "id_ed25519.pub"
     if public_key.is_file():
-        print("   📢 Passphrase will be requested on first terminal — keychain caches it thereafter")
+        print(
+            "   📢 Passphrase will be requested on first terminal — keychain caches it thereafter"
+        )
 
 
 def _undo_ssh_agent() -> None:
@@ -691,6 +747,9 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     print("⚡ Setting ghostty tmux command...")
     _update_ghostty_command()
 
+    print("🪟 Setting ghostty window decorations...")
+    _update_ghostty_window_decoration()
+
     print("🔔 Writing opencode-notifier config...")
     _write_notifier_config(config)
 
@@ -722,12 +781,15 @@ def run_post_install(config: dict, mode: str = "install") -> None:
 
     # Register ruff in Mason so mason-lspconfig doesn't reinstall via pip
     from core import BIN_DIR
+
     mason_pkgs = Path.home() / ".local" / "share" / "nvim" / "mason" / "packages"
     mason_bin = Path.home() / ".local" / "share" / "nvim" / "mason" / "bin"
     ruff_pkg = mason_pkgs / "ruff"
     if (BIN_DIR / "ruff").exists():
         ruff_pkg.mkdir(parents=True, exist_ok=True)
-        (ruff_pkg / "mason-receipt.json").write_text('{"id":"ruff","bin":["ruff"],"languages":["Python"],"spdx":"MIT"}')
+        (ruff_pkg / "mason-receipt.json").write_text(
+            '{"id":"ruff","bin":["ruff"],"languages":["Python"],"spdx":"MIT"}'
+        )
         mason_bin_ruff = mason_bin / "ruff"
         if mason_bin_ruff.is_symlink() or mason_bin_ruff.exists():
             mason_bin_ruff.unlink()
