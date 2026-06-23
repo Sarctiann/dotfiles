@@ -58,14 +58,18 @@ if is_company_project then
   keys_op = {
     {
       "<leader>aa",
-      function() augment_utils.new_session(cache_dir) end,
+      function()
+        augment_utils.new_session(cache_dir)
+      end,
       desc = "Augment New Session",
       silent = true,
       mode = { "n", "v" },
     },
     {
       "<leader>aq",
-      function() augment_utils.ask_inline(cache_dir) end,
+      function()
+        augment_utils.ask_inline(cache_dir)
+      end,
       desc = "Augment Ask (inline)",
       mode = { "n", "v" },
     },
@@ -230,11 +234,20 @@ local plugin_spec = {
     --- @type Cli-Integration.Config
     opts = {
       debug = false,
-      auto_clipboard = true,
+      window_features = {
+        auto_insert = true,
+        buffer_lock = true,
+        dynamic_resize = true,
+        fullscreen = true,
+        nav_keymaps = true,
+        start_insert_on_click = true,
+      },
       show_help_on_open = true,
       new_lines_amount = 1,
       start_insert_on_click = true,
-      enable_bufferline_integration = true,
+      adapters = {
+        bufferline = true,
+      },
       list_buffer = false,
       window_width = 40,
       window_padding = 1,
@@ -251,7 +264,7 @@ local plugin_spec = {
         },
         normal_mode = {
           hide = { "<Esc>" },
-          toggle_width = { "<C-f>" },
+          toggle_fullscreen = { "<C-f>" },
         },
       },
       integrations = {

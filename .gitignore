@@ -15,6 +15,7 @@ bun.lock
 
 # Secrets / state
 .credentials
+gemini-credentials.json
 opencode-notifier.json
 opencode-notifier-state.json
 .playwright-mcp
