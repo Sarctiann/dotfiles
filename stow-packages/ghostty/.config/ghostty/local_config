@@ -27,6 +27,8 @@ macos-non-native-fullscreen = padded-notch
 macos-titlebar-style = hidden
 macos-window-buttons = hidden
 macos-option-as-alt = left
+background-opacity = 0.90
+background-blur = macos-glass-clear
 
 # --- Behavior ---
 confirm-close-surface = false

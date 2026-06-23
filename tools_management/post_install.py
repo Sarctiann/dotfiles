@@ -318,13 +318,17 @@ def _update_ghostty_command() -> None:
 def _update_ghostty_window_decoration() -> None:
     """Set window-decoration = none on Linux (macOS uses macos-titlebar-style in local_config)."""
     import platform
+
     if platform.system() == "Darwin" or is_wsl():
         return
     config_path = _ghostty_config_path()
     if not config_path.is_file():
         return
     _set_or_add_line(config_path, "window-decoration", 'window-decoration = "none"')
-    print("   \u2713 ghostty: window-decoration set to 'none'")
+    _set_or_add_line(config_path, "backgorund-blur", "backgorund-blur = false")
+    print(
+        "   \u2713 ghostty: window-decoration set to 'none', backgorund-blur set to false"
+    )
 
 
 def _generate_terminal_font_overrides(config: dict) -> None:
