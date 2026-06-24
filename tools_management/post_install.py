@@ -193,73 +193,34 @@ def _undo_opencode_notifier() -> None:
         print("   removed opencode-notifier.json")
 
 
-def _ghostty_config_path() -> Path:
-    return Path.home() / ".config" / "ghostty" / "config"
+def _ghostty_override_path() -> Path:
+    return Path.home() / ".config" / "ghostty" / "local_config"
 
 
-def _ghostty_local_config_path() -> Path:
-    return STOW_DIR / "ghostty" / ".config" / "ghostty" / "local_config"
+def _ensure_ghostty_override() -> None:
+    """Ensure ~/.config/ghostty/local_config exists with machine-specific overrides.
 
-
-def _build_ghostty_config() -> str:
-    """Build config content by commenting all active settings from local_config.
-
-    font-family and command are left as commented placeholders — the installer
-    uncomments and updates them later. Everything else from local_config is
-    copied as a commented reference so the user knows what can be overridden.
-    """
-    lines = [
-        "# Ghostty local overrides (machine-specific)",
-        "# This file is gitignored \u2014 modify freely without affecting the repo.",
-        "# All shared settings live in local_config (tracked in git).",
-        "#",
-        "# The installer manages font-family and command below. Uncomment any",
-        "# other setting to override the value from local_config.",
-        "",
-        'config-file = "./local_config"',
-        "",
-        '# font-family = "CodeNewRoman Nerd Font"',
-        '# command = "/opt/homebrew/bin/tmux new-session -A -D -s main"',
-        "",
-        "# --- Override any value below ---",
-        "",
-    ]
-
-    lc = _ghostty_local_config_path()
-    if lc.is_file():
-        for line in lc.read_text().split("\n"):
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            lines.append(f"# {line}")
-
-    return "\n".join(lines) + "\n"
-
-
-_CONFIG_SENTINEL = "# --- Override any value below ---"
-
-
-def _ensure_ghostty_config() -> None:
-    """Ensure ~/.config/ghostty/config exists with commented reference of all local_config settings.
-
-    On first run the file is built dynamically from local_config. On subsequent
-    runs the sentinel line is checked; if missing the file is rebuilt (migration
-    from old installer). font-family and command are re-applied by the caller.
+    This file is gitignored and loaded after config (tracked), so values here
+    take precedence. font-family and command are set by the installer later.
     """
     if is_wsl():
         return
-    config_path = _ghostty_config_path()
-
-    if config_path.is_file() or config_path.is_symlink():
-        if _CONFIG_SENTINEL in config_path.read_text():
-            return
-        config_path.write_text(_build_ghostty_config())
-        print("   \u2713 ghostty: rebuilt config with current local_config settings")
+    override_path = _ghostty_override_path()
+    if override_path.is_file() or override_path.is_symlink():
         return
 
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(_build_ghostty_config())
-    print("   \u2713 ghostty: created ~/.config/ghostty/config")
+    override_path.parent.mkdir(parents=True, exist_ok=True)
+    override_path.write_text(
+        "# Ghostty machine-specific overrides (gitignored)\n"
+        "# Loaded after config (tracked) \u2014 values here take precedence.\n"
+        "# The installer manages font-family and command below. Add any\n"
+        "# other override below.\n"
+        "\n"
+        '# font-family = "CodeNewRoman Nerd Font"\n'
+        '# command = "/opt/homebrew/bin/tmux new-session -A -D -s main"\n'
+        "\n"
+    )
+    print("   \u2713 ghostty: created ~/.config/ghostty/local_config")
 
 
 def _set_or_add_line(path: Path, key: str, new_line: str) -> bool:
@@ -284,26 +245,26 @@ def _set_or_add_line(path: Path, key: str, new_line: str) -> bool:
 
 
 def _update_ghostty_font(config: dict) -> None:
-    """Set font-family in ghostty config (machine-specific file)."""
+    """Set font-family in ghostty override file (machine-specific)."""
     stow_cfg = config.get("stow", {})
     if not stow_cfg.get("ghostty_or_windowsTerminal", True) or is_wsl():
         return
     base = config.get("terminal_font", "CodeNewRoman")
     if not base:
         return
-    config_path = _ghostty_config_path()
-    if not config_path.is_file():
+    override_path = _ghostty_override_path()
+    if not override_path.is_file():
         return
     font_name = _ghostty_font(base)
     new_line = f'font-family = "{font_name}"'
-    _set_or_add_line(config_path, "font-family", new_line)
+    _set_or_add_line(override_path, "font-family", new_line)
     print(f"   \u2713 ghostty: font-family set to '{font_name}'")
 
 
 def _update_ghostty_command() -> None:
-    """Set tmux command in ghostty config."""
-    config_path = _ghostty_config_path()
-    if not config_path.is_file():
+    """Set tmux command in ghostty override file."""
+    override_path = _ghostty_override_path()
+    if not override_path.is_file():
         return
     tmux_bin = which("tmux")
     if not tmux_bin:
@@ -311,23 +272,23 @@ def _update_ghostty_command() -> None:
     if isinstance(tmux_bin, bool):
         tmux_bin = shutil.which("tmux") or "tmux"
     tmux_cmd = f'command = "{tmux_bin} new-session -A -D -s main"'
-    _set_or_add_line(config_path, "command", tmux_cmd)
+    _set_or_add_line(override_path, "command", tmux_cmd)
     print(f"   \u2713 ghostty: tmux command enabled ({tmux_bin})")
 
 
 def _update_ghostty_window_decoration() -> None:
-    """Set window-decoration = none on Linux (macOS uses macos-titlebar-style in local_config)."""
+    """Set window-decoration = none on Linux (macOS uses macos-titlebar-style in config)."""
     import platform
 
     if platform.system() == "Darwin" or is_wsl():
         return
-    config_path = _ghostty_config_path()
-    if not config_path.is_file():
+    override_path = _ghostty_override_path()
+    if not override_path.is_file():
         return
-    _set_or_add_line(config_path, "window-decoration", 'window-decoration = "none"')
-    _set_or_add_line(config_path, "backgorund-blur", "backgorund-blur = false")
+    _set_or_add_line(override_path, "window-decoration", 'window-decoration = "none"')
+    _set_or_add_line(override_path, "background-blur", "background-blur = false")
     print(
-        "   \u2713 ghostty: window-decoration set to 'none', backgorund-blur set to false"
+        "   \u2713 ghostty: window-decoration set to 'none', background-blur set to false"
     )
 
 
@@ -338,7 +299,7 @@ def _generate_terminal_font_overrides(config: dict) -> None:
     if not base:
         return
 
-    # Ghostty: update font-family in existing local_config (don't overwrite)
+    # Ghostty: update font-family in existing override file
     _update_ghostty_font(config)
 
     targets: list[tuple[str, str, str]] = []
@@ -742,8 +703,8 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     stow_cfg = config.get("stow", {})
     terminal_font = config.get("terminal_font", "CodeNewRoman Nerd Font Propo")
 
-    print("🐚 Ensuring ghostty config bootstrap...")
-    _ensure_ghostty_config()
+    print("🐚 Ensuring ghostty override file...")
+    _ensure_ghostty_override()
 
     print("🔤 Generating terminal font overrides...")
     _generate_terminal_font_overrides(config)

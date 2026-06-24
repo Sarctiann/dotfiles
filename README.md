@@ -357,9 +357,9 @@ Configure which terminals to stow via boolean flags in `config.json → stow`:
 | `alacritty`                  | stow alacritty                                  |
 | `wezterm`                    | stow wezterm                                    |
 
-Multiple terminals can be active at once. The terminal font (`terminal_font` at the top level of `config.json`, e.g. `CodeNewRoman`) is written to local override files during post-install (ghostty: `local_config`, alacritty: `local.toml`, wezterm: `local.lua`, Windows Terminal: patched during copy). The full font name is assembled as `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
+Multiple terminals can be active at once. The terminal font (`terminal_font` at the top level of `config.json`, e.g. `CodeNewRoman`) is written to local override files during post-install (ghostty: `local_config` → `~/.config/ghostty/local_config`, alacritty: `local.toml`, wezterm: `local.lua`, Windows Terminal: patched during copy). The full font name is assembled as `{base} Nerd Font Propo` for most terminals, `{base} Nerd Font` for Ghostty.
 
-Ghostty uses a two-file config split: `local_config` (tracked in git) holds all shared settings, while `config` (gitignored, created by installer) holds only `config-file = "./local_config"` plus commented reference overrides for local customization.
+Ghostty uses a two-file config split: `config` (tracked in git) holds all shared settings, while `local_config` (gitignored, created by installer) holds machine-specific overrides. The `config-file` directive in `config` loads `local_config` after all shared settings, so overrides take precedence.
 
 ### Base packages
 
@@ -394,7 +394,7 @@ Before stow overwrites an existing file, `stow.py` copies it to `~/.local/share/
 **/.gitkeep
 .DS_Store
 **/.playwright-mcp
-.config/ghostty/config     # gitignored, created by installer
+.config/ghostty/local_config     # gitignored, created by installer
 ```
 
 ## Adding a new stow package

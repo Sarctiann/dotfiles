@@ -1,5 +1,5 @@
-# Ghostty main configuration (tracked in git)
-# Loaded via config-file directive. Override any value in ~/.config/ghostty/config.
+# Ghostty main configuration (shared, tracked in git)
+# Machine-specific overrides live in local_config (loaded via config-file below).
 
 # --- Theme ---
 theme = "TokyoNight Night"
@@ -36,3 +36,6 @@ confirm-close-surface = false
 # --- Keybindings ---
 keybind = shift+enter=text:\x1b[13;2u
 keybind = ctrl+enter=text:\x1b[13;5u
+
+# Machine-specific overrides loaded AFTER this file, so they take precedence.
+config-file = "./local_config"

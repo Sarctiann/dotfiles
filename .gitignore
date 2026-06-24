@@ -42,8 +42,8 @@ company_dirs.lua
 local.lua
 local.toml
 
-# Ghostty main config — user-local overrides (bootstrap created by installer)
-stow-packages/ghostty/.config/ghostty/config
+# Ghostty machine-specific overrides (created by installer)
+stow-packages/ghostty/.config/ghostty/local_config
 
 # Testing
 testing/test_containers/logs/
