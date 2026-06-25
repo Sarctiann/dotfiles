@@ -17,16 +17,34 @@ setopt histignorealldups sharehistory PROMPT_SUBST
 autoload -Uz vcs_info
 precmd_vcs_info() { vcs_info }
 precmd_functions+=( precmd_vcs_info )
-precmd_functions+=( _async_git_fetch )
 
 zstyle ':vcs_info:*' check-for-changes true
 zstyle ':vcs_info:*' unstagedstr '%F{red} %f'
 zstyle ':vcs_info:*' stagedstr '%F{green} %f'
 zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b%m %u%c%F{yellow})%f'
 
-# Remote ahead/behind via vcs_info hook (async fetch + cache)
-typeset -g _GIT_PROMPT_CACHE="${XDG_RUNTIME_DIR:-/tmp}/git-prompt-cache"
 zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
+
++vi-git-remote() {
+    local git_root cache_file
+    git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
+    cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
+
+    local ahead=0 behind=0
+    [[ -f "$cache_file" ]] && read -r ahead behind < "$cache_file"
+
+    if (( ahead > 0 || behind > 0 )); then
+        local remote_info="%F{215}"
+        (( ahead > 0 )) && remote_info+="↑${ahead}"
+        (( behind > 0 )) && remote_info+="↓${behind}"
+        remote_info+="%f"
+
+        hook_com[misc]=" ${remote_info}"
+    fi
+}
+
+# ── Remote ahead/behind via async fetch + cache ───────────────
+typeset -g _GIT_PROMPT_CACHE="${XDG_RUNTIME_DIR:-/tmp}/git-prompt-cache"
 
 _async_git_fetch() {
     local git_root
@@ -35,6 +53,7 @@ _async_git_fetch() {
     local lock_file="$_GIT_PROMPT_CACHE/${git_root//\//_}.lock"
 
     (
+        mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
         mkdir "$lock_file" 2>/dev/null || exit
         git -C "$git_root" fetch --quiet 2>/dev/null
 
@@ -47,28 +66,12 @@ _async_git_fetch() {
             ahead=0; behind=0
         fi
 
-        mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
         echo "$ahead $behind" > "$cache_file"
         rmdir "$lock_file" 2>/dev/null
     ) &!
 }
 
-+vi-git-remote() {
-    local git_root cache_file
-    git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
-    cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
-
-    local ahead=0 behind=0
-    [[ -f "$cache_file" ]] && read -r ahead behind < "$cache_file"
-
-    if (( ahead > 0 || behind > 0 )); then
-        local remote_info=" %F{208}"
-        (( ahead > 0 )) && remote_info+="↑${ahead}"
-        (( behind > 0 )) && remote_info+="↓${behind}"
-        remote_info+="%f"
-        hook_com[misc]+=$remote_info
-    fi
-}
+precmd_functions+=( _async_git_fetch )
 
 function virtualenv_info () {
     [ $VIRTUAL_ENV ] && echo '('`basename $VIRTUAL_ENV`') '
