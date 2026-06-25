@@ -53,7 +53,10 @@ From the output:
 > from the `opencode models` output. This applies to all steps that reference
 > model names (steps 2, 3, 5, 6, 7, 8, and 9).
 
-Also read `opencode.jsonc` to collect **agent names and their roles** (from descriptions and `agents/*.md` files). Ignore current model assignments — those will be replaced.
+Also read `opencode.jsonc` to collect:
+
+- **Agent names and their roles** (from descriptions and `agents/*.md` files)
+- **Current `variant` values** — note which agents already have a `variant` field set. The variant differentiates configurations of the same base model (e.g., `max`, `high`, `low`). Ignore current model assignments — those will be replaced.
 
 ### 2. Research Model Characteristics and Validate URLs
 
@@ -142,12 +145,22 @@ Assign each agent a model from the step-1 list. Apply the **Priority Mode** from
 
 **All modes — non-negotiable constraints:**
 
-- **No duplicate models** — each agent must use a unique model
+- **No duplicate model+variant** — each agent must use a unique model+variant combination. Same model with different `variant` values IS allowed (e.g., `deepseek-v4-flash` with `variant: max` and `variant: high`). If two agents share a model, they MUST have different `variant` values.
 - **Only models from step 1** — never assign a model not confirmed available
 - **No assignment left blank** — every agent must have a model
 - **Exact identifier match** — model names must be copied verbatim from step 1 output, including all hyphens, dots, and version numbers. Never modify, normalize, or guess identifiers.
 
-Save the resulting assignments to `docs/agent-audits/assignments.json` for use in step 6.
+Save the resulting assignments to `docs/agent-audits/assignments.json` for use in step 6. If any agent uses a model shared with another agent, include the `variant` field to differentiate them:
+
+```json
+{
+  "build": "opencode-go/deepseek-v4-flash",
+  "x-teach": "opencode-go/deepseek-v4-flash",
+  "z-spark": "opencode-go/deepseek-v4-free"
+}
+```
+
+The assignments dict maps agent names to model identifiers (for scale calculator compatibility). Variant info is recorded in the audit report and `opencode.jsonc` only.
 
 ### 6. Calculate Scale-Based Indicators
 
@@ -243,11 +256,12 @@ Range divided per dimension (computed in step 6):
 
 ## Proposed Assignments
 
-| Agent   | Model             | Intelligence | Cost | Speed | Role Fit  | Rationale           |
-| ------- | ----------------- | ------------ | ---- | ----- | --------- | ------------------- |
-| build   | qwen3.6-plus      | 󰫣󰫣          |     | 󱐋󱐋    | Good      | Balanced for coding |
-| z-spark | deepseek-v4-flash | 󰫣           |     | 󱐋󱐋󱐋   | Excellent | Fast & cheap        |
-| ...     | ...               | ...          | ...  | ...   | ...       | ...                 |
+| Agent   | Variant         | Model             | Intelligence | Cost | Speed | Role Fit  | Rationale           |
+| ------- | --------------- | ----------------- | ------------ | ---- | ----- | --------- | ------------------- |
+| build   | `max`           | deepseek-v4-flash | 󰫣󰫣          |     | 󱐋󱐋    | Good      | Balanced for coding |
+| x-teach | `high`          | deepseek-v4-flash | 󰫣󰫣          |     | 󱐋󱐋    | Good      | Teaching companion  |
+| z-spark | —               | deepseek-v4-flash | 󰫣           |     | 󱐋󱐋󱐋   | Excellent | Fast & cheap        |
+| ...     | ...             | ...               | ...          | ...  | ...   | ...       | ...                 |
 
 ## Changes from Previous Config
 
@@ -273,6 +287,7 @@ All model assignments must come **exclusively** from models confirmed in step 1.
 
 - Set `agent.<name>.model` for every agent from the proposed assignments in step 7
 - Set `agent.<name>.description` with `[quality | cost | speed]` prefix
+- If an agent shares a model with another agent, set `agent.<name>.variant` to the variant value from step 7. Agents using a unique model do NOT need a `variant` field.
 
 **`agents/*.md`:**
 
@@ -290,7 +305,7 @@ All model assignments must come **exclusively** from models confirmed in step 1.
 
 ### 9. Verify
 
-- No duplicate models across agents ✅
+- No duplicate model+variant across agents (same model + same variant never appears twice) ✅
 - All agent descriptions have `[quality | cost | speed]` indicators ✅
 - Scale calculation ran on selected models only ✅
 - Icons assigned by range quarters (Q1 → `---`, Q2 → 1 icon, Q3 → 2 icons, Q4 → 3 icons) ✅

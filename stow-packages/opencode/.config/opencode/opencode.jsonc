@@ -52,6 +52,7 @@
       "model": "opencode-go/deepseek-v4-flash",
       "color": "secondary",
       "description": "[󰫣󰫣  |  |󱐋󱐋󱐋] Implementation specialist with precision coding",
+      "variant": "max",
     },
     "plan": {
       "model": "opencode-go/minimax-m2.7",
@@ -69,6 +70,7 @@
       "model": "opencode-go/deepseek-v4-flash",
       "color": "#4fd6be",
       "description": "[󰫣󰫣  |  |󱐋󱐋󱐋] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+      "variant": "high",
     },
     "z-forge": {
       "model": "opencode/gpt-5.1-codex-mini",
