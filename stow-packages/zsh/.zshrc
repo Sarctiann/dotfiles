@@ -36,9 +36,10 @@ zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
     fi
 
     zmodload zsh/datetime 2>/dev/null
-    local delta_str=""
     if (( timestamp > 0 )); then
+        strftime -s time_str "%H:%M:%S" $timestamp
         local delta=$(( EPOCHSECONDS - timestamp ))
+        local delta_str=""
         if (( delta < 60 )); then
             delta_str="${delta}s"
         elif (( delta < 3600 )); then
@@ -46,7 +47,7 @@ zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
         else
             delta_str="$(( delta / 3600 ))h"
         fi
-        hook_com[misc]="%F{244}  ${delta_str}%f"
+        hook_com[misc]="%F{244} [${time_str}  ${delta_str}]%f"
     fi
 
     if (( ahead > 0 || behind > 0 )); then
