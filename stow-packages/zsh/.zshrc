@@ -61,6 +61,11 @@ _async_git_fetch() {
 
     mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
 
+    # Don't fetch if cache is fresh (< 30s)
+    if [[ -f "$cache_file" ]] && find "$cache_file" -mmin -0.5 2>/dev/null | grep -q .; then
+        return
+    fi
+
     (
         mkdir "$lock_file" 2>/dev/null || exit
         git -C "$git_root" fetch --quiet 2>/dev/null
