@@ -17,21 +17,50 @@ setopt histignorealldups sharehistory PROMPT_SUBST
 autoload -Uz vcs_info
 precmd_vcs_info() { vcs_info }
 precmd_functions+=( precmd_vcs_info )
+precmd_functions+=( _async_git_fetch )
 
 zstyle ':vcs_info:*' check-for-changes true
 zstyle ':vcs_info:*' unstagedstr '%F{red} %f'
 zstyle ':vcs_info:*' stagedstr '%F{green} %f'
 zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b%m %u%c%F{yellow})%f'
 
-# Remote ahead/behind via vcs_info hook (reads local tracking refs, no fetch)
+# Remote ahead/behind via vcs_info hook (async fetch + cache)
+typeset -g _GIT_PROMPT_CACHE="${XDG_RUNTIME_DIR:-/tmp}/git-prompt-cache"
 zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
 
+_async_git_fetch() {
+    local git_root
+    git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
+    local cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
+    local lock_file="$_GIT_PROMPT_CACHE/${git_root//\//_}.lock"
+
+    (
+        mkdir "$lock_file" 2>/dev/null || exit
+        git -C "$git_root" fetch --quiet 2>/dev/null
+
+        local upstream ahead behind
+        upstream=$(git -C "$git_root" rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null)
+        if [[ -n "$upstream" ]]; then
+            ahead=$(git -C "$git_root" rev-list --count @{upstream}..HEAD 2>/dev/null || echo 0)
+            behind=$(git -C "$git_root" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
+        else
+            ahead=0; behind=0
+        fi
+
+        mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
+        echo "$ahead $behind" > "$cache_file"
+        rmdir "$lock_file" 2>/dev/null
+    ) &!
+}
+
 +vi-git-remote() {
-    local branch_line
-    branch_line=$(git status --porcelain -b 2>/dev/null | head -1)
+    local git_root cache_file
+    git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
+    cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
+
     local ahead=0 behind=0
-    [[ $branch_line =~ '\[ahead ([0-9]+)\]' ]] && ahead=$match[1]
-    [[ $branch_line =~ '\[behind ([0-9]+)\]' ]] && behind=$match[1]
+    [[ -f "$cache_file" ]] && read -r ahead behind < "$cache_file"
+
     if (( ahead > 0 || behind > 0 )); then
         local remote_info=" %F{208}"
         (( ahead > 0 )) && remote_info+="↑${ahead}"
