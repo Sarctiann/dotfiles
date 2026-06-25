@@ -21,7 +21,25 @@ precmd_functions+=( precmd_vcs_info )
 zstyle ':vcs_info:*' check-for-changes true
 zstyle ':vcs_info:*' unstagedstr '%F{red} %f'
 zstyle ':vcs_info:*' stagedstr '%F{green} %f'
-zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b %u%c%F{yellow})%f'
+zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b%m %u%c%F{yellow})%f'
+
+# Remote ahead/behind via vcs_info hook (reads local tracking refs, no fetch)
+zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
+
++vi-git-remote() {
+    local branch_line
+    branch_line=$(git status --porcelain -b 2>/dev/null | head -1)
+    local ahead=0 behind=0
+    [[ $branch_line =~ '\[ahead ([0-9]+)\]' ]] && ahead=$match[1]
+    [[ $branch_line =~ '\[behind ([0-9]+)\]' ]] && behind=$match[1]
+    if (( ahead > 0 || behind > 0 )); then
+        local remote_info=" %F{208}"
+        (( ahead > 0 )) && remote_info+="↑${ahead}"
+        (( behind > 0 )) && remote_info+="↓${behind}"
+        remote_info+="%f"
+        hook_com[misc]+=$remote_info
+    fi
+}
 
 function virtualenv_info () {
     [ $VIRTUAL_ENV ] && echo '('`basename $VIRTUAL_ENV`') '
