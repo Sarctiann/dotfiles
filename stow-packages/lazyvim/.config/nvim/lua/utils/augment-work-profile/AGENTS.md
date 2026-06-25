@@ -6,24 +6,24 @@ When opening files in Neovim via MCP, you MUST follow this 4-step protocol:
 
 1. **Find files** — use native grep/glob to locate files, collect absolute paths
 2. **Verify MCP** — confirm Neovim MCP is connected (use `connect-to-neovim` skill if not)
-3. **Focus a normal file window** — target a window with `buftype == ''` and non-empty name;
-   the Lua code below **automatically excludes Neo-tree**, TUI terminals, and unnamed buffers
-4. **Open files** — `:edit` for the first file, `:badd` for subsequent ones (adds to buffer list without creating splits; navigate with bufferline)
+3. **Focus a normal file window** — target a window with `buftype == ''`;
+   the Lua code below **automatically excludes Neo-tree** and TUI terminals
+4. **Open files** — `:badd` for all files (adds to buffer list; navigate with bufferline)
 
 **If you skip step 3, files open in the AI terminal panel (unmodifiable, no line numbers).**
 
 ### Single file (Combined Focus + Open — preferred)
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('badd <path>')")
 ```
 
 Replace `<path>` with the absolute file path.
 
-### Multiple files — first `:edit`, rest `:badd`
+### Multiple files — `:badd` for all
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path-1> | badd <path-2> | badd <path-3>')")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('badd <path-1> | badd <path-2> | badd <path-3>')")
 ```
 
 See the `using-neovim` skill in `./skills/` for full details and the standalone focus variant for LSP/quickfix.

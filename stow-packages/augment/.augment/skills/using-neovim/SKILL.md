@@ -31,16 +31,14 @@ The Lua code below explicitly excludes:
 
 - **Neo-tree** (and any `nofile`/`acwrite` buffers)
 - **TUI/integration terminals** (and any other special `buftype`)
-- **Empty / unnamed buffers** (no filename)
-
-Only windows with `buftype == ''` and a non-empty filename qualify.
+Only windows with `buftype == ''` qualify.
 
 #### Standalone (focus only)
 
 Use before LSP commands, quickfix navigation, or buffer switches:
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end")
 ```
 
 ### Step 4 — Open files in editable mode
@@ -50,29 +48,29 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 **No round-trip pause.** Focuses a normal window and opens the file in a single MCP call:
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path>')")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('badd <path>')")
 ```
 
 Replace `<path>` with the absolute file path.
 
-#### Multiple files — first `:edit`, rest `:badd`
+#### Multiple files — `:badd` for all
 
-**Always use this pattern for multiple files** — opens the first in the focused window and adds the rest to the buffer list. The user navigates between them via bufferline. **No splits are created.**
+**Always use this pattern for multiple files** — adds all files to the buffer list. The user navigates between them via bufferline. **No splits are created.**
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('edit <path-1> | badd <path-2> | badd <path-3>')")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end vim.cmd('badd <path-1> | badd <path-2> | badd <path-3>')")
 ```
 
 For 2 files:
 
 ```
-neovim_vim_command(":lua ... vim.cmd('edit <path-A> | badd <path-B>')")
+neovim_vim_command(":lua ... vim.cmd('badd <path-A> | badd <path-B>')")
 ```
 
 If you already focused a normal window in a previous step:
 
 ```
-neovim_vim_command(":edit <path-1> | badd <path-2>")
+neovim_vim_command(":badd <path-1> | badd <path-2>")
 ```
 
 ## Tools Reference
@@ -122,5 +120,5 @@ When the user says "this line", "this file", or "here" without specifying a path
 | Opening a file without the **Window Focus Step** | Always focus first — the file opens in the AI terminal otherwise             |
 | Opening a file as two MCP calls (focus + open)   | Use **Combined Focus + Open** — one call, no pause                           |
 | Not opening the file after editing               | Use **Combined Focus + Open** so the user sees the result                    |
-| Creating splits for multiple files               | Use `:edit path-A \| badd path-B` — no splits, user navigates via bufferline |
+| Creating splits for multiple files               | Use `:badd` for all files — no splits, user navigates via bufferline |
 | Using MCP for code navigation                    | Use native read/grep                                                         |

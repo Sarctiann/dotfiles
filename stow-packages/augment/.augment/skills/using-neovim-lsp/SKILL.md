@@ -12,11 +12,10 @@ LSP operations require being in a normal file window. **Always run this before a
 command** to ensure focus is on a file buffer, not the AI terminal panel.
 
 The Lua code explicitly excludes Neo-tree (`nofile`), TUI terminals (`terminal`), and
-any other special `buftype` — only windows with `buftype == ''` and a non-empty filename
-qualify:
+any other special `buftype` — only windows with `buftype == ''` qualify:
 
 ```
-neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype local bn = vim.api.nvim_buf_get_name(b) if bt == '' and bn ~= '' then vim.api.nvim_set_current_win(w) break end end")
+neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end")
 ```
 
 ## Check LSP Status
