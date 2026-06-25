@@ -21,33 +21,34 @@ precmd_functions+=( precmd_vcs_info )
 zstyle ':vcs_info:*' check-for-changes true
 zstyle ':vcs_info:*' unstagedstr '%F{red} %f'
 zstyle ':vcs_info:*' stagedstr '%F{green} %f'
-zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b%m %u%c%F{yellow})%f'
+zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %m%b %u%c%F{yellow})%f'
 
 zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
 
 +vi-git-remote() {
-    local git_root cache_file lock_file
+    local git_root cache_file
     git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
     cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
-    lock_file="$_GIT_PROMPT_CACHE/${git_root//\//_}.lock"
 
-    local ahead=0 behind=0
-    [[ -f "$cache_file" ]] && read -r ahead behind < "$cache_file"
+    local ahead=0 behind=0 timestamp=0
+    if [[ -f "$cache_file" ]]; then
+        IFS=' ' read -r ahead behind timestamp < "$cache_file"
+    fi
 
-    local remote_info=""
+    zmodload zsh/datetime 2>/dev/null
+    local time_str=""
+    if (( timestamp > 0 )); then
+        strftime -s time_str "%H:%M:%S" $timestamp
+    fi
+    hook_com[misc]="${time_str} "
+
     if (( ahead > 0 || behind > 0 )); then
-        remote_info="%F{215}"
+        local remote_info="%F{215}"
         (( ahead > 0 )) && remote_info+="↑${ahead}"
         (( behind > 0 )) && remote_info+="↓${behind}"
         remote_info+="%f"
+        hook_com[branch]+=" ${remote_info}"
     fi
-
-    # Show sync indicator if previous fetch still in progress
-    if [[ -d "$lock_file" ]]; then
-        remote_info="%F{215}⟳%f${remote_info:+ $remote_info}"
-    fi
-
-    hook_com[misc]="${remote_info:+ $remote_info}"
 }
 
 # ── Remote ahead/behind via async fetch + cache ───────────────
@@ -61,15 +62,11 @@ _async_git_fetch() {
 
     mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
 
-    # Don't fetch if cache is fresh (< 30s)
-    if [[ -f "$cache_file" ]] && find "$cache_file" -mmin -0.5 2>/dev/null | grep -q .; then
-        return
-    fi
-
     (
         mkdir "$lock_file" 2>/dev/null || exit
         git -C "$git_root" fetch --quiet 2>/dev/null
 
+        zmodload zsh/datetime 2>/dev/null
         local upstream ahead behind
         upstream=$(git -C "$git_root" rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null)
         if [[ -n "$upstream" ]]; then
@@ -79,7 +76,7 @@ _async_git_fetch() {
             ahead=0; behind=0
         fi
 
-        echo "$ahead $behind" > "$cache_file"
+        echo "$ahead $behind $EPOCHSECONDS" > "$cache_file"
         rmdir "$lock_file" 2>/dev/null
     ) &!
 }
