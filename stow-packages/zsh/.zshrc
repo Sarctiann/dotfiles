@@ -21,7 +21,7 @@ precmd_functions+=( precmd_vcs_info )
 zstyle ':vcs_info:*' check-for-changes true
 zstyle ':vcs_info:*' unstagedstr '%F{red} %f'
 zstyle ':vcs_info:*' stagedstr '%F{green} %f'
-zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %m%b %u%c%F{yellow})%f'
+zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b%m %u%c%F{yellow})%f'
 
 zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
 
@@ -36,11 +36,18 @@ zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
     fi
 
     zmodload zsh/datetime 2>/dev/null
-    local time_str=""
+    local delta_str=""
     if (( timestamp > 0 )); then
-        strftime -s time_str "%H:%M:%S" $timestamp
+        local delta=$(( EPOCHSECONDS - timestamp ))
+        if (( delta < 60 )); then
+            delta_str="${delta}s"
+        elif (( delta < 3600 )); then
+            delta_str="$(( delta / 60 ))m"
+        else
+            delta_str="$(( delta / 3600 ))h"
+        fi
+        hook_com[misc]="  ${delta_str}"
     fi
-    hook_com[misc]="${time_str} "
 
     if (( ahead > 0 || behind > 0 )); then
         local remote_info="%F{215}"
