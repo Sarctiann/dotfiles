@@ -26,21 +26,28 @@ zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b%m %u%
 zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
 
 +vi-git-remote() {
-    local git_root cache_file
+    local git_root cache_file lock_file
     git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
     cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
+    lock_file="$_GIT_PROMPT_CACHE/${git_root//\//_}.lock"
 
     local ahead=0 behind=0
     [[ -f "$cache_file" ]] && read -r ahead behind < "$cache_file"
 
+    local remote_info=""
     if (( ahead > 0 || behind > 0 )); then
-        local remote_info="%F{215}"
+        remote_info="%F{215}"
         (( ahead > 0 )) && remote_info+="↑${ahead}"
         (( behind > 0 )) && remote_info+="↓${behind}"
         remote_info+="%f"
-
-        hook_com[misc]=" ${remote_info}"
     fi
+
+    # Show sync indicator if previous fetch still in progress
+    if [[ -d "$lock_file" ]]; then
+        remote_info="%F{215}⟳%f${remote_info:+ $remote_info}"
+    fi
+
+    hook_com[misc]="${remote_info:+ $remote_info}"
 }
 
 # ── Remote ahead/behind via async fetch + cache ───────────────
@@ -52,8 +59,9 @@ _async_git_fetch() {
     local cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
     local lock_file="$_GIT_PROMPT_CACHE/${git_root//\//_}.lock"
 
+    mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
+
     (
-        mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
         mkdir "$lock_file" 2>/dev/null || exit
         git -C "$git_root" fetch --quiet 2>/dev/null
 
