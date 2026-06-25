@@ -38,6 +38,7 @@ SETTINGS = """
 
 [pull]
   ff = only
+  rebase = true
 """
 
 
