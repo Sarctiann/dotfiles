@@ -46,7 +46,7 @@ zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
         else
             delta_str="$(( delta / 3600 ))h"
         fi
-        hook_com[misc]="  ${delta_str}"
+        hook_com[misc]="%F{244}  ${delta_str}%f"
     fi
 
     if (( ahead > 0 || behind > 0 )); then
