@@ -66,9 +66,9 @@
       "mode": "primary",
     },
     "x-teach": {
-      "model": "opencode/nemotron-3-ultra-free",
+      "model": "opencode-go/deepseek-v4-flash",
       "color": "#4fd6be",
-      "description": "[󰫣   |--- |󱐋  ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+      "description": "[󰫣󰫣  |  |󱐋󱐋󱐋] Learning companion — doesn't code, teaches concepts and how to find answers independently",
     },
     "z-forge": {
       "model": "opencode/gpt-5.1-codex-mini",
