@@ -7,7 +7,12 @@ local plugin_spec = {
     "Sarctiann/mojo.nvim",
     main = "mojo",
     --- @type Mojo-lang.Config
-    opts = {},
+    opts = {
+      statusline = {
+        -- Lazyvim already comes with Trouble
+        show_diag = false,
+      },
+    },
   },
 }
 
