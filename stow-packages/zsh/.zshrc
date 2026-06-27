@@ -30,10 +30,10 @@ zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
     git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
     cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
 
+    [[ -f "$cache_file" ]] || return
+
     local ahead=0 behind=0 timestamp=0
-    if [[ -f "$cache_file" ]]; then
-        IFS=' ' read -r ahead behind timestamp < "$cache_file"
-    fi
+    IFS=' ' read -r ahead behind timestamp < "$cache_file"
 
     zmodload zsh/datetime 2>/dev/null
     if (( timestamp > 0 )); then
@@ -80,11 +80,10 @@ _async_git_fetch() {
         if [[ -n "$upstream" ]]; then
             ahead=$(git -C "$git_root" rev-list --count @{upstream}..HEAD 2>/dev/null || echo 0)
             behind=$(git -C "$git_root" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
+            echo "$ahead $behind $EPOCHSECONDS" > "$cache_file"
         else
-            ahead=0; behind=0
+            rm -f "$cache_file"
         fi
-
-        echo "$ahead $behind $EPOCHSECONDS" > "$cache_file"
         rmdir "$lock_file" 2>/dev/null
     ) &!
 }
