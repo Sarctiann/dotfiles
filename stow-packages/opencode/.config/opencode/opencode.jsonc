@@ -90,7 +90,7 @@
     },
     "z-nexus": {
       "model": "opencode-go/mimo-v2.5",
-      "color": "#3760bf",
+      "color": "#9854f1",
       "description": "[󰫣󰫣  |  |󱐋󱐋 ] Large-context analyzer for multi-file understanding",
       "permission": {
         "skill": { "*": "ask" },
