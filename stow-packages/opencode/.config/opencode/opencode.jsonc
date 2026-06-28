@@ -42,40 +42,38 @@
     // Built-in agents with specific models and colors
     "explore": {
       "model": "opencode/north-mini-code-free",
-      "description": "[--- |--- |󱐋  ] Fast codebase exploration at lowest cost",
+      "description": "[--- |--- |󱐋󱐋 ] Fast codebase exploration at lowest cost",
     },
     "general": {
       "model": "opencode/mimo-v2.5-free",
-      "description": "[--- |--- |󱐋󱐋 ] Balanced general-purpose assistant",
+      "description": "[--- |--- |󱐋  ] Balanced general-purpose assistant",
     },
     "build": {
-      "model": "opencode-go/deepseek-v4-flash",
+      "model": "opencode/deepseek-v4-flash",
       "color": "secondary",
-      "description": "[󰫣󰫣  |  |󱐋󱐋󱐋] Implementation specialist with precision coding",
-      "variant": "max",
+      "description": "[󰫣󰫣  |   |󱐋󱐋󱐋] Implementation specialist with precision coding",
     },
     "plan": {
       "model": "opencode-go/minimax-m2.7",
       "color": "accent",
-      "description": "[󰫣󰫣󰫣 | |󱐋󱐋 ] Deep reasoning architect for multi-step planning and design",
+      "description": "[󰫣󰫣  |  |󱐋  ] Deep reasoning architect for multi-step planning and design",
     },
     // Custom agents with specific models and colors
     "x--free": {
       "model": "opencode/big-pickle",
       "color": "#b8db87",
-      "description": "[󰫣   |--- |󱐋  ] Free tier model for unlimited experimentation",
+      "description": "[󰫣󰫣󰫣 |--- |󱐋  ] Free tier model for unlimited experimentation",
       "mode": "primary",
     },
     "x-teach": {
       "model": "opencode-go/deepseek-v4-flash",
       "color": "#4fd6be",
-      "description": "[󰫣󰫣  |  |󱐋󱐋󱐋] Learning companion — doesn't code, teaches concepts and how to find answers independently",
-      "variant": "high",
+      "description": "[󰫣󰫣  |   |󱐋󱐋󱐋] Learning companion — doesn't code, teaches concepts and how to find answers independently",
     },
     "z-forge": {
-      "model": "opencode/gpt-5.1-codex-mini",
+      "model": "opencode-go/qwen3.6-plus",
       "color": "#007197",
-      "description": "[󰫣󰫣  | |󱐋󱐋 ] High-precision implementation specialist",
+      "description": "[󰫣󰫣󰫣 | |󱐋  ] High-precision implementation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
@@ -83,23 +81,23 @@
     "z-logic": {
       "model": "opencode-go/minimax-m3",
       "color": "#2e7de9",
-      "description": "[󰫣󰫣󰫣 | |󱐋󱐋 ] Reasoning architect for decomposition and design decisions",
+      "description": "[󰫣󰫣󰫣 |  |󱐋  ] Reasoning architect for decomposition and design decisions",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-nexus": {
-      "model": "opencode-go/mimo-v2.5",
+      "model": "opencode-go/qwen3.7-plus",
       "color": "#9854f1",
-      "description": "[󰫣󰫣  |  |󱐋󱐋 ] Large-context analyzer for multi-file understanding",
+      "description": "[󰫣󰫣󰫣 | |󱐋  ] Large-context analyzer for multi-file understanding",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-pilot": {
-      "model": "opencode/gpt-5-nano",
+      "model": "opencode-go/mimo-v2.5",
       "color": "#7aa2f7",
-      "description": "[󰫣   |   |󱐋󱐋󱐋] Tool and execution specialist for tests/builds/scripts",
+      "description": "[󰫣   |   |󱐋󱐋 ] Tool and execution specialist for tests/builds/scripts",
       "permission": {
         "skill": { "*": "ask" },
       },
@@ -107,15 +105,15 @@
     "z-spark": {
       "model": "opencode/deepseek-v4-flash-free",
       "color": "#7dcfff",
-      "description": "[󰫣󰫣  |--- |󱐋󱐋󱐋] Low-latency agent for quick tasks",
+      "description": "[󰫣   |--- |󱐋󱐋󱐋] Low-latency agent for quick tasks",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-ultra": {
-      "model": "opencode/gpt-5.4-nano",
+      "model": "opencode/gemini-3-flash",
       "color": "#e26a75",
-      "description": "[󰫣   | |󱐋󱐋󱐋] Heavy refactor and structural transformation specialist",
+      "description": "[󰫣󰫣  | |󱐋󱐋󱐋] Heavy refactor and structural transformation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
