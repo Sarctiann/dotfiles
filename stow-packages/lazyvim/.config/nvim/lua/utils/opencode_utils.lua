@@ -23,7 +23,6 @@ local M = {}
 OC_DEBUG = false
 M.OPENCODE_SERVER_USERNAME = os.getenv("OPENCODE_SERVER_USERNAME") or "opencode"
 M.OPENCODE_SERVER_PASSWORD = os.getenv("OPENCODE_SERVER_PASSWORD") or "opencode"
-local OPENCODE_DB = vim.fn.expand("~/.local/share/opencode/opencode.db")
 -- NOTE: Resolve paths relative to this file's directory using Neovim's debug.getinfo
 local _this_dir = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h")
 -- NOTE: Config directory with Neovim-specific skills, commands, and tools.

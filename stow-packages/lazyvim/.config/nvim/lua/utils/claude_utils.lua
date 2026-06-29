@@ -78,11 +78,11 @@ local function parse_timestamp_local(utc_timestamp)
   end
 
   local pseudo_epoch = os.time({
-    year = tonumber(year),
-    month = tonumber(month),
-    day = tonumber(day),
-    hour = tonumber(hour),
-    min = tonumber(min),
+    year = tonumber(year) or 0,
+    month = tonumber(month) or 0,
+    day = tonumber(day) or 0,
+    hour = tonumber(hour) or 0,
+    min = tonumber(min) or 0,
     sec = 0,
     isdst = false,
   })
