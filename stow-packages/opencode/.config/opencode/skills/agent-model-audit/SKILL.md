@@ -58,6 +58,48 @@ Also read `opencode.jsonc` to collect:
 - **Agent names and their roles** (from descriptions and `agents/*.md` files)
 - **Current `variant` values** — note which agents already have a `variant` field set. The variant differentiates configurations of the same base model (e.g., `max`, `high`, `low`). Ignore current model assignments — those will be replaced.
 
+#### Filter Out Models
+
+Check if the optional filter file exists at `skills/agent-model-audit/filter-out.md`. If it exists, **read its content and apply it as strict exclusion rules** before proceeding:
+
+```bash
+test -f skills/agent-model-audit/filter-out.md && cat skills/agent-model-audit/filter-out.md
+```
+
+If the file does not exist, skip this step — all models from `opencode models` remain candidates.
+
+The `filter-out.md` file is a **git-ignored markdown file** that may contain:
+
+- **Exact model identifiers** to exclude (e.g., `opencode-go/some-model`)
+- **Patterns** (e.g., `*experimental*`, `opencode-go/legacy-*`)
+- **Conditional rules** (e.g., exclude models with cost > $X, exclude models slower than Y t/s)
+- **Provider-level exclusions** (e.g., exclude all models from a specific provider)
+
+> **⚠️ CRITICAL:** The contents of `filter-out.md` are **strict rules**, not suggestions. Any model matching a filter-out rule MUST be excluded from ALL subsequent steps. This takes precedence over any other selection criteria. Apply the rules as literal as possible — if a rule is ambiguous, err on the side of exclusion.
+
+Add excluded model identifiers (if any) to a temporary note for reference in the audit report.
+
+#### Filter Out Models
+
+Check if the optional filter file exists at `skills/agent-model-audit/filter-out.md`. If it exists, **read its content and apply it as strict exclusion rules** before proceeding:
+
+```bash
+test -f skills/agent-model-audit/filter-out.md && cat skills/agent-model-audit/filter-out.md
+```
+
+If the file does not exist, skip this step — all models from `opencode models` remain candidates.
+
+The `filter-out.md` file is a **git-ignored markdown file** that may contain:
+
+- **Exact model identifiers** to exclude (e.g., `opencode-go/some-model`)
+- **Patterns** (e.g., `*experimental*`, `opencode-go/legacy-*`)
+- **Conditional rules** (e.g., exclude models with cost > $X, exclude models slower than Y t/s)
+- **Provider-level exclusions** (e.g., exclude all models from a specific provider)
+
+> **⚠️ CRITICAL:** The contents of `filter-out.md` are **strict rules**, not suggestions. Any model matching a filter-out rule MUST be excluded from ALL subsequent steps. This takes precedence over any other selection criteria. Apply the rules as literal as possible — if a rule is ambiguous, err on the side of exclusion.
+
+Add excluded model identifiers (if any) to a temporary note for reference in the audit report.
+
 ### 2. Research Model Characteristics and Validate URLs
 
 For each model listed in step 1, gather from provider documentation:
@@ -149,6 +191,8 @@ Assign each agent a model from the step-1 list. Apply the **Priority Mode** from
 - **Only models from step 1** — never assign a model not confirmed available
 - **No assignment left blank** — every agent must have a model
 - **Exact identifier match** — model names must be copied verbatim from step 1 output, including all hyphens, dots, and version numbers. Never modify, normalize, or guess identifiers.
+- **Respect filter-out rules** — models excluded by `skills/agent-model-audit/filter-out.md` (if the file exists) must never be assigned to any agent.
+- **Respect filter-out rules** — models excluded by `skills/agent-model-audit/filter-out.md` (if the file exists) must never be assigned to any agent.
 
 Save the resulting assignments to `docs/agent-audits/assignments.json` for use in step 6. If any agent uses a model shared with another agent, include the `variant` field to differentiate them:
 
@@ -311,6 +355,7 @@ All model assignments must come **exclusively** from models confirmed in step 1.
 - Icons assigned by range quarters (Q1 → `---`, Q2 → 1 icon, Q3 → 2 icons, Q4 → 3 icons) ✅
 - All assigned models came from `opencode models` output ✅
 - **All model identifiers match `opencode models` output character-for-character** ✅
+- Models excluded by `filter-out.md` are NOT assigned to any agent ✅
 - Audit report saved to `docs/agent-audits/YYYY-MM-DD.md` ✅
 - `opencode.jsonc` is valid JSONC ✅
 

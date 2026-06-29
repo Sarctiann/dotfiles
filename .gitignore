@@ -71,3 +71,4 @@ stow-packages/gemini/.gemini/history/
 manifest.json
 dotfiles-manifest.json
 settings.*.json.bak
+filter-out.md

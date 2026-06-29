@@ -41,79 +41,79 @@
   "agent": {
     // Built-in agents with specific models and colors
     "explore": {
-      "model": "opencode/north-mini-code-free",
-      "description": "[--- |--- |󱐋󱐋 ] Fast codebase exploration at lowest cost",
+      "model": "opencode/deepseek-v4-flash-free",
+      "description": "[󰫣   | --- | 󱐋󱐋󱐋] Fast codebase exploration at lowest cost",
     },
     "general": {
       "model": "opencode/mimo-v2.5-free",
-      "description": "[--- |--- |󱐋  ] Balanced general-purpose assistant",
+      "description": "[--- | --- | 󱐋󱐋󱐋] Balanced general-purpose assistant",
     },
     "build": {
-      "model": "opencode/deepseek-v4-flash",
+      "model": "opencode-go/deepseek-v4-pro",
       "color": "secondary",
-      "description": "[󰫣󰫣  |   |󱐋󱐋󱐋] Implementation specialist with precision coding",
+      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] Implementation specialist with precision coding",
     },
     "plan": {
-      "model": "opencode-go/minimax-m2.7",
+      "model": "opencode-go/glm-5.2",
       "color": "accent",
-      "description": "[󰫣󰫣  |  |󱐋  ] Deep reasoning architect for multi-step planning and design",
+      "description": "[󰫣󰫣  |  | 󱐋  ] Deep reasoning architect for multi-step planning and design",
     },
     // Custom agents with specific models and colors
     "x--free": {
       "model": "opencode/big-pickle",
       "color": "#b8db87",
-      "description": "[󰫣󰫣󰫣 |--- |󱐋  ] Free tier model for unlimited experimentation",
+      "description": "[󰫣󰫣󰫣 | --- | 󱐋  ] Free tier model for unlimited experimentation",
       "mode": "primary",
     },
     "x-teach": {
-      "model": "opencode-go/deepseek-v4-flash",
+      "model": "opencode-go/kimi-k2.7-code",
       "color": "#4fd6be",
-      "description": "[󰫣󰫣  |   |󱐋󱐋󱐋] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+      "description": "[󰫣󰫣  |   | 󱐋  ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
     },
     "z-forge": {
-      "model": "opencode-go/qwen3.6-plus",
+      "model": "opencode-go/mimo-v2.5-pro",
       "color": "#007197",
-      "description": "[󰫣󰫣󰫣 | |󱐋  ] High-precision implementation specialist",
+      "description": "[󰫣󰫣  |  | 󱐋  ] High-precision implementation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-logic": {
-      "model": "opencode-go/minimax-m3",
+      "model": "opencode-go/qwen3.7-max",
       "color": "#2e7de9",
-      "description": "[󰫣󰫣󰫣 |  |󱐋  ] Reasoning architect for decomposition and design decisions",
+      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] Reasoning architect for decomposition and design decisions",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-nexus": {
-      "model": "opencode-go/qwen3.7-plus",
+      "model": "opencode-go/minimax-m3",
       "color": "#9854f1",
-      "description": "[󰫣󰫣󰫣 | |󱐋  ] Large-context analyzer for multi-file understanding",
+      "description": "[󰫣󰫣  |    | 󱐋  ] Large-context analyzer for multi-file understanding",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-pilot": {
-      "model": "opencode-go/mimo-v2.5",
+      "model": "opencode-go/deepseek-v4-flash",
       "color": "#7aa2f7",
-      "description": "[󰫣   |   |󱐋󱐋 ] Tool and execution specialist for tests/builds/scripts",
+      "description": "[󰫣   |    | 󱐋󱐋󱐋] Tool and execution specialist for tests/builds/scripts",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-spark": {
-      "model": "opencode/deepseek-v4-flash-free",
+      "model": "opencode/north-mini-code-free",
       "color": "#7dcfff",
-      "description": "[󰫣   |--- |󱐋󱐋󱐋] Low-latency agent for quick tasks",
+      "description": "[--- | --- | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-ultra": {
-      "model": "opencode/gemini-3-flash",
+      "model": "opencode-go/glm-5.1",
       "color": "#e26a75",
-      "description": "[󰫣󰫣  | |󱐋󱐋󱐋] Heavy refactor and structural transformation specialist",
+      "description": "[󰫣󰫣  |  | 󱐋  ] Heavy refactor and structural transformation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
