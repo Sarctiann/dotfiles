@@ -72,14 +72,30 @@ _async_git_fetch() {
 
     # Stale lock cleanup: remove locks older than 30 seconds
     zmodload zsh/datetime 2>/dev/null
-    if [[ -d "$lock_file" ]] && (( EPOCHSECONDS - $(stat -c %Y "$lock_file" 2>/dev/null || echo 0) > 30 )); then
-        rmdir "$lock_file" 2>/dev/null
+    if [[ -d "$lock_file" ]]; then
+        local lock_mtime
+        if lock_mtime=$(stat -c %Y "$lock_file" 2>/dev/null); then
+            :  # GNU stat (Linux)
+        elif lock_mtime=$(stat -f %m "$lock_file" 2>/dev/null); then
+            :  # BSD stat (macOS)
+        else
+            lock_mtime=0
+        fi
+        if (( EPOCHSECONDS - lock_mtime > 30 )); then
+            rmdir "$lock_file" 2>/dev/null
+        fi
     fi
 
     (
         mkdir "$lock_file" 2>/dev/null || exit
-        GIT_SSH_COMMAND="ssh -o BatchMode=yes" timeout 15 \
+        GIT_SSH_COMMAND="ssh -o BatchMode=yes"
+        if command -v timeout &>/dev/null; then
+            timeout 15 git -C "$git_root" fetch --quiet 2>/dev/null
+        elif command -v gtimeout &>/dev/null; then
+            gtimeout 15 git -C "$git_root" fetch --quiet 2>/dev/null
+        else
             git -C "$git_root" fetch --quiet 2>/dev/null
+        fi
 
         zmodload zsh/datetime 2>/dev/null
         local upstream ahead behind
