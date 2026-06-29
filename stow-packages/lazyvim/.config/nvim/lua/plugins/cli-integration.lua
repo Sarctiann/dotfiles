@@ -36,7 +36,7 @@ if is_company_project then
       })
     end,
     format_paths = function(paths, actions)
-      if #paths == 0 then
+      if #paths == 0 or #paths[1] == 0 then
         return
       end
       if #paths == 1 then
@@ -119,7 +119,7 @@ else
       require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "OpenCode")
     end,
     format_paths = function(paths, actions)
-      if #paths == 0 then
+      if #paths == 0 or #paths[1] == 0 then
         return
       end
       if #paths == 1 then
@@ -283,7 +283,7 @@ local plugin_spec = {
             require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Gemini")
           end,
           format_paths = function(paths, actions)
-            if #paths == 0 then
+            if #paths == 0 or #paths[1] == 0 then
               return
             end
             actions.send_keys("@" .. paths[1] .. " ")
