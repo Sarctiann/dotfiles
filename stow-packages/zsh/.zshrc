@@ -70,9 +70,16 @@ _async_git_fetch() {
 
     mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
 
+    # Stale lock cleanup: remove locks older than 30 seconds
+    zmodload zsh/datetime 2>/dev/null
+    if [[ -d "$lock_file" ]] && (( EPOCHSECONDS - $(stat -c %Y "$lock_file" 2>/dev/null || echo 0) > 30 )); then
+        rmdir "$lock_file" 2>/dev/null
+    fi
+
     (
         mkdir "$lock_file" 2>/dev/null || exit
-        git -C "$git_root" fetch --quiet 2>/dev/null
+        GIT_SSH_COMMAND="ssh -o BatchMode=yes" timeout 15 \
+            git -C "$git_root" fetch --quiet 2>/dev/null
 
         zmodload zsh/datetime 2>/dev/null
         local upstream ahead behind
