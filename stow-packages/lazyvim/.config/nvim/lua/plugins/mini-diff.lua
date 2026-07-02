@@ -1,5 +1,5 @@
 return {
-  "mini-nvim/mini.diff",
+  "nvim-mini/mini.diff",
   config = function(_, opts)
     require("mini.diff").setup(opts)
     vim.api.nvim_set_hl(0, "MiniDiffSignAdd", { link = "Added" })
