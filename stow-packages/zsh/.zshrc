@@ -14,16 +14,27 @@ autoload -Uz promptinit
 promptinit
 setopt histignorealldups sharehistory PROMPT_SUBST
 
-autoload -Uz vcs_info
+autoload -Uz add-zsh-hook vcs_info
 precmd_vcs_info() { vcs_info }
-precmd_functions+=( precmd_vcs_info )
+add-zsh-hook precmd precmd_vcs_info
 
-zstyle ':vcs_info:*' check-for-changes true
+zstyle ':vcs_info:*' check-for-changes false
 zstyle ':vcs_info:*' unstagedstr '%F{red} %f'
 zstyle ':vcs_info:*' stagedstr '%F{green} %f'
 zstyle ':vcs_info:*' formats '%F{yellow}( <%f%F{green}%r%f%F{yellow}>%f %b%m %u%c%F{yellow})%f'
 
+zstyle ':vcs_info:git+post-backend:*:*' hooks git-changes
 zstyle ':vcs_info:git+set-message:*:*' hooks git-remote
+
++vi-git-changes() {
+    if ! git diff --no-ext-diff --ignore-submodules=dirty --quiet --exit-code 2>/dev/null ||
+       [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+        hook_com[unstaged]="1"
+    fi
+    if ! git diff --cached --no-ext-diff --ignore-submodules=dirty --quiet --exit-code 2>/dev/null; then
+        hook_com[staged]="1"
+    fi
+}
 
 +vi-git-remote() {
     local git_root cache_file
@@ -111,7 +122,7 @@ _async_git_fetch() {
     ) &!
 }
 
-precmd_functions+=( _async_git_fetch )
+add-zsh-hook precmd _async_git_fetch
 
 function virtualenv_info () {
     [ $VIRTUAL_ENV ] && echo '('`basename $VIRTUAL_ENV`') '
