@@ -9,15 +9,15 @@ return {
       Cursor = {
         color = "#7086b5",
       },
-      Error = { color = "#f52a65" },
-      Warn = { color = "#ffc777" },
-      Info = { color = "#007197" },
-      Hint = { color = "#9854f1" },
-      GitAdd = { text = "▎", color = "#9ece6a" },
-      GitChange = { text = "▎", color = "#ff9e64" },
-      GitDelete = { text = "▁", color = "#f7768e" },
+      -- NOTE: normalize colors
+      Error = { highlight = "DiagnosticVirtualTextError" },
+      Warn = { highlight = "DiagnosticVirtualTextWarn" },
+      Info = { highlight = "DiagnosticVirtualTextInfo" },
+      Hint = { highlight = "DiagnosticVirtualTextHint" },
+      GitAdd = { text = "▎", highlight = "MiniDiffSignAdd" },
+      GitChange = { text = "▎", highlight = "MiniDiffSignChange" },
+      GitDelete = { text = "▁", highlight = "MiniDiffSignDelete" },
     },
-    -- NOTE: hola
     handlers = {
       gitsigns = false,
       search = false,
@@ -87,5 +87,14 @@ return {
 
       return marks
     end)
+
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "MiniDiffUpdated",
+      group = vim.api.nvim_create_augroup("ScrollbarMiniDiff", {}),
+      callback = function()
+        handlers.show()
+        require("scrollbar").throttled_render()
+      end,
+    })
   end,
 }
