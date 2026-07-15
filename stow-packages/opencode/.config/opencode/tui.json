@@ -4,5 +4,5 @@
   "keybinds": {
     "which_key_toggle": "<leader>k"
   },
-  "plugin": ["@slkiser/opencode-quota"]
+  "plugin": ["@slkiser/opencode-quota@latest"]
 }
