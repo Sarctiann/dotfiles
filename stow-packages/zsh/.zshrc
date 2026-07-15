@@ -77,49 +77,30 @@ _async_git_fetch() {
     local git_root
     git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return
     local cache_file="$_GIT_PROMPT_CACHE/${git_root//\//_}"
-    local lock_file="$_GIT_PROMPT_CACHE/${git_root//\//_}.lock"
 
     mkdir -p "$_GIT_PROMPT_CACHE" 2>/dev/null
 
-    # Stale lock cleanup: remove locks older than 30 seconds
-    zmodload zsh/datetime 2>/dev/null
-    if [[ -d "$lock_file" ]]; then
-        local lock_mtime
-        if lock_mtime=$(stat -c %Y "$lock_file" 2>/dev/null); then
-            :  # GNU stat (Linux)
-        elif lock_mtime=$(stat -f %m "$lock_file" 2>/dev/null); then
-            :  # BSD stat (macOS)
-        else
-            lock_mtime=0
-        fi
-        if (( EPOCHSECONDS - lock_mtime > 30 )); then
-            rmdir "$lock_file" 2>/dev/null
-        fi
-    fi
-
     (
-        mkdir "$lock_file" 2>/dev/null || exit
-        GIT_SSH_COMMAND="ssh -o BatchMode=yes"
-        if command -v timeout &>/dev/null; then
-            timeout 15 git -C "$git_root" fetch --quiet 2>/dev/null
-        elif command -v gtimeout &>/dev/null; then
-            gtimeout 15 git -C "$git_root" fetch --quiet 2>/dev/null
-        else
-            git -C "$git_root" fetch --quiet 2>/dev/null
-        fi
-
-        zmodload zsh/datetime 2>/dev/null
-        local upstream ahead behind
-        upstream=$(git -C "$git_root" rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null)
-        if [[ -n "$upstream" ]]; then
-            ahead=$(git -C "$git_root" rev-list --count @{upstream}..HEAD 2>/dev/null || echo 0)
-            behind=$(git -C "$git_root" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
-            echo "$ahead $behind $EPOCHSECONDS" > "$cache_file"
-        else
-            rm -f "$cache_file"
-        fi
-        rmdir "$lock_file" 2>/dev/null
-    ) &!
+        sh -c '
+            git_root="$1" cache_file="$2"
+            export GIT_SSH_COMMAND="ssh -o BatchMode=yes"
+            if command -v timeout >/dev/null 2>&1; then
+                timeout 15 git -C "$git_root" fetch --quiet 2>/dev/null
+            elif command -v gtimeout >/dev/null 2>&1; then
+                gtimeout 15 git -C "$git_root" fetch --quiet 2>/dev/null
+            else
+                git -C "$git_root" fetch --quiet 2>/dev/null
+            fi
+            upstream=$(git -C "$git_root" rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null)
+            if [ -n "$upstream" ]; then
+                ahead=$(git -C "$git_root" rev-list --count @{upstream}..HEAD 2>/dev/null || echo 0)
+                behind=$(git -C "$git_root" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
+                echo "$ahead $behind $(date +%s)" > "$cache_file"
+            else
+                rm -f "$cache_file"
+            fi
+        ' -- "$git_root" "$cache_file" >/dev/null 2>&1 &
+    )
 }
 
 add-zsh-hook precmd _async_git_fetch
@@ -130,11 +111,11 @@ function virtualenv_info () {
 }
 
 PROMPT=$'\n'
-PROMPT+='%{%F{yellow}%}< %{%F{blue}%}%~%{%F{white}%} :'
+PROMPT+='%F{yellow}< %F{blue}%~%F{white} :'
 PROMPT+=' ${vcs_info_msg_0_}'
 PROMPT+=$'\n'
-PROMPT+='%{%F{green}%}$(virtualenv_info)'
-PROMPT+='%{%F{cyan}%}%n%{%F{135}%}@%{%F{cyan}%}%m%{%F{yellow}%} > %{%F{white}%}'
+PROMPT+='%F{green}$(virtualenv_info)'
+PROMPT+='%F{cyan}%n%F{135}@%F{cyan}%m%F{yellow} > %F{white}'
 
 # ─── API keys & credentials ────────────────────────────────────
 # All env vars are defined in ~/.config/zsh/.credentials (see README.md there)
