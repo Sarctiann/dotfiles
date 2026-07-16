@@ -30,7 +30,7 @@ See the `using-neovim` skill in `./skills/` for full details and the standalone 
 
 ---
 
-This directory (`~/Documents/HST/.augment-work-profile/`) is the **canonical working
+This directory (`$COMPANY_DIR/.augment_work_profile/`) is the **canonical working
 directory for all Augment agent artifacts** related to HST projects.
 
 ## Language
@@ -90,7 +90,7 @@ and visible to the team working on HST projects.
 
 ## Agentic Skills
 
-**Before responding to any request, ALSO check `~/Documents/HST/.augment_work_profile/skills/` for a matching skill.**
+**Before responding to any request, ALSO check `$COMPANY_DIR/.augment_work_profile/skills/` for a matching skill.**
 If a skill matches the request, follow it exactly — user-level skills take precedence over project-level skills.
 
 ## Directory Structure
