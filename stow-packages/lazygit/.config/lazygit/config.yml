@@ -165,7 +165,7 @@ os:
   readFromClipboardCmd: ""
   shellFunctionsFile: ""
 
-disableStartupPopups: false
+disableStartupPopups: true
 customCommands: []
 services: {}
 notARepository: prompt
