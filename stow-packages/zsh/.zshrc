@@ -1,4 +1,5 @@
 # ─── Locale & basics ───────────────────────────────────────────
+export XDG_CONFIG_HOME="$HOME/.config"
 export CLICOLOR=1
 export LC_ALL=en_US.UTF-8
 export VIRTUAL_ENV_DISABLE_PROMPT=1
