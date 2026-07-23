@@ -3,7 +3,6 @@
 *
 
 # Whitelist: neovim skills tracked in dotfiles
-!editor-neovim/
 !using-neovim/
 !using-neovim-lsp/
 !using-quickfix/
