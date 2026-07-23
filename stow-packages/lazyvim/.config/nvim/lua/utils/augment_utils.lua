@@ -242,6 +242,8 @@ end
 -- Reads from the work profile's skills/ directory (the source of truth, not tracked
 -- in dotfiles). Auggie discovers skills from ~/.augment/skills/ (not from
 -- --augment-cache-dir), so we copy them there on every session open.
+-- Skills are flat .md files (e.g. hst-commit-and-pr.md) — Auggie looks for
+-- skills/<name>.md, not skills/<name>/SKILL.md.
 -- AGENTS.md is NOT deployed — it already lives in the cache_dir and is read
 -- directly by auggie.
 -- @param cache_dir string Path to the augment cache directory (e.g. $COMPANY_DIR/.augment_work_profile)
@@ -254,13 +256,10 @@ function M.deploy_work_profile_config(cache_dir)
   local augment_skills_dir = vim.fn.expand("~/.augment/skills")
   vim.fn.mkdir(augment_skills_dir, "p")
 
-  for _, dir in ipairs(vim.fn.glob(source_skills .. "/*", false, true)) do
-    if vim.fn.isdirectory(dir) == 1 then
-      local skill_name = vim.fn.fnamemodify(dir, ":t")
-      local target_dir = augment_skills_dir .. "/" .. skill_name
-      vim.fn.system({ "rm", "-rf", target_dir })
-      vim.fn.system({ "cp", "-r", dir, target_dir })
-    end
+  for _, file in ipairs(vim.fn.glob(source_skills .. "/*.md", false, true)) do
+    local skill_name = vim.fn.fnamemodify(file, ":t")
+    local target = augment_skills_dir .. "/" .. skill_name
+    vim.fn.system({ "cp", file, target })
   end
 end
 

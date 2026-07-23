@@ -1,11 +1,12 @@
 # Ignore all runtime-deployed skills (e.g., cc-*, explain-context)
 # Only track the neovim integration skills explicitly listed below
+# Skills are flat .md files — Auggie reads skills/<name>.md pattern
 *
 
 # Whitelist: neovim skills tracked in dotfiles
-!using-neovim/
-!using-neovim-lsp/
-!using-quickfix/
+!using-neovim.md
+!using-neovim-lsp.md
+!using-quickfix.md
 
 # Whitelist: this file itself
 !.gitignore
