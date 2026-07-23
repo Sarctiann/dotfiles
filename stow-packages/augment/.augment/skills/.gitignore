@@ -1,0 +1,12 @@
+# Ignore all runtime-deployed skills (e.g., cc-*, explain-context)
+# Only track the neovim integration skills explicitly listed below
+*
+
+# Whitelist: neovim skills tracked in dotfiles
+!editor-neovim/
+!using-neovim/
+!using-neovim-lsp/
+!using-quickfix/
+
+# Whitelist: this file itself
+!.gitignore

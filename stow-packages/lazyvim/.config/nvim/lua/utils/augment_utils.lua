@@ -1,7 +1,5 @@
 local M = {}
 
-local WORK_PROFILE_SOURCE = vim.fn.expand("~/.config/nvim/lua/utils/augment-work-profile")
-
 -- WARN:
 -- configure your nvim-mcp-server to work with auggie by going to the directory
 -- where you have your augment cache dir and running this command in your terminal (only needs to be done once):
@@ -240,28 +238,29 @@ function M.manage_augment_sessions(show_all, cache_dir)
   })
 end
 
--- NOTE: Deploy tracked config files (AGENTS.md, skills) into the work profile
--- Copies from stow-managed source so the work-profile gets the latest tracked
--- version without exposing the source path (which may contain sensitive names).
--- Runs on every auggie open — the stow source is the single source of truth.
--- @param cache_dir string Path to the augment cache directory
+-- NOTE: Deploy work-profile skills to ~/.augment/skills/ so Auggie discovers them.
+-- Reads from the work profile's skills/ directory (the source of truth, not tracked
+-- in dotfiles). Auggie discovers skills from ~/.augment/skills/ (not from
+-- --augment-cache-dir), so we copy them there on every session open.
+-- AGENTS.md is NOT deployed — it already lives in the cache_dir and is read
+-- directly by auggie.
+-- @param cache_dir string Path to the augment cache directory (e.g. $COMPANY_DIR/.augment_work_profile)
 function M.deploy_work_profile_config(cache_dir)
-  if vim.fn.isdirectory(WORK_PROFILE_SOURCE) == 0 then
+  local source_skills = cache_dir .. "/skills"
+  if vim.fn.isdirectory(source_skills) == 0 then
     return
   end
 
-  vim.fn.mkdir(cache_dir, "p")
-  vim.fn.mkdir(cache_dir .. "/skills", "p")
+  local augment_skills_dir = vim.fn.expand("~/.augment/skills")
+  vim.fn.mkdir(augment_skills_dir, "p")
 
-  local function cp(source, target)
-    if vim.fn.filereadable(source) == 1 then
-      vim.fn.system({ "cp", source, target })
+  for _, dir in ipairs(vim.fn.glob(source_skills .. "/*", false, true)) do
+    if vim.fn.isdirectory(dir) == 1 then
+      local skill_name = vim.fn.fnamemodify(dir, ":t")
+      local target_dir = augment_skills_dir .. "/" .. skill_name
+      vim.fn.system({ "rm", "-rf", target_dir })
+      vim.fn.system({ "cp", "-r", dir, target_dir })
     end
-  end
-
-  cp(WORK_PROFILE_SOURCE .. "/AGENTS.md", cache_dir .. "/AGENTS.md")
-  for _, file in ipairs(vim.fn.glob(WORK_PROFILE_SOURCE .. "/skills/*.md", false, true)) do
-    cp(file, cache_dir .. "/skills/" .. vim.fn.fnamemodify(file, ":t"))
   end
 end
 
