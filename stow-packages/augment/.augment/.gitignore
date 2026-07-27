@@ -4,5 +4,6 @@ session.json
 prompt-history.jsonl
 task-storage/
 
-# Personal scripts and DB backups
+# Personal commands, scripts and DB backups
 scripts/
+commands/

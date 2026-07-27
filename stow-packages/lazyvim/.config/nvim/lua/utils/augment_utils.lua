@@ -238,29 +238,39 @@ function M.manage_augment_sessions(show_all, cache_dir)
   })
 end
 
--- NOTE: Deploy work-profile skills to ~/.augment/skills/ so Auggie discovers them.
--- Reads from the work profile's skills/ directory (the source of truth, not tracked
--- in dotfiles). Auggie discovers skills from ~/.augment/skills/ (not from
--- --augment-cache-dir), so we copy them there on every session open.
--- Skills are flat .md files (e.g. hst-commit-and-pr.md) — Auggie looks for
--- skills/<name>.md, not skills/<name>/SKILL.md.
--- AGENTS.md is NOT deployed — it already lives in the cache_dir and is read
--- directly by auggie.
+-- NOTE: Deploy work-profile config (skills, scripts, commands) to ~/.augment/
+-- so Auggie discovers them. Reads from the work profile's directories (the source
+-- of truth, not tracked in dotfiles). Auggie discovers skills/commands from
+-- ~/.augment/ (not from --augment-cache-dir), so we copy them on every session open.
+--
+-- Deployed directories:
+--   skills/   — flat .md files (Auggie looks for skills/<name>.md, not skills/<name>/SKILL.md)
+--   scripts/  — shell scripts and other executables used by skills/hooks
+--   commands/ — custom slash commands as flat .md files (~/.augment/commands/<name>.md)
+--
+-- AGENTS.md is NOT deployed — it already lives in the cache_dir and is read directly by auggie.
 -- @param cache_dir string Path to the augment cache directory (e.g. $COMPANY_DIR/.augment_work_profile)
 function M.deploy_work_profile_config(cache_dir)
-  local source_skills = cache_dir .. "/skills"
-  if vim.fn.isdirectory(source_skills) == 0 then
-    return
+  -- Helper: copy all files matching a glob pattern from a source subdirectory to a target dir
+  -- @param source_subdir string  Subdirectory name under cache_dir (e.g. "skills")
+  -- @param target_base string    Target base directory (e.g. "~/.augment")
+  -- @param glob_pattern string   Glob pattern to match (e.g. "*.md", "*")
+  local function deploy_dir(source_subdir, target_base, glob_pattern)
+    local source = cache_dir .. "/" .. source_subdir
+    if vim.fn.isdirectory(source) == 0 then
+      return
+    end
+    local target = vim.fn.expand(target_base .. "/" .. source_subdir)
+    vim.fn.mkdir(target, "p")
+    for _, file in ipairs(vim.fn.glob(source .. "/" .. glob_pattern, false, true)) do
+      local name = vim.fn.fnamemodify(file, ":t")
+      vim.fn.system({ "cp", file, target .. "/" .. name })
+    end
   end
 
-  local augment_skills_dir = vim.fn.expand("~/.augment/skills")
-  vim.fn.mkdir(augment_skills_dir, "p")
-
-  for _, file in ipairs(vim.fn.glob(source_skills .. "/*.md", false, true)) do
-    local skill_name = vim.fn.fnamemodify(file, ":t")
-    local target = augment_skills_dir .. "/" .. skill_name
-    vim.fn.system({ "cp", file, target })
-  end
+  deploy_dir("skills", "~/.augment", "*.md")
+  deploy_dir("scripts", "~/.augment", "*")
+  deploy_dir("commands", "~/.augment", "*.md")
 end
 
 -- NOTE: Function to inject env vars into augment's settings.json MCP server config
