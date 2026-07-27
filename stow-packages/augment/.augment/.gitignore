@@ -1,0 +1,8 @@
+# Personal session data
+sessions/
+session.json
+prompt-history.jsonl
+task-storage/
+
+# Personal scripts and DB backups
+scripts/
