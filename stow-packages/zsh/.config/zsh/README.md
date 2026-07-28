@@ -26,15 +26,18 @@ Username for the opencode server.
 
 Password for the opencode server.
 
-### `OPENCODE_GO_WORKSPACE_ID`
+### OpenCode credentials
 
-Workspace ID for the opencode quota plugin.
+Workspace ID and auth cookie for the opencode quota plugin. Obtained from the web dashboard (`https://opencode.ai`).
 
-### `OPENCODE_GO_AUTH_COOKIE`
+| Var | Provider | Purpose |
+|-----|----------|---------|
+| `OPENCODE_WORKSPACE_ID` | OpenCode Zen | Billing (balance, monthly limit) |
+| `OPENCODE_AUTH_COOKIE` | OpenCode Zen | Billing (balance, monthly limit) |
+| `OPENCODE_GO_WORKSPACE_ID` | OpenCode Go | Usage (rolling, weekly, monthly) |
+| `OPENCODE_GO_AUTH_COOKIE` | OpenCode Go | Usage (rolling, weekly, monthly) |
 
-Auth cookie for the opencode quota plugin.
-
-Obtained from the opencode web dashboard (`https://opencode.ai`).
+> Both pairs use the same values — the workspace ID and auth cookie are shared between Zen and Go.
 
 ---
 
