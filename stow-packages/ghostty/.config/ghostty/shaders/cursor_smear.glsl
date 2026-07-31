@@ -65,7 +65,7 @@ vec4 saturate(vec4 color, float factor) {
 }
 
 const float OPACITY = 0.6;
-const float DURATION = 0.3; //IN SECONDS
+const float DURATION = 0.3; // trail duration in seconds (higher = more persistent)
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
@@ -110,5 +110,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     newColor = mix(newColor, trail, antialising(sdfCurrentCursor));
     newColor = mix(newColor, fragColor, step(sdfCurrentCursor, 0.));
     // newColor = mix(fragColor, newColor, OPACITY);
-    fragColor = mix(fragColor, newColor, step(sdfCurrentCursor, easedProgress * lineLength));
+    // ── Motion filters (normalized coords: 1.0 = half screen height) ──
+    // Filters phantom cursor jumps caused by Ghostty batching
+    // iPreviousCursor updates. ~px values at 1080p in parentheses.
+    float dx = abs(centerCC.x - centerCP.x);
+    float dy = abs(centerCC.y - centerCP.y);
+    float maxHorizontal = 0.3;
+    float maxVertical   = 0.3;
+    float animate = step(dx, maxHorizontal) * step(dy, maxVertical);
+    // ── End motion filters ──
+    fragColor = mix(fragColor, newColor, animate * step(sdfCurrentCursor, easedProgress * lineLength));
 }

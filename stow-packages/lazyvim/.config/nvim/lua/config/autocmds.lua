@@ -45,7 +45,7 @@ end
 if not vim.g.vscode then
   -- Single source of truth for cursor behavior in Neovim and on exit
   local nvim_cursor =
-    "n:block-NormalCursor,c:ver30-CmdTermCursor,ci:ver30-CmdTermCursor,cr:ver30-CmdTermCursor,sm:block,i:ver30-CursorL,t:ver30-CmdTermCursor,v-ve-o:hor30-VisualCursor,r:hor50-ReplaceCursor,a:blinkon100"
+    "n:block-NormalCursor,c:ver30-CmdTermCursor,ci:ver30-CmdTermCursor,cr:ver30-CmdTermCursor,sm:block,i:ver30-CursorL,t:ver30-CmdTermCursor,v-ve-o:hor30-VisualCursor,r:hor50-ReplaceCursor"
   local exit_cursor = "a:ver30-blinkon100-blinkoff400-blinkon250"
 
   -- Create a single cursor autocommand group

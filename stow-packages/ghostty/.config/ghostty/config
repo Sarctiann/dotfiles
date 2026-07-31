@@ -15,7 +15,7 @@ adjust-cell-height = 5%
 
 # --- Cursor ---
 cursor-style = "bar"
-cursor-style-blink = true
+cursor-style-blink = false
 
 # --- Shader ---
 custom-shader = "./shaders/cursor_smear.glsl"
