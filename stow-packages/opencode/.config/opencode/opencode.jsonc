@@ -42,21 +42,21 @@
     // Built-in agents with specific models and colors
     "explore": {
       "model": "opencode/deepseek-v4-flash-free",
-      "description": "[󰫣   | --- | 󱐋󱐋󱐋] Fast codebase exploration at lowest cost",
+      "description": "[---  | --- | 󱐋󱐋󱐋] Fast codebase exploration at lowest cost",
     },
     "general": {
       "model": "opencode/mimo-v2.5-free",
-      "description": "[--- | --- | 󱐋󱐋󱐋] Balanced general-purpose assistant",
+      "description": "[---  | --- | 󱐋󱐋󱐋] Balanced general-purpose assistant",
     },
     "build": {
       "model": "opencode-go/deepseek-v4-pro",
       "color": "secondary",
-      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] Implementation specialist with precision coding",
+      "description": "[󰫣󰫣  |    | 󱐋  ] Implementation specialist with precision coding",
     },
     "plan": {
-      "model": "opencode-go/glm-5.2",
+      "model": "opencode-go/hy3",
       "color": "accent",
-      "description": "[󰫣󰫣  |  | 󱐋  ] Deep reasoning architect for multi-step planning and design",
+      "description": "[󰫣󰫣  |    | 󱐋  ] Deep reasoning architect for multi-step planning and design",
     },
     // Custom agents with specific models and colors
     "x--free": {
@@ -66,20 +66,20 @@
       "mode": "primary",
     },
     "x-teach": {
-      "model": "opencode-go/kimi-k2.7-code",
+      "model": "opencode-go/minimax-m3",
       "color": "#4fd6be",
-      "description": "[󰫣󰫣  |   | 󱐋  ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+      "description": "[󰫣󰫣  |    | 󱐋  ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
     },
     "z-forge": {
       "model": "opencode-go/mimo-v2.5-pro",
       "color": "#007197",
-      "description": "[󰫣󰫣  |  | 󱐋  ] High-precision implementation specialist",
+      "description": "[󰫣󰫣  |    | 󱐋  ] High-precision implementation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-logic": {
-      "model": "opencode-go/qwen3.7-max",
+      "model": "opencode-go/qwen3.8-max",
       "color": "#2e7de9",
       "description": "[󰫣󰫣󰫣 |  | 󱐋  ] Reasoning architect for decomposition and design decisions",
       "permission": {
@@ -87,9 +87,9 @@
       },
     },
     "z-nexus": {
-      "model": "opencode-go/minimax-m3",
+      "model": "opencode/longcat-2.0-free",
       "color": "#9854f1",
-      "description": "[󰫣󰫣  |    | 󱐋  ] Large-context analyzer for multi-file understanding",
+      "description": "[󰫣   | --- | 󱐋  ] Large-context analyzer for multi-file understanding",
       "permission": {
         "skill": { "*": "ask" },
       },
@@ -103,17 +103,17 @@
       },
     },
     "z-spark": {
-      "model": "opencode/north-mini-code-free",
+      "model": "opencode/ling-3.0-flash-free",
       "color": "#7dcfff",
-      "description": "[--- | --- | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
+      "description": "[---  | --- | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-ultra": {
-      "model": "opencode-go/glm-5.1",
+      "model": "opencode-go/grok-4.5",
       "color": "#e26a75",
-      "description": "[󰫣󰫣  |  | 󱐋  ] Heavy refactor and structural transformation specialist",
+      "description": "[󰫣󰫣󰫣 |  | 󱐋󱐋 ] Heavy refactor and structural transformation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
