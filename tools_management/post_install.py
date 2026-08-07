@@ -611,6 +611,62 @@ def _sync_wsl_timezone() -> None:
         print(f"   🕐 Setting WSL timezone to {iana_tz}...")
         run_optional(["sudo", "timedatectl", "set-timezone", iana_tz])
 
+    _ensure_wsl_boot_timezone(iana_tz)
+
+
+def _ensure_wsl_boot_timezone(iana_tz: str) -> None:
+    """Persist timezone sync in /etc/wsl.conf so it survives reboots
+    without requiring sudo each time.
+
+    Adds a ``command=`` line under the ``[boot]`` section that runs
+    at WSL startup as root.
+    """
+    boot_cmd = f"command=timedatectl set-timezone {iana_tz}"
+
+    wsl_conf_path = Path("/etc/wsl.conf")
+    if wsl_conf_path.is_file():
+        content = wsl_conf_path.read_text()
+    else:
+        content = ""
+
+    if boot_cmd in content:
+        print(f"   ✅ /etc/wsl.conf already configured for {iana_tz}")
+        return
+
+    lines = content.splitlines()
+    boot_section_idx = -1
+    cmd_line_idx = -1
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped == "[boot]":
+            boot_section_idx = i
+        elif stripped.startswith("[") and boot_section_idx >= 0:
+            break
+        elif stripped.startswith("command=") and boot_section_idx >= 0:
+            cmd_line_idx = i
+
+    if boot_section_idx >= 0:
+        if cmd_line_idx >= 0:
+            lines[cmd_line_idx] = boot_cmd
+        else:
+            lines.insert(boot_section_idx + 1, boot_cmd)
+    else:
+        if lines and lines[-1].strip() != "":
+            lines.append("")
+        lines.append("[boot]")
+        lines.append(boot_cmd)
+
+    new_content = "\n".join(lines)
+    if not new_content.endswith("\n"):
+        new_content += "\n"
+
+    tmp = tempfile.mktemp(suffix=".wsl.conf")
+    Path(tmp).write_text(new_content)
+    run_optional(["sudo", "cp", str(tmp), "/etc/wsl.conf"])
+    Path(tmp).unlink(missing_ok=True)
+    print(f"   ✓ /etc/wsl.conf configured to set timezone to {iana_tz} on boot")
+
 
 def _setup_ssh_agent() -> None:
     ssh_dir = Path.home() / ".ssh"
