@@ -19,6 +19,7 @@ local sub_header = "\n\nWelcome " .. os.getenv("USER"):lower():gsub("^%l", strin
 return {
   "folke/snacks.nvim",
   opts = {
+    words = { enabled = false }, -- avoids nvim_buf_clear_namespace on terminal buffers (cursor jump in floating terminals)
     dashboard = {
       preset = {
         pick = function(cmd, opts)
