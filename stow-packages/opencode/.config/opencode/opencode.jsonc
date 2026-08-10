@@ -28,6 +28,8 @@
         "qwen3.6-plus",
       ],
     },
+    // Detected opencode-go authentication; opencode-quota added this global provider declaration.
+    "opencode-go": {},
   },
 
   // Plugins to load
