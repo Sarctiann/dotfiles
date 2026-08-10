@@ -136,12 +136,13 @@ alias la='ls -A'
 alias l='ls -CF'
 alias mg='mongo --quiet'
 alias ptpy='ptpython'
-alias lzv="NVIM_APPNAME=nvim nvim"
-alias lzg="lazygit"
+alias lzv="nvm use default && NVIM_APPNAME=nvim nvim"
+alias lzg="nvm use default && lazygit"
 alias lzd="lazydocker"
 alias lzs="lazysql"
 alias π-thon="python3.14"
 alias py="python3"
+alias auggie="nvm use default && auggie"
 alias auggie-work="auggie --augment-cache-dir $COMPANY_DIR/.augment_work_profile"
 alias Claude="claude --dangerously-skip-permissions"
 alias oc="opencode"
