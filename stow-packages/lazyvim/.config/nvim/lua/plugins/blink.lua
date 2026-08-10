@@ -7,20 +7,15 @@ return {
   },
   {
     "saghen/blink.cmp",
-    -- NOTE: Less than Augment
-    priority = 900,
     dependencies = {
       "moyiz/blink-emoji.nvim",
     },
     opts = {
       completion = {
-        ghost_text = {
-          enabled = false,
-        },
+        ghost_text = { enabled = false },
       },
-
       sources = {
-        default = { "lsp", "path", "snippets", "buffer", "emoji" },
+        default = { "emoji" },
         providers = {
           emoji = {
             module = "blink-emoji",
@@ -50,11 +45,9 @@ return {
           },
         },
       },
-
       cmdline = {
         enabled = false,
       },
-
       keymap = {
         preset = "super-tab",
         ["<C-y>"] = { nil },
