@@ -111,7 +111,7 @@ else
   integration_op = {
     name = "OpenCode",
     cli_cmd = opencode_utils.get_cli_cmd(),
-    cli_ready_flags = { search_for = "Ask", from_line = 22, lines_amt = 12 },
+    cli_ready_flags = { search_for = "Ask", from_line = 15, lines_amt = 10 },
     on_open = function()
       opencode_utils.on_open()
     end,
@@ -124,12 +124,12 @@ else
       end
       if #paths == 1 then
         actions.send_keys("@" .. paths[1])
-        actions.wait(350)
+        actions.wait(500)
         actions.send_keys("<CR>")
       else
         actions.for_each_path(function(path)
           actions.send_keys("@" .. path)
-          actions.wait(350)
+          actions.wait(500)
           actions.send_keys("<CR>")
           actions.send_line()
         end)
@@ -139,14 +139,14 @@ else
       if data.selection then
         actions.send_line("```")
         actions.send_keys("@" .. data.relative_file)
-        actions.wait(250)
+        actions.wait(500)
         actions.send_keys("<CR>")
         actions.send_line(" L" .. data.start_line .. "-L" .. data.end_line)
         actions.send_line(data.selection)
         actions.send_line("```")
       else
         actions.send_keys("@" .. data.relative_file)
-        actions.wait(250)
+        actions.wait(500)
         actions.send_keys("<CR>")
         actions.send_line(" L" .. data.start_line)
       end

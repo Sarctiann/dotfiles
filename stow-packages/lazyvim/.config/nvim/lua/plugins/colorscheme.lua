@@ -9,5 +9,9 @@ return {
       sidebars = "dark",
       -- floats = "transparent",
     },
+    on_highlights = function(hl, c)
+      hl.MiniDiffSignAdd = { link = "Added" }
+      hl.MiniDiffSignChange = { fg = c.orange }
+    end,
   },
 }

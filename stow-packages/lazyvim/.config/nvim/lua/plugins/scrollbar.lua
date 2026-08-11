@@ -26,6 +26,7 @@ return {
       "terminal",
       "help",
       "snacks_dashboard",
+      "snacks_explorer",
       "snacks_picker",
       "snacks_notifier",
       "snacks_input",
@@ -33,6 +34,7 @@ return {
       "cli-integration",
     },
   },
+
   config = function(_, opts)
     require("scrollbar").setup(opts)
 
@@ -87,9 +89,20 @@ return {
     vim.api.nvim_create_autocmd("User", {
       pattern = "MiniDiffUpdated",
       group = vim.api.nvim_create_augroup("ScrollbarMiniDiff", {}),
-      callback = function()
-        handlers.show()
-        require("scrollbar").throttled_render()
+      callback = function(args)
+        local bufnr = args.buf or vim.api.nvim_get_current_buf()
+        if not (bufnr and vim.api.nvim_buf_is_valid(bufnr)) then
+          return
+        end
+
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+          if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == bufnr then
+            vim.api.nvim_win_call(win, function()
+              handlers.show()
+              require("scrollbar").render()
+            end)
+          end
+        end
       end,
     })
   end,
