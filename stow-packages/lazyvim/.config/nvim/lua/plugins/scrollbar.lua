@@ -28,6 +28,7 @@ return {
       "snacks_dashboard",
       "snacks_explorer",
       "snacks_picker",
+      "snacks_picker_list",
       "snacks_notifier",
       "snacks_input",
       "snacks_terminal",
