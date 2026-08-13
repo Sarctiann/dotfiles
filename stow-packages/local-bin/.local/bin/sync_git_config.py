@@ -37,8 +37,7 @@ SETTINGS = """
   defaultBranch = main
 
 [pull]
-  ff = only
-  rebase = true
+  rebase = false
 """
 
 
