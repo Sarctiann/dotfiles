@@ -12,7 +12,7 @@ return {
     on_highlights = function(hl, c)
       hl.MiniDiffSignAdd = { link = "Added" }
       hl.MiniDiffSignChange = { fg = c.orange }
-      hl.SnacksPickerGitStatusUntracked = { fg = c.purple }
+      hl.SnacksPickerGitStatusUntracked = { fg = c.magenta }
     end,
   },
 }
