@@ -53,7 +53,7 @@
     "build": {
       "model": "opencode-go/deepseek-v4-pro",
       "color": "secondary",
-      "description": "[󰫣󰫣  |    | 󱐋  ] Implementation specialist with precision coding",
+      "description": "[󰫣󰫣󰫣 |    | 󱐋  ] Implementation specialist with precision coding",
     },
     "plan": {
       "model": "opencode-go/hy3",
@@ -62,15 +62,15 @@
     },
     // Custom agents with specific models and colors
     "x--free": {
-      "model": "opencode/big-pickle",
+      "model": "opencode/hy3-free",
       "color": "#b8db87",
-      "description": "[󰫣󰫣󰫣 | --- | 󱐋  ] Free tier model for unlimited experimentation",
+      "description": "[󰫣󰫣  | --- | 󱐋  ] Free tier model for unlimited experimentation",
       "mode": "primary",
     },
     "x-teach": {
-      "model": "opencode-go/minimax-m3",
+      "model": "opencode-go/qwen3.7-plus",
       "color": "#4fd6be",
-      "description": "[󰫣󰫣  |    | 󱐋  ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+      "description": "[󰫣󰫣  |    | 󱐋󱐋 ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
     },
     "z-forge": {
       "model": "opencode-go/mimo-v2.5-pro",
@@ -81,17 +81,17 @@
       },
     },
     "z-logic": {
-      "model": "opencode-go/qwen3.8-max",
+      "model": "opencode/big-pickle",
       "color": "#2e7de9",
-      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] Reasoning architect for decomposition and design decisions",
+      "description": "[󰫣󰫣󰫣 | --- | 󱐋  ] Reasoning architect for decomposition and design decisions",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-nexus": {
-      "model": "opencode/longcat-2.0-free",
+      "model": "opencode-go/minimax-m3",
       "color": "#9854f1",
-      "description": "[󰫣   | --- | 󱐋  ] Large-context analyzer for multi-file understanding",
+      "description": "[󰫣󰫣  |    | 󱐋  ] Large-context analyzer for multi-file understanding",
       "permission": {
         "skill": { "*": "ask" },
       },
@@ -105,9 +105,9 @@
       },
     },
     "z-spark": {
-      "model": "opencode/ling-3.0-flash-free",
+      "model": "opencode/laguna-s-2.1-free",
       "color": "#7dcfff",
-      "description": "[---  | --- | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
+      "description": "[--- | --- | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
       "permission": {
         "skill": { "*": "ask" },
       },
