@@ -46,6 +46,7 @@ return {
     picker = {
       sources = {
         explorer = {
+          ignored = true,
           hidden = true,
           actions = {
             explorer_toggle = explorer_toggle,

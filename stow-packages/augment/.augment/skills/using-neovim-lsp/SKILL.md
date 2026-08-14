@@ -1,3 +1,8 @@
+---
+name: using-neovim-lsp
+description: Protocol for using LSP features through the Neovim MCP server for read-only context (hover, diagnostics, definitions) — never for file-modifying operations like rename or format. Use when the user needs LSP info via Neovim.
+---
+
 # Using Neovim LSP via MCP
 
 ## Purpose

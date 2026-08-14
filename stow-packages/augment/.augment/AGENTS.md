@@ -86,16 +86,35 @@ and visible to the team working on the project.
 
 ## Agentic Skills
 
-**Before responding to any request, ALSO check `./skills/` for a matching skill.**
-If a skill matches the request, follow it exactly — user-level skills take precedence over project-level skills.
+Skills in `./skills/` follow the official [agentskills.io](https://agentskills.io) format and are
+**auto-discovered natively by Auggie CLI** — no manual instruction is needed for this location.
+Auggie scans `~/.augment/skills/` (highest precedence), `<workspace>/.augment/skills/`,
+`~/.claude/skills/`, `<workspace>/.claude/skills/`, `~/.agents/skills/`, and
+`<workspace>/.agents/skills/`. Use `/skills` in interactive mode to see what was actually loaded.
+
+**Required format** (per skill): its own subdirectory with a `SKILL.md` file inside, where
+`name:` in the frontmatter matches the directory name exactly:
+
+```
+skills/
+├── my-skill/
+│   └── SKILL.md   ← frontmatter: name: my-skill, description: ...
+```
+
+A flat `my-skill.md` file (no subdirectory) is **not discovered** by Auggie — this was the
+root cause of skills silently failing to load before this structure was fixed (2026-08-14).
+
+If a skill matches the request, follow it exactly — user-level skills (`~/.augment/skills/`)
+take precedence over workspace-level skills with the same name.
 
 ## Directory Structure
 
 ```
 ~/.augment/
 ├── AGENTS.md          ← This file (rules for agents)
-└── skills/            ← User-level skills (checked on every request)
-    └── *.md
+└── skills/            ← User-level skills (auto-discovered by Auggie CLI)
+    └── <skill-name>/
+        └── SKILL.md
 ```
 
 ---

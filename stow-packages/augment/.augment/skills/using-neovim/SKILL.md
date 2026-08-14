@@ -1,3 +1,8 @@
+---
+name: using-neovim
+description: Protocol for using the Neovim MCP server for visualization and context sharing only — file operations must use native tools. Use when opening files in Neovim, checking what the user is looking at, or sharing edit results via Neovim.
+---
+
 # Using Neovim MCP
 
 ## Purpose

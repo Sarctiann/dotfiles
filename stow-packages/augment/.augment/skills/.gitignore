@@ -3,10 +3,21 @@
 # Skills are flat .md files — Auggie reads skills/<name>.md pattern
 *
 
-# Whitelist: neovim skills tracked in dotfiles
-!using-neovim.md
-!using-neovim-lsp.md
-!using-quickfix.md
+# Whitelist: un-ignore the neovim skill directories (git won't descend
+# into ignored dirs, so these must be re-included before their contents)
+!using-neovim/
+!using-neovim-lsp/
+!using-quickfix/
+
+# Re-ignore everything inside them…
+using-neovim/*
+using-neovim-lsp/*
+using-quickfix/*
+
+# …except the SKILL.md files tracked in dotfiles
+!using-neovim/SKILL.md
+!using-neovim-lsp/SKILL.md
+!using-quickfix/SKILL.md
 
 # Whitelist: this file itself
 !.gitignore

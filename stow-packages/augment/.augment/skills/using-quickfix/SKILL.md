@@ -1,3 +1,8 @@
+---
+name: using-quickfix
+description: Protocol for populating and navigating the Neovim quickfix list as a visualization aid for multi-file search/edit results — never as the primary work mechanism. Use after project-wide searches or before multi-file edits.
+---
+
 # Using Quickfix List
 
 ## Purpose
