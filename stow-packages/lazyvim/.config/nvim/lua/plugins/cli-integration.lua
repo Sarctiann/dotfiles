@@ -124,7 +124,7 @@ else
       end
       if #paths == 1 then
         actions.send_keys("@" .. paths[1])
-        actions.wait(500)
+        actions.wait(750)
         actions.send_keys("<CR>")
       else
         actions.for_each_path(function(path)

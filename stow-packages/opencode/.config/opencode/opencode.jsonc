@@ -51,9 +51,9 @@
       "description": "[---  | --- | 󱐋󱐋󱐋] Balanced general-purpose assistant",
     },
     "build": {
-      "model": "opencode-go/minimax-m3",
+      "model": "opencode-go/deepseek-v4-flash",
       "color": "secondary",
-      "description": "[󰫣󰫣  |    | 󱐋  ] Implementation specialist with precision coding",
+      "description": "[󰫣   |    | 󱐋󱐋󱐋] Implementation specialist with precision coding",
     },
     "plan": {
       "model": "opencode-go/hy3",
@@ -97,9 +97,9 @@
       },
     },
     "z-pilot": {
-      "model": "opencode-go/deepseek-v4-flash",
+      "model": "opencode-go/minimax-m3",
       "color": "#7aa2f7",
-      "description": "[󰫣   |    | 󱐋󱐋󱐋] Tool and execution specialist for tests/builds/scripts",
+      "description": "[󰫣󰫣  |    | 󱐋  ] Tool and execution specialist for tests/builds/scripts",
       "permission": {
         "skill": { "*": "ask" },
       },
