@@ -42,6 +42,17 @@ do
   })
 end
 
+-- Disable LazyVim's default line wrapping for text files (wrap stays off by
+-- default; spell check is preserved). Manual `:set wrap` is unaffected.
+local wrap_spell = vim.api.nvim_create_augroup("lazyvim_wrap_spell", { clear = true })
+vim.api.nvim_create_autocmd("FileType", {
+  group = wrap_spell,
+  pattern = { "text", "plaintex", "typst", "gitcommit", "markdown" },
+  callback = function()
+    vim.opt_local.spell = true
+  end,
+})
+
 if not vim.g.vscode then
   -- Single source of truth for cursor behavior in Neovim and on exit
   local nvim_cursor =
