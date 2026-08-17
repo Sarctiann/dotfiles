@@ -33,6 +33,9 @@ return {
       "snacks_input",
       "snacks_terminal",
       "cli-integration",
+      "mason",
+      "lazy",
+      "lazyextras",
     },
   },
 
