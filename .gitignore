@@ -18,6 +18,7 @@ bun.lock
 gemini-credentials.json
 opencode-notifier.json
 opencode-notifier-state.json
+**/opencode-quota/opencode.json
 .playwright-mcp
 
 # nvim / LazyVim artifacts

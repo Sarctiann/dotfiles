@@ -34,7 +34,7 @@
 
   // Plugins to load
   "plugin": [
-    "@slkiser/opencode-quota@latest",
+    "@sarctiann/opencode-quota@latest",
     "@mohak34/opencode-notifier@latest",
     "superpowers@git+https://github.com/obra/superpowers.git",
   ],

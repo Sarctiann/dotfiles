@@ -28,16 +28,22 @@ Password for the opencode server.
 
 ### OpenCode credentials
 
-Workspace ID and auth cookie for the opencode quota plugin. Obtained from the web dashboard (`https://opencode.ai`).
+The OpenCode Quota plugin no longer reads credentials from environment
+variables. The `OPENCODE_WORKSPACE_ID` / `OPENCODE_AUTH_COOKIE` /
+`OPENCODE_GO_WORKSPACE_ID` / `OPENCODE_GO_AUTH_COOKIE` exports were removed to
+avoid colliding with OpenCode's workspace feature (which reads the same
+`OPENCODE_WORKSPACE_ID` variable and caused an "(unknown)" entry in the
+session sidebar).
 
-| Var | Provider | Purpose |
-|-----|----------|---------|
-| `OPENCODE_WORKSPACE_ID` | OpenCode Zen | Billing (balance, monthly limit) |
-| `OPENCODE_AUTH_COOKIE` | OpenCode Zen | Billing (balance, monthly limit) |
-| `OPENCODE_GO_WORKSPACE_ID` | OpenCode Go | Usage (rolling, weekly, monthly) |
-| `OPENCODE_GO_AUTH_COOKIE` | OpenCode Go | Usage (rolling, weekly, monthly) |
+Credentials are now provided through the plugin's own configuration:
 
-> Both pairs use the same values — the workspace ID and auth cookie are shared between Zen and Go.
+| Provider | Source | Contents |
+|----------|--------|----------|
+| OpenCode Zen | `~/.config/opencode/opencode-quota/opencode.json` | `{ "workspaceId", "authCookie" }` |
+| OpenCode Go | `~/.local/share/opencode/auth.json` (or `OPENCODE_API_KEY`) | API key |
+
+The Zen workspace ID and auth cookie are obtained from the web dashboard
+(`https://opencode.ai`).
 
 ---
 
