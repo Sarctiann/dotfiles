@@ -39,7 +39,7 @@ Credentials are now provided through the plugin's own configuration:
 
 | Provider | Source | Contents |
 |----------|--------|----------|
-| OpenCode Zen | `~/.config/opencode/opencode-quota/opencode.json` | `{ "workspaceId", "authCookie" }` |
+| OpenCode Zen | `~/.config/opencode/opencode-quota/opencode-zen.json` | `{ "workspaceId", "authCookie" }` |
 | OpenCode Go | `~/.local/share/opencode/auth.json` (or `OPENCODE_API_KEY`) | API key |
 
 The Zen workspace ID and auth cookie are obtained from the web dashboard
