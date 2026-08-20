@@ -49,5 +49,6 @@
   "googleModels": ["CLAUDE"],
   "opencodeGoWindows": ["rolling", "weekly", "monthly"],
   "alibabaCodingPlanTier": "lite",
-  "cursorPlan": "none"
+  "cursorPlan": "none",
+  "opencodeZenDisplay": "detailed"
 }
