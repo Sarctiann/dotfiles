@@ -38,6 +38,7 @@ SETTINGS = """
 
 [pull]
   rebase = false
+  autostash = true
 """
 
 
