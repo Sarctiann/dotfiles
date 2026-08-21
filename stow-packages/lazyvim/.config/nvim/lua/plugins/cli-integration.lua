@@ -48,7 +48,7 @@ if is_company_project then
         end)
       end
     end,
-    window_width = 45,
+    window_width = 50,
     terminal_keys = {
       terminal_mode = {
         normal_mode = { "<M-q>" },
@@ -155,7 +155,7 @@ else
       actions.submit()
     end,
     keep_open = false,
-    window_width = 45,
+    window_width = 50,
     terminal_keys = {
       terminal_mode = {
         normal_mode = { "<M-q>" },
@@ -255,7 +255,7 @@ local plugin_spec = {
         bufferline = true,
       },
       list_buffer = false,
-      window_width = 40,
+      window_width = 50,
       window_padding = 1,
       terminal_keys = {
         terminal_mode = {
@@ -288,7 +288,7 @@ local plugin_spec = {
             end
             actions.send_keys("@" .. paths[1] .. " ")
           end,
-          window_width = 45,
+          window_width = 50,
         },
       },
     },
