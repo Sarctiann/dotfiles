@@ -71,6 +71,19 @@ Obtained from: `https://tavily.com`
 
 ---
 
+### `FIGMA_API_KEY`
+
+Figma Personal Access Token. Used by the OpenFigma MCP server (registered in
+the World Conquest project's `opencode.json`) so the `z-design` agent can read
+and sync the Figma design book bidirectionally.
+
+Scopes required: **File content: Read** and **Dev resources: Read**.
+
+Generated at: `https://www.figma.com/settings` → *Security → Personal access
+tokens*.
+
+---
+
 ### `GIT_NAME` / `GIT_EMAIL`
 
 Personal git identity. Used by `sync_git_config.py` to generate `~/.gitconfig`.
