@@ -43,39 +43,39 @@
   "agent": {
     // Built-in agents with specific models and colors
     "explore": {
-      "model": "opencode/deepseek-v4-flash-free",
-      "description": "[---  | --- | 󱐋󱐋󱐋] Fast codebase exploration at lowest cost",
+      "model": "opencode/mimo-v2.5-free",
+      "description": "[󰫣   | --- | 󱐋󱐋󱐋] Fast codebase exploration at lowest cost",
     },
     "general": {
-      "model": "opencode/mimo-v2.5-free",
-      "description": "[---  | --- | 󱐋󱐋󱐋] Balanced general-purpose assistant",
+      "model": "opencode/muse-spark-1.2-contributor-free",
+      "description": "[󰫣   | --- | 󱐋  ] Balanced general-purpose assistant",
     },
     "build": {
-      "model": "opencode-go/deepseek-v4-flash",
+      "model": "opencode-go/qwen3.8-flash",
       "color": "secondary",
-      "description": "[󰫣   |    | 󱐋󱐋󱐋] Implementation specialist with precision coding",
+      "description": "[󰫣󰫣  |    | 󱐋  ] Implementation specialist with precision coding",
     },
     "plan": {
       "model": "opencode-go/hy3",
       "color": "accent",
-      "description": "[󰫣󰫣  |    | 󱐋  ] Deep reasoning architect for multi-step planning and design",
+      "description": "[󰫣󰫣󰫣 |    | 󱐋  ] Deep reasoning architect for multi-step planning and design",
     },
     // Custom agents with specific models and colors
     "x--free": {
-      "model": "opencode/hy3-free",
+      "model": "opencode/ling-3.0-flash-fin-free",
       "color": "#b8db87",
-      "description": "[󰫣󰫣  | --- | 󱐋  ] Free tier model for unlimited experimentation",
+      "description": "[--- | --- | 󱐋  ] Free tier model for unlimited experimentation",
       "mode": "primary",
     },
     "x-teach": {
       "model": "opencode-go/qwen3.7-plus",
       "color": "#4fd6be",
-      "description": "[󰫣󰫣  |    | 󱐋󱐋 ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+      "description": "[󰫣󰫣  |  | 󱐋󱐋 ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
     },
     "z-forge": {
-      "model": "opencode-go/mimo-v2.5-pro",
+      "model": "opencode-go/deepseek-v4-pro",
       "color": "#007197",
-      "description": "[󰫣󰫣  |    | 󱐋  ] High-precision implementation specialist",
+      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] High-precision implementation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
@@ -89,33 +89,33 @@
       },
     },
     "z-nexus": {
-      "model": "opencode-go/deepseek-v4-pro",
+      "model": "opencode-go/minimax-m3",
       "color": "#9854f1",
-      "description": "[󰫣󰫣󰫣 |    | 󱐋  ] Large-context analyzer for multi-file understanding",
+      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] Large-context analyzer for multi-file understanding",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-pilot": {
-      "model": "opencode-go/minimax-m3",
+      "model": "opencode-go/deepseek-v4-flash",
       "color": "#7aa2f7",
-      "description": "[󰫣󰫣  |    | 󱐋  ] Tool and execution specialist for tests/builds/scripts",
+      "description": "[󰫣󰫣  |    | 󱐋󱐋󱐋] Tool and execution specialist for tests/builds/scripts",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-spark": {
-      "model": "opencode/laguna-s-2.1-free",
+      "model": "opencode-go/mimo-v2.5",
       "color": "#7dcfff",
-      "description": "[--- | --- | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
+      "description": "[󰫣󰫣  |    | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
       "permission": {
         "skill": { "*": "ask" },
       },
     },
     "z-ultra": {
-      "model": "opencode-go/grok-4.5",
+      "model": "opencode-go/mimo-v2.5-pro",
       "color": "#e26a75",
-      "description": "[󰫣󰫣󰫣 |  | 󱐋󱐋 ] Heavy refactor and structural transformation specialist",
+      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] Heavy refactor and structural transformation specialist",
       "permission": {
         "skill": { "*": "ask" },
       },
