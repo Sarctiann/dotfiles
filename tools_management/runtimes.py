@@ -95,6 +95,14 @@ def install_opencode() -> None:
     )
 
 
+def install_claude() -> None:
+    if which("claude"):
+        print("✅ claude already installed")
+        return
+    print("📋 Installing Claude Code (native)...")
+    run(["bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash"])
+
+
 def install_bun() -> None:
     if which("bun"):
         print("✅ bun already installed")
@@ -199,6 +207,17 @@ def _uninstall_opencode() -> None:
         print("   removed ~/.config/opencode")
 
 
+def _uninstall_claude() -> None:
+    claude_bin = BIN_DIR / "claude"
+    if claude_bin.is_symlink() or claude_bin.exists():
+        claude_bin.unlink()
+        print("   removed ~/.local/bin/claude")
+    claude_dir = Path.home() / ".local" / "share" / "claude"
+    if claude_dir.exists():
+        shutil.rmtree(claude_dir)
+        print("   removed ~/.local/share/claude")
+
+
 def _clean_path_from_rc(marker: str) -> None:
     for rc in [Path.home() / ".zshrc", Path.home() / ".bashrc"]:
         if rc.exists() and not rc.is_symlink():
@@ -230,6 +249,8 @@ def _preexisting_names() -> list[str]:
         preexisting.append("rust")
     if which("opencode"):
         preexisting.append("opencode")
+    if which("claude"):
+        preexisting.append("claude")
     if which("uv"):
         preexisting.append("uv")
     return preexisting
@@ -238,6 +259,7 @@ def _preexisting_names() -> list[str]:
 INSTALLERS = {
     "nvm": install_nvm,
     "opencode": install_opencode,
+    "claude": install_claude,
     "bun": install_bun,
     "rust": install_rust,
     "uv": install_uv,
@@ -249,6 +271,7 @@ UNINSTALLERS = {
     "bun": _uninstall_bun,
     "rust": _uninstall_rust,
     "opencode": _uninstall_opencode,
+    "claude": _uninstall_claude,
     "uv": _uninstall_uv,
 }
 
@@ -261,10 +284,11 @@ def _check_runtime(name: str, enabled: bool) -> None:
         "bun": lambda: which("bun"),
         "rust": lambda: which("cargo"),
         "opencode": lambda: which("opencode"),
+        "claude": lambda: which("claude"),
         "uv": lambda: which("uv"),
     }
     installed = checks.get(name, lambda: False)()
-    display = {"opencode": "OpenCode", "nvm": "nvm"}.get(name, name.capitalize())
+    display = {"opencode": "OpenCode", "claude": "Claude Code", "nvm": "nvm"}.get(name, name.capitalize())
     status = "✅" if installed else "⬜"
     print(f"   {status} {display}")
 

@@ -4,6 +4,7 @@ local plugin_dir = DOCS_DIR and (DOCS_DIR .. "/SARCTIANN/LuaCode/custom_plugins/
 local gemini_utils = require("utils.gemini_utils")
 local augment_utils = require("utils.augment_utils")
 local opencode_utils = require("utils.opencode_utils")
+local claude_utils = require("utils.claude_utils")
 
 -- Static check: are we inside COMPANY_DIR at load time?
 -- Uses augment_utils.get_augment_cache_dir() as canonical cache_dir source.
@@ -17,6 +18,7 @@ end
 
 local integration_op
 local keys_op
+local claude_op
 
 if is_company_project then
   local cache_dir = augment_utils.get_augment_cache_dir()
@@ -58,6 +60,61 @@ if is_company_project then
     },
   }
 
+  local claude_cfg = claude_utils.get_claude_config_dir()
+  claude_op = {
+    name = "Claude",
+    cli_cmd = "claude",
+    env = { CLAUDE_CONFIG_DIR = claude_cfg },
+    cli_ready_flags = { search_for = "Type your message", from_line = 1, lines_amt = 50 },
+    start_doing = function(visual_text, actions)
+      require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Claude")
+    end,
+    on_open = function(_, _)
+      claude_utils.on_open_claude(claude_cfg)
+    end,
+    format_paths = function(paths, actions)
+      if #paths == 0 or #paths[1] == 0 then
+        return
+      end
+      if #paths == 1 then
+        actions.send_keys("@" .. paths[1] .. " ")
+      else
+        actions.for_each_path(function(path)
+          actions.send_keys("@" .. path)
+          actions.send_line()
+        end)
+      end
+    end,
+    on_ask_submit = function(data, actions)
+      if data.selection then
+        actions.send_line("```")
+        actions.send_keys("@" .. data.relative_file)
+        actions.wait(500)
+        actions.send_keys("<CR>")
+        actions.send_line(" L" .. data.start_line .. "-L" .. data.end_line)
+        actions.send_line(data.selection)
+        actions.send_line("```")
+      else
+        actions.send_keys("@" .. data.relative_file)
+        actions.wait(500)
+        actions.send_keys("<CR>")
+        actions.send_line(" L" .. data.start_line)
+      end
+      actions.send_line()
+      actions.send_line(data.question)
+      actions.submit()
+    end,
+    keep_open = false,
+    window_width = 50,
+    terminal_keys = {
+      terminal_mode = {
+        normal_mode = { "<M-q>" },
+        insert_file_path = { "<C-o>" },
+        insert_all_buffers = { "<C-o><C-o>" },
+      },
+    },
+  }
+
   keys_op = {
     {
       "<leader>aa",
@@ -69,21 +126,13 @@ if is_company_project then
       mode = { "n", "v" },
     },
     {
-      "<leader>aq",
-      function()
-        augment_utils.ask_inline(cache_dir)
-      end,
-      desc = "Augment Ask (inline)",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>as",
+      "<leader>aA",
       nil,
       desc = " Augment Code Sessions",
       silent = true,
     },
     {
-      "<leader>asc",
+      "<leader>aAc",
       function()
         augment_utils.resume_last_session(cache_dir)
       end,
@@ -91,7 +140,7 @@ if is_company_project then
       silent = true,
     },
     {
-      "<leader>asd",
+      "<leader>aAd",
       function()
         augment_utils.delete_all_augment_sessions(cache_dir)
       end,
@@ -99,12 +148,65 @@ if is_company_project then
       silent = true,
     },
     {
-      "<leader>ass",
+      "<leader>aAs",
       function()
         augment_utils.manage_augment_sessions(false, cache_dir)
       end,
       desc = "Augment Code Custom Session Manager",
       silent = true,
+    },
+    {
+      "<leader>aAq",
+      function()
+        augment_utils.ask_inline(cache_dir)
+      end,
+      desc = "Augment Ask (inline)",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>ac",
+      ":CLIIntegration open_root Claude<CR>",
+      desc = "Claude New Session",
+      silent = true,
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>aC",
+      nil,
+      desc = " Claude Code Sessions",
+      silent = true,
+    },
+    {
+      "<leader>aCc",
+      function()
+        claude_utils.resume_last_session()
+      end,
+      desc = "Claude Resume Latest",
+      silent = true,
+    },
+    {
+      "<leader>aCs",
+      function()
+        claude_utils.manage_claude_sessions(false, claude_cfg)
+      end,
+      desc = "Claude Session Manager",
+      silent = true,
+    },
+    {
+      "<leader>aCd",
+      function()
+        claude_utils.delete_all_claude_sessions(claude_cfg)
+      end,
+      desc = "Claude Delete Project Sessions",
+      silent = true,
+    },
+    {
+      "<leader>aCq",
+      function()
+        claude_utils.ask_inline()
+      end,
+      desc = "Claude Ask (inline)",
+      mode = { "n", "v" },
     },
   }
 else
@@ -232,6 +334,26 @@ else
   }
 end
 
+local integration_list = { integration_op }
+if claude_op then
+  integration_list[#integration_list + 1] = claude_op
+end
+integration_list[#integration_list + 1] = {
+  name = "Gemini",
+  cli_cmd = "gemini",
+  cli_ready_flags = { search_for = "Type your", from_line = 15, lines_amt = 15 },
+  start_doing = function(visual_text, actions)
+    require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Gemini")
+  end,
+  format_paths = function(paths, actions)
+    if #paths == 0 or #paths[1] == 0 then
+      return
+    end
+    actions.send_keys("@" .. paths[1] .. " ")
+  end,
+  window_width = 50,
+}
+
 local plugin_spec = {
   --- @module 'cli-integration'
   {
@@ -273,24 +395,7 @@ local plugin_spec = {
           toggle_fullscreen = { "<C-f>" },
         },
       },
-      integrations = {
-        integration_op,
-        {
-          name = "Gemini",
-          cli_cmd = "gemini",
-          cli_ready_flags = { search_for = "Type your", from_line = 15, lines_amt = 15 },
-          start_doing = function(visual_text, actions)
-            require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Gemini")
-          end,
-          format_paths = function(paths, actions)
-            if #paths == 0 or #paths[1] == 0 then
-              return
-            end
-            actions.send_keys("@" .. paths[1] .. " ")
-          end,
-          window_width = 50,
-        },
-      },
+      integrations = integration_list,
     },
     keys = vim.list_extend(
       {
@@ -311,28 +416,19 @@ local plugin_spec = {
           mode = { "n", "v" },
         },
         {
-          "<leader>aQ",
-          function()
-            require("cli-integration").hooks.ask("Gemini")
-          end,
-          desc = "Gemini Ask (inline)",
-          silent = true,
-          mode = { "n", "v" },
-        },
-        {
-          "<leader>aS",
+          "<leader>aG",
           nil,
           desc = " Gemini Sessions",
           silent = true,
         },
         {
-          "<leader>aSc",
+          "<leader>aGc",
           ":CLIIntegration open_root Gemini --resume latest<CR>",
           desc = "Gemini Resume Latest",
           silent = true,
         },
         {
-          "<leader>aSs",
+          "<leader>aGs",
           function()
             gemini_utils.manage_gemini_sessions(false)
           end,
@@ -340,10 +436,19 @@ local plugin_spec = {
           silent = true,
         },
         {
-          "<leader>aSd",
+          "<leader>aGd",
           gemini_utils.delete_all_gemini_sessions,
           desc = "Gemini Delete Project Sessions",
           silent = true,
+        },
+        {
+          "<leader>aGq",
+          function()
+            require("cli-integration").hooks.ask("Gemini")
+          end,
+          desc = "Gemini Ask (inline)",
+          silent = true,
+          mode = { "n", "v" },
         },
       }, keys_op)
     ),

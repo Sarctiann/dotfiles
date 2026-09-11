@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "nvim": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "nvim-mcp-server"],
+      "env": { "NVIM": "$NVIM" }
+    }
+  }
+}

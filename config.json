@@ -47,6 +47,7 @@
     "bun": true,
     "rust": true,
     "opencode": true,
+    "claude": true,
     "uv": true
   },
   "stow": {
@@ -68,6 +69,7 @@
       "mojo": [],
       "augment": [],
       "gemini": [],
+      "claude": [],
       "local-bin": [],
       "lazygit": [],
       "lazydocker": [],
@@ -77,7 +79,7 @@
   "step_deps": {
       "CLI tools": ["lazyvim", "bat"],
       "NPM packages": ["lazyvim", "zsh"],
-      "Runtimes": ["lazyvim", "opencode", "zsh"],
+      "Runtimes": ["lazyvim", "opencode", "claude", "zsh"],
     "Post-install": ["tmux", "windows-terminal"]
   },
   "post_install": {
@@ -114,6 +116,7 @@
       "bun",
       "cargo",
       "opencode",
+      "claude",
       "uv",
       "auggie",
       "gemini"

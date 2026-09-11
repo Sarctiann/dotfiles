@@ -69,6 +69,18 @@ stow-packages/gemini/.gemini/installation_id
 stow-packages/gemini/.gemini/projects.json
 stow-packages/gemini/.gemini/history/
 
+# Claude sessions & state (stow package) — never track conversation/sensitive data
+stow-packages/claude/.claude/projects/
+stow-packages/claude/.claude/sessions/
+stow-packages/claude/.claude/cache/
+stow-packages/claude/.claude/backups/
+stow-packages/claude/.claude/downloads/
+stow-packages/claude/.claude/.credentials.json
+stow-packages/claude/.claude/history.jsonl
+stow-packages/claude/.claude/shell-snapshots/
+stow-packages/claude/.claude/todos/
+stow-packages/claude/.claude/tasks/
+
 # Repo artifacts
 manifest.json
 dotfiles-manifest.json
