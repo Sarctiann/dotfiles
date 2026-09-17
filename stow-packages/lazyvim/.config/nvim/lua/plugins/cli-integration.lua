@@ -61,9 +61,17 @@ if is_company_project then
   }
 
   local claude_cfg = claude_utils.get_claude_config_dir()
+  local claude_mcp_config_path = claude_utils.get_nvim_mcp_config_path(claude_cfg)
+  local claude_nvim_plugin_dir = claude_utils.get_nvim_plugin_dir()
   claude_op = {
     name = "Claude",
-    cli_cmd = "claude",
+    -- --mcp-config and --plugin-dir are session-scoped (see claude --help), so
+    -- the nvim MCP server and using-neovim skill only load for Claude sessions
+    -- opened through this Neovim integration, never for plain `claude` runs.
+    cli_cmd = "claude --mcp-config "
+      .. vim.fn.shellescape(claude_mcp_config_path)
+      .. " --plugin-dir "
+      .. vim.fn.shellescape(claude_nvim_plugin_dir),
     env = { CLAUDE_CONFIG_DIR = claude_cfg },
     cli_ready_flags = { search_for = "Type your message", from_line = 1, lines_amt = 50 },
     start_doing = function(visual_text, actions)

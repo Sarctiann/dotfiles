@@ -310,6 +310,49 @@ function M.manage_claude_sessions(show_all, config_dir)
   })
 end
 
+-- NOTE: Session-scoped MCP config for nvim-mcp-server, loaded via
+-- `claude --mcp-config <path>`. The NVIM socket path changes with every
+-- Neovim instance, so this file is (re)written right before each launch
+-- (on_open runs synchronously before cli-integration.nvim spawns the
+-- terminal — see cli-integration.nvim/lua/cli-integration/terminal.lua)
+-- instead of being persisted in settings.json, which Claude Code does not
+-- read MCP server definitions from at all (unlike Auggie's settings.json).
+-- This also keeps the nvim MCP scoped to sessions opened from Neovim only.
+-- @param config_dir string Path to the claude config dir
+function M.get_nvim_mcp_config_path(config_dir)
+  return config_dir .. "/nvim-mcp.session.json"
+end
+
+function M.write_nvim_mcp_config(config_dir)
+  local nvim_soc = os.getenv("NVIM") or vim.v.servername or ""
+  local data = {
+    mcpServers = {
+      nvim = {
+        type = "stdio",
+        command = "npx",
+        args = { "-y", "nvim-mcp-server" },
+        env = { NVIM = nvim_soc },
+      },
+    },
+  }
+  local path = M.get_nvim_mcp_config_path(config_dir)
+  local wf = io.open(path, "w")
+  if wf then
+    wf:write(vim.json.encode(data))
+    wf:close()
+  else
+    vim.notify("claude_utils: could not write " .. path, vim.log.levels.ERROR)
+  end
+end
+
+-- NOTE: Fixed path to the dotfiles-tracked plugin bundling the Neovim-specific
+-- skill (using-neovim). Loaded per-session via `claude --plugin-dir`, so it
+-- only applies to sessions opened through the Neovim integration — never
+-- persisted into the user or work-profile skills directories.
+function M.get_nvim_plugin_dir()
+  return vim.fn.expand("~/dotfiles/stow-packages/claude/.claude/nvim-plugin")
+end
+
 -- NOTE: Deploy private work-profile skills into <config_dir>/skills so Claude
 -- discovers them. Claude Code reads skills directly from CLAUDE_CONFIG_DIR/skills
 -- (unlike Auggie, which only reads from ~/.augment regardless of --augment-cache-dir),
@@ -339,43 +382,15 @@ function M.deploy_work_profile_skills(config_dir)
 end
 
 -- NOTE: Called from cli-integration's on_open hook for Claude sessions.
--- Ensures the work profile exists and that the nvim MCP server is configured
--- with the live Neovim socket (mirrors augment_utils.on_open_auggie). Also
--- creates <config_dir>/settings.json from scratch when it is missing.
+-- Ensures the work profile exists, refreshes the session-scoped nvim MCP
+-- config with the live Neovim socket, and deploys private work-profile
+-- skills (mirrors augment_utils.on_open_auggie).
 -- @param config_dir (optional) Resolved from workspace when nil
 function M.on_open_claude(config_dir)
   config_dir = config_dir or M.get_claude_config_dir()
   vim.fn.mkdir(config_dir, "p")
 
-  local settings_path = config_dir .. "/settings.json"
-  local data = {}
-  local f = io.open(settings_path, "r")
-  if f then
-    local content = f:read("*all")
-    f:close()
-    local ok, decoded = pcall(vim.json.decode, content)
-    if ok and type(decoded) == "table" then
-      data = decoded
-    end
-  end
-
-  local nvim_soc = os.getenv("NVIM") or vim.v.servername or ""
-  data.mcpServers = data.mcpServers or {}
-  data.mcpServers.nvim = {
-    type = "stdio",
-    command = "npx",
-    args = { "-y", "nvim-mcp-server" },
-    env = { NVIM = nvim_soc },
-  }
-
-  local wf = io.open(settings_path, "w")
-  if wf then
-    wf:write(vim.json.encode(data))
-    wf:close()
-  else
-    vim.notify("claude_utils: could not write " .. settings_path, vim.log.levels.ERROR)
-  end
-
+  M.write_nvim_mcp_config(config_dir)
   M.deploy_work_profile_skills(config_dir)
 end
 

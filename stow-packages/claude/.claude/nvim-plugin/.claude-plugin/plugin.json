@@ -1,0 +1,5 @@
+{
+  "name": "nvim-integration",
+  "description": "Neovim MCP skill for Claude Code sessions launched from within Neovim via cli-integration.nvim",
+  "version": "1.0.0"
+}
