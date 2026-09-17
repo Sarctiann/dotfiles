@@ -310,6 +310,34 @@ function M.manage_claude_sessions(show_all, config_dir)
   })
 end
 
+-- NOTE: Deploy private work-profile skills into <config_dir>/skills so Claude
+-- discovers them. Claude Code reads skills directly from CLAUDE_CONFIG_DIR/skills
+-- (unlike Auggie, which only reads from ~/.augment regardless of --augment-cache-dir),
+-- so this only needs to place them under the work profile — no user-dir deploy needed.
+--
+-- Source of truth stays $COMPANY_DIR/.augment_work_profile/skills (already authored
+-- as <name>/SKILL.md, which is Claude's native skill format), copied as-is (whole
+-- directories, not flattened like augment_utils.deploy_work_profile_config does).
+-- Only runs for company projects; source is company-private and must never land
+-- in the personal ~/.claude config dir.
+function M.deploy_work_profile_skills(config_dir)
+  if not M.is_company_project() then
+    return
+  end
+  local company_dir = vim.fn.expand(os.getenv("COMPANY_DIR") or ""):gsub("/+$", "")
+  local source = company_dir .. "/.augment_work_profile/skills"
+  if vim.fn.isdirectory(source) == 0 then
+    return
+  end
+  local target = config_dir .. "/skills"
+  vim.fn.mkdir(target, "p")
+  for _, skill_dir in ipairs(vim.fn.glob(source .. "/*", false, true)) do
+    if vim.fn.isdirectory(skill_dir) == 1 then
+      vim.fn.system({ "cp", "-r", skill_dir, target .. "/" })
+    end
+  end
+end
+
 -- NOTE: Called from cli-integration's on_open hook for Claude sessions.
 -- Ensures the work profile exists and that the nvim MCP server is configured
 -- with the live Neovim socket (mirrors augment_utils.on_open_auggie). Also
@@ -347,6 +375,8 @@ function M.on_open_claude(config_dir)
   else
     vim.notify("claude_utils: could not write " .. settings_path, vim.log.levels.ERROR)
   end
+
+  M.deploy_work_profile_skills(config_dir)
 end
 
 return M
