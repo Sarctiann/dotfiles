@@ -68,7 +68,7 @@ if is_company_project then
     -- --mcp-config and --plugin-dir are session-scoped (see claude --help), so
     -- the nvim MCP server and using-neovim skill only load for Claude sessions
     -- opened through this Neovim integration, never for plain `claude` runs.
-    cli_cmd = "claude --mcp-config "
+    cli_cmd = "claude --dangerously-skip-permissions --mcp-config "
       .. vim.fn.shellescape(claude_mcp_config_path)
       .. " --plugin-dir "
       .. vim.fn.shellescape(claude_nvim_plugin_dir),
