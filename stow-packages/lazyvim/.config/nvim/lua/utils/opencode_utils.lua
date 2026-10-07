@@ -331,6 +331,10 @@ function M.get_cli_cmd()
 end
 
 -- NOTE: Toggles the cloudflare tunnel via `npx untun`.
+-- PINNED to untun@0.1.3: untun 0.2.x ships dist/cli.mjs without a
+-- `#!/usr/bin/env node` shebang, so npx's symlink executes it as a shell
+-- script (spawn fails with ImageMagick `import`/syntax errors). Remove the
+-- pin once upstream fixes the shebang.
 -- If a tunnel is already active (M._tunnel_handle is set), kills the entire untun/cloudflared
 -- process tree and clears state. Otherwise starts a new tunnel pointing at this instance's
 -- server port (M._port). The tunnel handle is NOT detached so it dies if neovim exits
@@ -371,7 +375,7 @@ function M.toggle_tunnel()
 
   local handle, pid
   handle, pid = vim.loop.spawn("npx", {
-    args = { "untun", "tunnel", tunnel_target_url },
+    args = { "untun@0.1.3", "tunnel", tunnel_target_url },
     -- NOTE: NOT detached — tunnel dies when neovim exits
     stdio = { stdin_pipe, stdout_pipe, stderr_pipe },
     -- Explicitly provide optional uv.spawn options to satisfy static checkers
