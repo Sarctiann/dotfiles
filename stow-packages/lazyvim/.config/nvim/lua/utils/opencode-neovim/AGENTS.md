@@ -1,5 +1,11 @@
 # Neovim Integration Rules
 
+> **Note (OpenCode V2)**: OpenCode no longer loads this file automatically (config-dir
+> injection was dropped during the V1 → V2 migration). Its active rules now live in
+> `skills/using-neovim/SKILL.md`, which is injected through the `OPENCODE_CONFIG`
+> overlay (`opencode_nvim_mcps.jsonc`). This file is kept as reference documentation
+> for all clients.
+
 This file only adds rules for OpenCode sessions launched from Neovim. Global user rules live in the parent `AGENTS.md`.
 
 ## Role of Neovim MCP

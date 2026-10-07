@@ -124,3 +124,19 @@ Quickfix navigation commands (`:cn`, `:cp`, `:cfirst`) follow the focused window
 | Opening a file without the **Window Focus Step** | Always run it first — the file opens in the AI terminal otherwise |
 | Not opening the file after editing | Use **Combined Focus + Open** so the user sees the result |
 | Using MCP for code navigation | Use native `read`/`grep`/`glob` |
+
+## Multi-Client Synchronization
+
+The three skills in `opencode-neovim/skills/` (`using-neovim`, `using-neovim-lsp`,
+`using-quickfix`) are **ported to several clients** and MUST be kept in sync:
+
+| Client | Location |
+|--------|----------|
+| **OpenCode** (native) | `./skills/<name>/SKILL.md` (stow-managed) |
+| **Augment** (user-level) | `~/.augment/skills/<name>.md` (stow-managed) |
+| **Augment** (work-profile) | `<work-profile>/skills/<name>.md` (neovim-deployed) |
+| **Gemini CLI** | `~/.gemini/custom-skills/<name>/SKILL.md` (stow-managed) |
+
+**Rule**: any change to a skill under `skills/` MUST be replicated to every location
+above. Content is identical except for client-specific details (prerequisites section,
+connection instructions).

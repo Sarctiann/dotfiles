@@ -1,82 +1,195 @@
+// Neovim overlay config for OpenCode V2.
+//
+// Injected via OPENCODE_CONFIG when OpenCode is launched from Neovim
+// (see opencode_utils.lua get_cli_cmd()). It merges ON TOP of the global
+// ~/.config/opencode/opencode.jsonc, so entries here win over the global ones.
+//
+// Replaces the old V1 shape (flat `mcp` + `agent` maps). The companion
+// commands/*.md files were ported to the `commands` map below because V2 only
+// discovers .md commands from the global config directory.
 {
   "$schema": "https://opencode.ai/config.json",
-  // MCP servers configuration
   "mcp": {
-    // Neovim MCP server for buffer access and editing (bigcodegen)
-    "neovim": {
-      "type": "local",
-      "command": ["npx", "-y", "mcp-neovim-server"],
-      "enabled": true,
-      "environment": {
-        // Enable shell commands execution through vim
-        "ALLOW_SHELL_COMMANDS": "true",
-        // Socket path for neovim connection (uses NVIM env var)
-        "NVIM_SOCKET_PATH": "{env:NVIM}",
-      },
-    },
+    "servers": {
+      "neovim": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "mcp-neovim-server"
+        ],
+        "environment": {
+          "ALLOW_SHELL_COMMANDS": "true",
+          "NVIM_SOCKET_PATH": "{env:NVIM}"
+        }
+      }
+    }
   },
-  // Skill permissions for custom agents:
-  // allow neovim skills freely, keep ask for superpowers
-  "agent": {
+  "skills": [
+    "~/.config/nvim/lua/utils/opencode-neovim/skills"
+  ],
+  "commands": {
+    "nvim-context": {
+      "description": "Summarize current Neovim editor state (buffer, cursor, LSP, windows)",
+      "template": "1. Run the Window Focus Step to ensure a file window is active (not the OpenCode terminal):\n   `neovim_vim_command(\":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end\")`\n2. Call `neovim_vim_status` to get the current Neovim session state.\n3. Call `neovim_vim_buffer` to read the active buffer content.\n\nSummarize:\n\n- Active file and cursor position\n- Current mode and any visual selection\n- Attached LSP clients (from `lspInfo` field)\n- Open windows and their layout\n- Any relevant marks or registers\n\nIf the Neovim MCP is not available, say so clearly."
+    },
+    "nvim-find": {
+      "description": "Search project with vim_grep and show results in quickfix list",
+      "template": "1. Run the Window Focus Step to ensure a file window is active (not the OpenCode terminal):\n   `neovim_vim_command(\":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end\")`\n2. Use `neovim_vim_grep` to search for the pattern: $ARGUMENTS\n\nAfter the search:\n\n3. Run `neovim_vim_command` with `\":copen\"` to show the quickfix list in Neovim\n4. Summarize the results: how many matches, which files, notable patterns\n\nIf no pattern is provided, ask the user what to search for.\nIf the Neovim MCP is not available, say so clearly."
+    },
+    "nvim-open-related": {
+      "description": "Find and open files related to a topic in Neovim splits",
+      "template": "Find files related to: $ARGUMENTS\n\nSteps:\n\n1. Run the Window Focus Step to ensure a file window is active (not the OpenCode terminal):\n   `neovim_vim_command(\":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end\")`\n2. Use `neovim_vim_grep` to search for \"$ARGUMENTS\" across the project.\n3. Identify the most relevant files (max 4) based on the results.\n4. Open each file with `neovim_vim_file_open`.\n5. Arrange them using `neovim_vim_window split` or `vsplit` so the user can see them side by side.\n6. Summarize what each file contains and why it's relevant.\n\nIf no argument is provided, use `neovim_vim_status` to get the current buffer context and find related files based on that.\nIf the Neovim MCP is not available, say so clearly."
+    },
+    "nvim-refs": {
+      "description": "Find all LSP references for the symbol under cursor and show in quickfix",
+      "template": "1. Run the Window Focus Step to ensure a file window is active (not the OpenCode terminal):\n   `neovim_vim_command(\":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b = vim.api.nvim_win_get_buf(w) local bt = vim.bo[b].buftype if bt == '' then vim.api.nvim_set_current_win(w) break end end\")`\n2. Call `neovim_vim_status` to get the current cursor position and confirm an LSP client is attached (check `lspInfo` field).\n3. Run `neovim_vim_command` with `\":lua vim.lsp.buf.references()\"` to populate the quickfix list with all references.\n4. Run `neovim_vim_command` with `\":copen\"` to show the quickfix list.\n5. Run `neovim_vim_command` with `\":lua print(vim.fn.json_encode(vim.fn.getqflist()))\"` and summarize: how many references, which files and lines.\n\nIf no LSP client is attached (lspInfo shows \"LSP information unavailable\"), fall back to `neovim_vim_grep` using the word under the cursor from `neovim_vim_status`.\nIf the Neovim MCP is not available, say so clearly."
+    }
+  },
+  "agents": {
     "z-logic": {
-      "permission": {
-        "skill": {
-          "using-neovim": "allow",
-          "using-quickfix": "allow",
-          "using-neovim-lsp": "allow",
-          "*": "ask",
+      "permissions": [
+        {
+          "action": "skill",
+          "resource": "*",
+          "effect": "ask"
         },
-      },
+        {
+          "action": "skill",
+          "resource": "using-neovim",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-quickfix",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-neovim-lsp",
+          "effect": "allow"
+        }
+      ]
     },
     "z-forge": {
-      "permission": {
-        "skill": {
-          "using-neovim": "allow",
-          "using-quickfix": "allow",
-          "using-neovim-lsp": "allow",
-          "*": "ask",
+      "permissions": [
+        {
+          "action": "skill",
+          "resource": "*",
+          "effect": "ask"
         },
-      },
+        {
+          "action": "skill",
+          "resource": "using-neovim",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-quickfix",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-neovim-lsp",
+          "effect": "allow"
+        }
+      ]
     },
     "z-nexus": {
-      "permission": {
-        "skill": {
-          "using-neovim": "allow",
-          "using-quickfix": "allow",
-          "using-neovim-lsp": "allow",
-          "*": "ask",
+      "permissions": [
+        {
+          "action": "skill",
+          "resource": "*",
+          "effect": "ask"
         },
-      },
+        {
+          "action": "skill",
+          "resource": "using-neovim",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-quickfix",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-neovim-lsp",
+          "effect": "allow"
+        }
+      ]
     },
     "z-ultra": {
-      "permission": {
-        "skill": {
-          "using-neovim": "allow",
-          "using-quickfix": "allow",
-          "using-neovim-lsp": "allow",
-          "*": "ask",
+      "permissions": [
+        {
+          "action": "skill",
+          "resource": "*",
+          "effect": "ask"
         },
-      },
+        {
+          "action": "skill",
+          "resource": "using-neovim",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-quickfix",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-neovim-lsp",
+          "effect": "allow"
+        }
+      ]
     },
     "z-pilot": {
-      "permission": {
-        "skill": {
-          "using-neovim": "allow",
-          "using-quickfix": "allow",
-          "using-neovim-lsp": "allow",
-          "*": "ask",
+      "permissions": [
+        {
+          "action": "skill",
+          "resource": "*",
+          "effect": "ask"
         },
-      },
+        {
+          "action": "skill",
+          "resource": "using-neovim",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-quickfix",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-neovim-lsp",
+          "effect": "allow"
+        }
+      ]
     },
     "z-spark": {
-      "permission": {
-        "skill": {
-          "using-neovim": "allow",
-          "using-quickfix": "allow",
-          "using-neovim-lsp": "allow",
-          "*": "ask",
+      "permissions": [
+        {
+          "action": "skill",
+          "resource": "*",
+          "effect": "ask"
         },
-      },
-    },
-  },
+        {
+          "action": "skill",
+          "resource": "using-neovim",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-quickfix",
+          "effect": "allow"
+        },
+        {
+          "action": "skill",
+          "resource": "using-neovim-lsp",
+          "effect": "allow"
+        }
+      ]
+    }
+  }
 }

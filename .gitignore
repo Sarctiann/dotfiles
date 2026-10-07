@@ -15,6 +15,7 @@ bun.lock
 
 # Secrets / state
 .credentials
+service.json
 gemini-credentials.json
 opencode-notifier.json
 opencode-notifier-state.json

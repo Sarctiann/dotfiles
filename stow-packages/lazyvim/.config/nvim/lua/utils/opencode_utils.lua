@@ -1,34 +1,41 @@
 local M = {}
 
--- WARN:
--- You will want to add the following MCP entry to your `~/.config/opencode/opencode.jsonc`
--- if you have an `opencode.json` instead, remove the comments.
+-- WARN (OpenCode V2):
+-- The Neovim MCP server plus the nvim-only skills/commands/agent permissions live in
+-- `opencode_nvim_mcps.jsonc` (same directory as this file) and are injected through
+-- OPENCODE_CONFIG when OpenCode is started from Neovim (see get_cli_cmd()).
+-- The global `~/.config/opencode/opencode.jsonc` declares the same MCP server with
+-- `disabled: true`, so sessions outside Neovim never see it. The overlay merges ON TOP
+-- of the global config, so its `disabled: false` wins when launched from Neovim.
+--
+-- V2 shape of the global entry (for reference):
 --
 --  // MCP servers configuration
 --  "mcp": {
---    // Neovim MCP server for buffer access and editing (bigcodegen)
---    "neovim": {
---      "type": "local",
---      "command": ["npx", "-y", "mcp-neovim-server"],
---      "enabled": true,
---      "environment": {
---        // Enable shell commands execution through vim
---        "ALLOW_SHELL_COMMANDS": "true",
---        // Socket path for neovim connection (uses NVIM env var)
---        "NVIM_SOCKET_PATH": "{env:NVIM}",
+--    "servers": {
+--      "neovim": {
+--        "type": "local",
+--        "command": ["npx", "-y", "mcp-neovim-server"],
+--        "disabled": true,
+--        "environment": {
+--          // Enable shell commands execution through vim
+--          "ALLOW_SHELL_COMMANDS": "true",
+--          // Socket path for neovim connection (uses NVIM env var)
+--          "NVIM_SOCKET_PATH": "{env:NVIM}",
+--        },
 --      },
 --    },
 --  }
 
 OC_DEBUG = false
-M.OPENCODE_SERVER_USERNAME = os.getenv("OPENCODE_SERVER_USERNAME") or "opencode"
+-- NOTE: V2 uses basic auth with a fixed user "opencode"; only the password matters.
 M.OPENCODE_SERVER_PASSWORD = os.getenv("OPENCODE_SERVER_PASSWORD") or "opencode"
 -- NOTE: Resolve paths relative to this file's directory using Neovim's debug.getinfo
 local _this_dir = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h")
--- NOTE: Config directory with Neovim-specific skills, commands, and tools.
--- Passed as OPENCODE_CONFIG_DIR so these only load when OpenCode is opened from Neovim.
-local OPENCODE_NEOVIM_CONFIG_DIR = _this_dir .. "/opencode-neovim"
-local OPENCODE_MCP_CONFIG_FILE = OPENCODE_NEOVIM_CONFIG_DIR .. "/opencode_nvim_mcps.jsonc"
+-- NOTE: Overlay config with the Neovim MCP server, skills, commands, and agent
+-- permissions. Passed as OPENCODE_CONFIG (merged on top of the global config) so it
+-- only applies when OpenCode is started from Neovim.
+local OPENCODE_MCP_CONFIG_FILE = _this_dir .. "/opencode-neovim/opencode_nvim_mcps.jsonc"
 
 -- NOTE: Runtime state for the current neovim instance.
 -- These are NOT persisted — they live only for the lifetime of this neovim process.
@@ -58,7 +65,7 @@ end
 -- NOTE: Registers a VimLeavePre autocmd that fully tears down everything this neovim instance
 -- started: the opencode server, any attached client, and the cloudflare tunnel (if open).
 -- Cleanup order:
---   1. Kill all processes bound to our port (covers both `opencode serve` and `opencode attach`)
+--   1. Kill all processes bound to our port (covers both `opencode serve` and the `opencode --server` client)
 --   2. Kill the server by its saved PID as a belt-and-suspenders fallback
 --   3. Kill the tunnel process tree via pkill -f untun
 --   4. Delete PORT_FILE, LOGFILE, and PID_FILE
@@ -87,7 +94,7 @@ function M.register_cleanup()
       end
 
       -- NOTE: Primary kill: find every process listening on our port and send SIGKILL.
-      -- This reliably kills both `opencode serve` and any `opencode attach` still running.
+      -- This reliably kills both `opencode serve` and any `opencode --server` client still running.
       local f = io.open(port_file, "r")
       if f then
         local port = f:read("*a"):gsub("%s+", "")
@@ -122,10 +129,8 @@ local function load_credentials()
   local handle = io.open(cred_file, "r")
   if handle then
     for line in handle:lines() do
-      local username = line:match('^OPENCODE_SERVER_USERNAME="([^"]+)"')
       local password = line:match('^OPENCODE_SERVER_PASSWORD="([^"]+)"')
-      if username and password then
-        M.OPENCODE_SERVER_USERNAME = username
+      if password then
         M.OPENCODE_SERVER_PASSWORD = password
         break
       end
@@ -193,34 +198,31 @@ end
 -- NOTE: Returns the full bash script used as cli_cmd for cli-integration.
 -- WARN: cli-integration appends extra args (e.g. " -s <session_id>") as raw text after
 -- cli_cmd. The script is wrapped in a shell function so those appended args become
--- positional parameters ($@) forwarded to `opencode attach`.
+-- positional parameters ($@) forwarded to `opencode --server <url>`.
 --
 -- Lifecycle per neovim instance:
 --   Fast path  — PORT_FILE exists AND the server responds on that port:
---                skip startup, exec `opencode attach` immediately.
+--                skip startup, exec `opencode --server <url>` immediately.
 --                This is the normal case when the TUI is closed (Ctrl+C kills the client
 --                but leaves the server running) and then re-opened.
 --   Slow path  — PORT_FILE absent or server unreachable:
 --                start `opencode serve --port 0` in background, poll LOGFILE for the
---                assigned port (up to 5s), write PORT_FILE and PID_FILE, then attach.
+--                assigned port (up to 5s), write PORT_FILE and PID_FILE, then connect.
 --
 -- Files written (all under ~/.local/share/opencode/, namespaced by nvim PID):
 --   PORT_FILE        — the TCP port the server is listening on
 --   LOGFILE          — stdout/stderr of `opencode serve`
 --   PID_FILE         — PID of the `opencode serve` process (read by register_cleanup)
 function M.get_cli_cmd()
-  local username = M.OPENCODE_SERVER_USERNAME
   local password = M.OPENCODE_SERVER_PASSWORD
   local mcp_config = OPENCODE_MCP_CONFIG_FILE
-  local neovim_config_dir = OPENCODE_NEOVIM_CONFIG_DIR
 
   -- NOTE: The script body is wrapped in oc__main() so cli-integration's appended args
   -- (e.g. "-s <session_id>") become positional parameters and can be forwarded via "$@"
-  -- to `opencode attach` without any string manipulation.
+  -- to `opencode --server` without any string manipulation.
   return string.format(
     [[oc__main() {
     echo "\n\n\n\n\n\n\n\n\n\n\n"
-    export OPENCODE_SERVER_USERNAME=%s
     export OPENCODE_SERVER_PASSWORD=%s
     PORT_FILE="%s"
 
@@ -257,8 +259,8 @@ function M.get_cli_cmd()
       return 1
     }
 
-    # NOTE: Fast path — if PORT_FILE exists and the server is alive, attach immediately.
-    # This is the common case: the TUI was closed (Ctrl+C kills `opencode attach` but
+    # NOTE: Fast path — if PORT_FILE exists and the server is alive, connect immediately.
+    # This is the common case: the TUI was closed (Ctrl+C kills `opencode --server` but
     # leaves `opencode serve` running), and the user re-opens it with <leader>aa.
     # on_open() in Lua also pre-writes the PORT_FILE when M._port is already known,
     # ensuring the fast path succeeds even if PORT_FILE was removed by an earlier cleanup.
@@ -266,9 +268,9 @@ function M.get_cli_cmd()
       EXISTING_PORT=$(cat "$PORT_FILE" 2>/dev/null)
       _oc_log "PORT_FILE exists, EXISTING_PORT=$EXISTING_PORT"
       if [ -n "$EXISTING_PORT" ] && _oc_port_alive "$EXISTING_PORT"; then
-        _oc_log "FAST PATH: server alive on port $EXISTING_PORT, attaching"
+        _oc_log "FAST PATH: server alive on port $EXISTING_PORT, connecting"
         echo "Server already running. Attaching OpenCode CLI..."
-        exec opencode attach "http://127.0.0.1:$EXISTING_PORT" "$@"
+        exec opencode --server "http://127.0.0.1:$EXISTING_PORT" "$@"
       else
         _oc_log "SLOW PATH: port check failed (port=$EXISTING_PORT)"
       fi
@@ -287,7 +289,10 @@ function M.get_cli_cmd()
 
     # NOTE: nohup + stdin from /dev/null + stdout/stderr to LOGFILE ensures the server
     # survives terminal close. setsid is unnecessary because nohup already ignores SIGHUP.
-    nohup env OPENCODE_CONFIG=%s OPENCODE_CONFIG_DIR=%s opencode serve --port 0 --hostname 0.0.0.0 --mdns --print-logs </dev/null >"$LOGFILE" 2>&1 &
+    # OPENCODE_CONFIG injects the Neovim overlay (MCP server + skills + commands);
+    # it is the only injection mechanism in V2 (OPENCODE_CONFIG_DIR would REPLACE the
+    # global config dir, losing global agents/plugins/mcp).
+    nohup env OPENCODE_CONFIG=%s opencode serve --port 0 --hostname 0.0.0.0 --print-logs </dev/null >"$LOGFILE" 2>&1 &
     SERVER_PID=$!
     disown $SERVER_PID 2>/dev/null
     echo "$SERVER_PID" > "$PID_FILE"
@@ -314,16 +319,14 @@ function M.get_cli_cmd()
 
     echo "Starting OpenCode CLI..."
 
-    opencode attach "http://127.0.0.1:$PORT" "$@"
-    _oc_log "opencode attach exited with code $?"
+    opencode --server "http://127.0.0.1:$PORT" "$@"
+    _oc_log "opencode --server exited with code $?"
   }
   oc__main]],
-    username,
     password,
     get_port_file(),
     OC_DEBUG and 1 or 0,
-    mcp_config,
-    neovim_config_dir
+    mcp_config
   )
 end
 
@@ -551,14 +554,18 @@ local function parse_timestamp(ts_ms)
   return iso, date, time
 end
 
--- NOTE: Query all sessions via `opencode db --format json`.
--- Uses opencode's own database access instead of calling the external sqlite3 CLI,
--- which avoids a system dependency and is robust against ~/.sqliterc format changes.
+-- NOTE: Query all sessions across projects via the sqlite3 CLI.
+-- OpenCode V2 dropped the `opencode db` subcommand; `opencode session list` only lists
+-- the current project, so direct DB access is required for the cross-project picker.
+-- DB path comes from `opencode debug paths db` (~/.local/share/opencode/opencode.db).
 local function get_sessions()
   local sessions = {}
+  local db_path = vim.fn.expand("~/.local/share/opencode/opencode.db")
   local result = vim.fn.system({
-    "opencode", "db", "--format", "json",
-    "SELECT id, title, directory, time_updated FROM session ORDER BY time_updated DESC;"
+    "sqlite3",
+    "-json",
+    db_path,
+    "SELECT id, title, directory, time_updated FROM session ORDER BY time_updated DESC;",
   })
   if vim.v.shell_error ~= 0 or result == "" then
     return sessions
@@ -683,21 +690,21 @@ local function get_proc_cwd(pid, is_darwin)
 end
 
 -- NOTE: Interactive inspector for ALL opencode-related processes on the machine.
--- Lists: opencode serve (server), opencode attach (client), and npx untun (tunnel).
+-- Lists: opencode serve (server), opencode --server (client), and npx untun (tunnel).
 -- Shows type, PID, directory, and allows killing one-by-one or all at once.
 function M.inspect_opencode_processes()
   local entries = {}
   local is_darwin = vim.fn.system("uname -s"):gsub("%s+", "") == "Darwin"
 
   -- Collect all opencode processes (server + client) via ps
-  local oc_lines = vim.fn.systemlist("ps -eo pid,args | grep -E 'opencode (serve|attach)' | grep -v grep 2>/dev/null")
+  local oc_lines = vim.fn.systemlist("ps -eo pid,args | grep -E 'opencode (serve|--server)' | grep -v grep 2>/dev/null")
   for _, line in ipairs(oc_lines) do
     local pid, cmd = line:match("^%s*(%d+)%s+(.*)$")
     if pid and cmd then
       local kind
       if cmd:find("opencode serve", 1, true) then
         kind = "server"
-      elseif cmd:find("opencode attach", 1, true) then
+      elseif cmd:find("opencode --server", 1, true) then
         kind = "client"
       end
       if kind then
