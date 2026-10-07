@@ -6,19 +6,116 @@ local augment_utils = require("utils.augment_utils")
 local opencode_utils = require("utils.opencode_utils")
 local claude_utils = require("utils.claude_utils")
 
--- Static check: are we inside COMPANY_DIR at load time?
--- Uses augment_utils.get_augment_cache_dir() as canonical cache_dir source.
-local company_dir_str = os.getenv("COMPANY_DIR") or ""
-local is_company_project = false
-if company_dir_str ~= "" then
-  local company_dir = vim.fn.expand(company_dir_str):gsub("/+$", "")
-  local current_dir = vim.fn.getcwd()
-  is_company_project = (current_dir .. "/"):sub(1, #company_dir + 1) == company_dir .. "/"
-end
+local is_company_project = claude_utils.is_company_project()
+
+local claude_cfg = claude_utils.get_claude_config_dir()
+local claude_op = {
+  name = "Claude",
+  cli_cmd = claude_utils.get_cli_cmd(),
+  env = { CLAUDE_CONFIG_DIR = claude_cfg },
+  cli_ready_flags = { search_for = "Type your message", from_line = 1, lines_amt = 50 },
+  start_doing = function(visual_text, actions)
+    require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Claude")
+  end,
+  on_open = function(_, _)
+    claude_utils.on_open_claude(claude_cfg)
+  end,
+  format_paths = function(paths, actions)
+    if #paths == 0 or #paths[1] == 0 then
+      return
+    end
+    if #paths == 1 then
+      actions.send_keys("@" .. paths[1] .. " ")
+    else
+      actions.for_each_path(function(path)
+        actions.send_keys("@" .. path)
+        actions.send_line()
+      end)
+    end
+  end,
+  on_ask_submit = function(data, actions)
+    if data.selection then
+      actions.send_line("```")
+      actions.send_keys("@" .. data.relative_file)
+      actions.wait(500)
+      actions.send_keys("<CR>")
+      actions.send_line(" L" .. data.start_line .. "-L" .. data.end_line)
+      actions.send_line(data.selection)
+      actions.send_line("```")
+    else
+      actions.send_keys("@" .. data.relative_file)
+      actions.wait(500)
+      actions.send_keys("<CR>")
+      actions.send_line(" L" .. data.start_line)
+    end
+    actions.send_line()
+    actions.send_line(data.question)
+    actions.submit()
+  end,
+  keep_open = false,
+  window_width = 50,
+  terminal_keys = {
+    terminal_mode = {
+      normal_mode = { "<M-q>" },
+      insert_file_path = { "<C-o>" },
+      insert_all_buffers = { "<C-o><C-o>" },
+    },
+  },
+}
+
+
+local claude_keys = {
+    {
+      "<leader>ac",
+      function()
+        claude_utils.new_session()
+      end,
+      desc = "Claude New Session",
+      silent = true,
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>aC",
+      nil,
+      desc = " Claude Code Sessions",
+      silent = true,
+    },
+    {
+      "<leader>aCc",
+      function()
+        claude_utils.resume_last_session()
+      end,
+      desc = "Claude Resume Latest",
+      silent = true,
+    },
+    {
+      "<leader>aCs",
+      function()
+        claude_utils.manage_claude_sessions(false, claude_cfg)
+      end,
+      desc = "Claude Session Manager",
+      silent = true,
+    },
+    {
+      "<leader>aCd",
+      function()
+        claude_utils.delete_all_claude_sessions(claude_cfg)
+      end,
+      desc = "Claude Delete Project Sessions",
+      silent = true,
+    },
+    {
+      "<leader>aCq",
+      function()
+        claude_utils.ask_inline()
+      end,
+      desc = "Claude Ask (inline)",
+      mode = { "n", "v" },
+    },
+}
 
 local integration_op
 local keys_op
-local claude_op
 
 if is_company_project then
   local cache_dir = augment_utils.get_augment_cache_dir()
@@ -50,69 +147,6 @@ if is_company_project then
         end)
       end
     end,
-    window_width = 50,
-    terminal_keys = {
-      terminal_mode = {
-        normal_mode = { "<M-q>" },
-        insert_file_path = { "<C-o>" },
-        insert_all_buffers = { "<C-o><C-o>" },
-      },
-    },
-  }
-
-  local claude_cfg = claude_utils.get_claude_config_dir()
-  local claude_mcp_config_path = claude_utils.get_nvim_mcp_config_path(claude_cfg)
-  local claude_nvim_plugin_dir = claude_utils.get_nvim_plugin_dir()
-  claude_op = {
-    name = "Claude",
-    -- --mcp-config and --plugin-dir are session-scoped (see claude --help), so
-    -- the nvim MCP server and using-neovim skill only load for Claude sessions
-    -- opened through this Neovim integration, never for plain `claude` runs.
-    cli_cmd = "claude --dangerously-skip-permissions --mcp-config "
-      .. vim.fn.shellescape(claude_mcp_config_path)
-      .. " --plugin-dir "
-      .. vim.fn.shellescape(claude_nvim_plugin_dir),
-    env = { CLAUDE_CONFIG_DIR = claude_cfg },
-    cli_ready_flags = { search_for = "Type your message", from_line = 1, lines_amt = 50 },
-    start_doing = function(visual_text, actions)
-      require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Claude")
-    end,
-    on_open = function(_, _)
-      claude_utils.on_open_claude(claude_cfg)
-    end,
-    format_paths = function(paths, actions)
-      if #paths == 0 or #paths[1] == 0 then
-        return
-      end
-      if #paths == 1 then
-        actions.send_keys("@" .. paths[1] .. " ")
-      else
-        actions.for_each_path(function(path)
-          actions.send_keys("@" .. path)
-          actions.send_line()
-        end)
-      end
-    end,
-    on_ask_submit = function(data, actions)
-      if data.selection then
-        actions.send_line("```")
-        actions.send_keys("@" .. data.relative_file)
-        actions.wait(500)
-        actions.send_keys("<CR>")
-        actions.send_line(" L" .. data.start_line .. "-L" .. data.end_line)
-        actions.send_line(data.selection)
-        actions.send_line("```")
-      else
-        actions.send_keys("@" .. data.relative_file)
-        actions.wait(500)
-        actions.send_keys("<CR>")
-        actions.send_line(" L" .. data.start_line)
-      end
-      actions.send_line()
-      actions.send_line(data.question)
-      actions.submit()
-    end,
-    keep_open = false,
     window_width = 50,
     terminal_keys = {
       terminal_mode = {
@@ -169,51 +203,6 @@ if is_company_project then
         augment_utils.ask_inline(cache_dir)
       end,
       desc = "Augment Ask (inline)",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>ac",
-      ":CLIIntegration open_root Claude<CR>",
-      desc = "Claude New Session",
-      silent = true,
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>aC",
-      nil,
-      desc = " Claude Code Sessions",
-      silent = true,
-    },
-    {
-      "<leader>aCc",
-      function()
-        claude_utils.resume_last_session()
-      end,
-      desc = "Claude Resume Latest",
-      silent = true,
-    },
-    {
-      "<leader>aCs",
-      function()
-        claude_utils.manage_claude_sessions(false, claude_cfg)
-      end,
-      desc = "Claude Session Manager",
-      silent = true,
-    },
-    {
-      "<leader>aCd",
-      function()
-        claude_utils.delete_all_claude_sessions(claude_cfg)
-      end,
-      desc = "Claude Delete Project Sessions",
-      silent = true,
-    },
-    {
-      "<leader>aCq",
-      function()
-        claude_utils.ask_inline()
-      end,
-      desc = "Claude Ask (inline)",
       mode = { "n", "v" },
     },
   }
@@ -342,10 +331,7 @@ else
   }
 end
 
-local integration_list = { integration_op }
-if claude_op then
-  integration_list[#integration_list + 1] = claude_op
-end
+local integration_list = { integration_op, claude_op }
 integration_list[#integration_list + 1] = {
   name = "Gemini",
   cli_cmd = "gemini",
@@ -458,7 +444,7 @@ local plugin_spec = {
           silent = true,
           mode = { "n", "v" },
         },
-      }, keys_op)
+      }, vim.list_extend(claude_keys, keys_op))
     ),
   },
 }

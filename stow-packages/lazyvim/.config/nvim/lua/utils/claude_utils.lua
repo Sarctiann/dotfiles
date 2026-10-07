@@ -1,25 +1,10 @@
 local M = {}
 
--- WARN:
+-- NOTE:
 -- Claude Code stores its config/sessions in a *config dir*, controlled by the
 -- CLAUDE_CONFIG_DIR env var. By default that is ~/.claude. When running inside
 -- a company project, these utils use $COMPANY_DIR/.claude_work_profile so work
--- settings, MCP servers, and sessions stay separate from personal use.
---
--- Make nvim-mcp-server available inside a config dir by running once:
---     claude mcp add nvim -s user -e NVIM=\$NVIM -- "npx" -y nvim-mcp-server
--- (personal: default config dir; work profile: run with CLAUDE_CONFIG_DIR set).
--- It adds an entry to <config_dir>/settings.json:
---   {
---     "mcpServers": {
---       "nvim": {
---         "type": "stdio",
---         "command": "npx",
---         "args": ["-y", "nvim-mcp-server"],
---         "env": { "NVIM": "$NVIM" }
---       }
---     }
---   }
+-- settings and sessions stay separate from personal use.
 
 -- NOTE: True when the current working directory lives inside $COMPANY_DIR.
 -- Mirrors the static check used by cli-integration.lua so tools can decide
@@ -55,13 +40,11 @@ function M.get_display_name()
 end
 
 -- NOTE: Shell command used by cli-integration to launch Claude Code.
--- Sets CLAUDE_CONFIG_DIR so the session reads/writes the right profile.
+-- CLAUDE_CONFIG_DIR is set separately through the integration's `env`.
+-- --plugin-dir is session-scoped, so the using-neovim skill only loads for
+-- sessions opened through the Neovim integration.
 function M.get_cli_cmd()
-  if M.is_company_project() then
-    local cfg = M.get_claude_config_dir()
-    return "env CLAUDE_CONFIG_DIR=" .. vim.fn.shellescape(cfg) .. " claude"
-  end
-  return "claude"
+  return "claude --permission-mode acceptEdits --plugin-dir " .. vim.fn.shellescape(M.get_nvim_plugin_dir())
 end
 
 -- NOTE: Floating notification at bottom-right, auto-dismisses.
@@ -100,7 +83,7 @@ end
 -- NOTE: Show which profile is active before running a session action.
 local function announce()
   local cfg = M.get_claude_config_dir()
-  local d = cfg:gsub(vim.fn.expand("~"), "~")
+  local d = cfg:gsub("^" .. vim.pesc(vim.fn.expand("~")), "~")
   M.show_notification(" " .. M.get_display_name() .. " (profile: <" .. d .. ">) ")
 end
 
@@ -210,7 +193,7 @@ function M.delete_all_claude_sessions(config_dir)
   config_dir = config_dir or M.get_claude_config_dir()
   local base_dir = config_dir .. "/projects"
   local current_path = require("cli-integration.hooks").get_current_workspace()
-  local project_dir_name = current_path:gsub("[/._]", "-")
+  local project_dir_name = current_path:gsub("[^%w]", "-")
   local project_dir = base_dir .. "/" .. project_dir_name
 
   local options = { "Current Project Only", "ALL Projects", "Cancel" }
@@ -255,7 +238,7 @@ function M.manage_claude_sessions(show_all, config_dir)
     get_sessions = function()
       local sessions = {}
       local current_ws = hooks.get_current_workspace()
-      local current_ws_dir = current_ws:gsub("[/._]", "-")
+      local current_ws_dir = current_ws:gsub("[^%w]", "-")
       local project_dirs = vim.fn.glob(base_dir .. "/*", false, true)
       for _, dir in ipairs(project_dirs) do
         if vim.fn.isdirectory(dir) == 1 then
@@ -310,41 +293,6 @@ function M.manage_claude_sessions(show_all, config_dir)
   })
 end
 
--- NOTE: Session-scoped MCP config for nvim-mcp-server, loaded via
--- `claude --mcp-config <path>`. The NVIM socket path changes with every
--- Neovim instance, so this file is (re)written right before each launch
--- (on_open runs synchronously before cli-integration.nvim spawns the
--- terminal — see cli-integration.nvim/lua/cli-integration/terminal.lua)
--- instead of being persisted in settings.json, which Claude Code does not
--- read MCP server definitions from at all (unlike Auggie's settings.json).
--- This also keeps the nvim MCP scoped to sessions opened from Neovim only.
--- @param config_dir string Path to the claude config dir
-function M.get_nvim_mcp_config_path(config_dir)
-  return config_dir .. "/nvim-mcp.session.json"
-end
-
-function M.write_nvim_mcp_config(config_dir)
-  local nvim_soc = os.getenv("NVIM") or vim.v.servername or ""
-  local data = {
-    mcpServers = {
-      nvim = {
-        type = "stdio",
-        command = "npx",
-        args = { "-y", "nvim-mcp-server" },
-        env = { NVIM = nvim_soc },
-      },
-    },
-  }
-  local path = M.get_nvim_mcp_config_path(config_dir)
-  local wf = io.open(path, "w")
-  if wf then
-    wf:write(vim.json.encode(data))
-    wf:close()
-  else
-    vim.notify("claude_utils: could not write " .. path, vim.log.levels.ERROR)
-  end
-end
-
 -- NOTE: Fixed path to the dotfiles-tracked plugin bundling the Neovim-specific
 -- skill (using-neovim). Loaded per-session via `claude --plugin-dir`, so it
 -- only applies to sessions opened through the Neovim integration — never
@@ -382,15 +330,13 @@ function M.deploy_work_profile_skills(config_dir)
 end
 
 -- NOTE: Called from cli-integration's on_open hook for Claude sessions.
--- Ensures the work profile exists, refreshes the session-scoped nvim MCP
--- config with the live Neovim socket, and deploys private work-profile
+-- Ensures the work profile exists and deploys private work-profile
 -- skills (mirrors augment_utils.on_open_auggie).
 -- @param config_dir (optional) Resolved from workspace when nil
 function M.on_open_claude(config_dir)
   config_dir = config_dir or M.get_claude_config_dir()
   vim.fn.mkdir(config_dir, "p")
 
-  M.write_nvim_mcp_config(config_dir)
   M.deploy_work_profile_skills(config_dir)
 end
 
