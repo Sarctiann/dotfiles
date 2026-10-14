@@ -1,12 +1,20 @@
 local M = {}
 
--- WARN (OpenCode V2):
+-- WARN (OpenCode V2 architecture):
+-- 1. Local TUI — `opencode --standalone` runs a PRIVATE server in the same process as the
+--    TUI. The Neovim overlay below is injected through OPENCODE_CONFIG (see get_env()), so
+--    the per-instance NVIM socket is honored WITHOUT managing a port, a PID file, a log
+--    file, or a server password. Closing the terminal tears the private server down.
+-- 2. Internet — `opencode pair --remote` targets the SHARED background service and exposes
+--    it through OpenTunnel (see M.pair). All servers share one database, so the phone sees
+--    the same sessions (without the Neovim-only MCP tools, which is expected).
+--
 -- The Neovim MCP server plus the nvim-only skills/commands/agent permissions live in
--- `opencode_nvim_mcps.jsonc` (same directory as this file) and are injected through
--- OPENCODE_CONFIG when OpenCode is started from Neovim (see get_cli_cmd()).
--- The global `~/.config/opencode/opencode.jsonc` declares the same MCP server with
--- `disabled: true`, so sessions outside Neovim never see it. The overlay merges ON TOP
--- of the global config, so its `disabled: false` wins when launched from Neovim.
+-- `opencode-neovim/opencode_nvim_mcps.jsonc` and are injected through OPENCODE_CONFIG when
+-- OpenCode is started from Neovim (see get_env()). The global
+-- `~/.config/opencode/opencode.jsonc` declares the same MCP server with `disabled: true`,
+-- so sessions outside Neovim never see it. The overlay merges ON TOP of the global config,
+-- so its entries win when OpenCode is launched from Neovim.
 --
 -- V2 shape of the global entry (for reference):
 --
@@ -27,443 +35,189 @@ local M = {}
 --    },
 --  }
 
-OC_DEBUG = false
--- NOTE: V2 uses basic auth with a fixed user "opencode"; only the password matters.
-M.OPENCODE_SERVER_PASSWORD = os.getenv("OPENCODE_SERVER_PASSWORD") or "opencode"
 -- NOTE: Resolve paths relative to this file's directory using Neovim's debug.getinfo
 local _this_dir = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h")
--- NOTE: Overlay config with the Neovim MCP server, skills, commands, and agent
--- permissions. Passed as OPENCODE_CONFIG (merged on top of the global config) so it
--- only applies when OpenCode is started from Neovim.
+-- NOTE: Overlay config with the Neovim MCP server, skills, commands, and agent permissions.
+-- Passed as OPENCODE_CONFIG (merged on top of the global config) so it only applies when
+-- OpenCode is started from Neovim.
 local OPENCODE_MCP_CONFIG_FILE = _this_dir .. "/opencode-neovim/opencode_nvim_mcps.jsonc"
 
--- NOTE: Runtime state for the current neovim instance.
--- These are NOT persisted — they live only for the lifetime of this neovim process.
--- Each neovim instance owns its own opencode server; state is never shared across instances.
--- _port        : port of the server started by THIS instance (read back from PORT_FILE after startup)
--- _server_pid  : PID of the `opencode serve` process started by this instance
--- _tunnel_*    : state for the optional cloudflare tunnel (npx untun)
--- _cleanup_registered : guard so VimLeavePre is only registered once
-M._port = nil
-M._server_pid = nil -- PID of the opencode serve process started by this instance
-M._tunnel_handle = nil -- vim.loop.process handle for npx untun (NOT detached — dies with neovim)
-M._tunnel_pid = nil
-M._tunnel_url = nil
-M._cleanup_registered = false -- guard: VimLeavePre registered at most once per nvim instance
+-- NOTE: Runtime state for the current neovim instance (not persisted).
+-- _pair_urls  : one-time connect links captured from the last `opencode pair` run
+-- _remote_url : remote (OpenTunnel) connect link, when remote pairing was used
+M._pair_urls = nil
+M._remote_url = nil
 
--- NOTE: Path to the tempfile where the bash script writes the port after the server starts.
--- Namespaced by the neovim PID so every neovim instance has its own isolated set of files:
---   port.nvim<PID>            — the TCP port the server is listening on
---   port.nvim<PID>.serve.log  — stdout/stderr of `opencode serve`
---   port.nvim<PID>.server.pid — PID of the `opencode serve` process
--- All three files are deleted by register_cleanup() when neovim exits.
-local function get_port_file()
-  local nvim_pid = vim.fn.getpid()
-  return vim.fn.expand(string.format("~/.local/share/opencode/port.nvim%d", nvim_pid))
+-- NOTE: Environment for the OpenCode terminal job, passed as the `env` field of the
+-- cli-integration OpenCode entry (merged on top of the inherited environment).
+--   OPENCODE_CONFIG : injects the Neovim overlay (MCP + skills + commands + agent
+--     permissions). It is the only injection mechanism in V2; OPENCODE_CONFIG_DIR would
+--     REPLACE the global config dir, losing global agents/plugins/mcp.
+--   NVIM : pinned to this Neovim's socket so the overlay's `{env:NVIM}` resolves even if
+--     the variable was not exported to the terminal job.
+function M.get_env()
+  return {
+    OPENCODE_CONFIG = OPENCODE_MCP_CONFIG_FILE,
+    NVIM = os.getenv("NVIM") or vim.v.servername,
+  }
 end
 
--- NOTE: Registers a VimLeavePre autocmd that fully tears down everything this neovim instance
--- started: the opencode server, any attached client, and the cloudflare tunnel (if open).
--- Cleanup order:
---   1. Kill all processes bound to our port (covers both `opencode serve` and the `opencode --server` client)
---   2. Kill the server by its saved PID as a belt-and-suspenders fallback
---   3. Kill the tunnel process tree via pkill -f untun
---   4. Delete PORT_FILE, LOGFILE, and PID_FILE
--- Safe to call multiple times — the guard flag ensures the autocmd is only created once.
-function M.register_cleanup()
-  if M._cleanup_registered then
-    return
+-- NOTE: Helpers for the native `opencode pair` flow.
+
+-- NOTE: Classifies a pairing-link host as loopback/private so the LAN link can be
+-- told apart from the OpenTunnel remote link.
+local function is_private_host(host)
+  return host == "localhost"
+    or host == "127.0.0.1"
+    or host == "0.0.0.0"
+    or host:match("^192%.168%.") ~= nil
+    or host:match("^10%.") ~= nil
+    or host:match("^172%.1[6-9]%.") ~= nil
+    or host:match("^172%.2%d%.") ~= nil
+    or host:match("^172%.3[01]%.") ~= nil
+end
+
+-- NOTE: Extracts http(s) connect links from arbitrary `opencode pair` output lines.
+-- The CLI prints plain URLs alongside a QR block and box-drawing decoration, so we
+-- match the stable "/auth/connect/<token>" path instead of parsing the whole line.
+local function extract_pair_url(line)
+  return line:match("https?://[%w%._%-:]+/auth/connect/[%w%-_]+")
+end
+
+-- NOTE: Pairs a browser or app with the shared background service using the native
+-- `opencode pair` command.
+--   remote = false → local links only (loopback + LAN when the service hostname is 0.0.0.0)
+--   remote = true  → `--remote --yes`, enabling OpenTunnel remote access on the shared
+--                    service and printing a remote connect link.
+-- WARN: links are one-time and expire after 5 minutes. The best link (the remote one
+-- when present, otherwise the first) is copied to the clipboard as soon as it appears.
+function M.pair(remote)
+  local args = { "opencode", "pair" }
+  if remote then
+    table.insert(args, "--remote")
+    table.insert(args, "--yes")
   end
-  M._cleanup_registered = true
 
-  vim.api.nvim_create_autocmd("VimLeavePre", {
-    callback = function()
-      local port_file = get_port_file()
-      local pid_file = port_file .. ".server.pid"
+  local urls = {}
 
-      -- NOTE: Try to recover the server PID from the PID_FILE in case M._server_pid
-      -- was never populated (e.g. the server was started in a previous TUI session
-      -- within the same neovim instance but the Lua state was not updated).
-      local server_pid = M._server_pid
-      if not server_pid then
-        local pf = io.open(pid_file, "r")
-        if pf then
-          server_pid = pf:read("*a"):gsub("%s+", "")
-          pf:close()
+  local function collect(data)
+    if not data then
+      return
+    end
+    for _, line in ipairs(data) do
+      local url = extract_pair_url(line)
+      if url then
+        table.insert(urls, url)
+      end
+    end
+  end
+
+  vim.notify(
+    remote and "Enabling remote access and pairing (this can take a minute)..."
+      or "Generating pairing links...",
+    vim.log.levels.INFO
+  )
+
+  vim.fn.jobstart(args, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_stdout = function(_, data)
+      collect(data)
+    end,
+    on_stderr = function(_, data)
+      collect(data)
+    end,
+    on_exit = function(_, code)
+      vim.schedule(function()
+        if #urls == 0 then
+          vim.notify(
+            string.format("opencode pair produced no links (exit %d)", code),
+            vim.log.levels.WARN
+          )
+          return
         end
-      end
 
-      -- NOTE: Primary kill: find every process listening on our port and send SIGKILL.
-      -- This reliably kills both `opencode serve` and any `opencode --server` client still running.
-      local f = io.open(port_file, "r")
-      if f then
-        local port = f:read("*a"):gsub("%s+", "")
-        f:close()
-        if port ~= "" then
-          vim.fn.system(string.format("lsof -ti tcp:%s | xargs kill -9 2>/dev/null || true", port))
+        -- De-duplicate while preserving order.
+        local seen = {}
+        local unique = {}
+        for _, url in ipairs(urls) do
+          if not seen[url] then
+            seen[url] = true
+            table.insert(unique, url)
+          end
         end
-      end
+        M._pair_urls = unique
 
-      -- NOTE: Fallback kill by PID in case lsof missed the server (e.g. it already
-      -- closed the port but the process is still alive).
-      if server_pid and server_pid ~= "" then
-        vim.fn.system(string.format("kill -9 %s 2>/dev/null || true", server_pid))
-      end
+        -- Prefer the remote (non-private) link; fall back to the first link.
+        local remote_url = nil
+        for _, url in ipairs(unique) do
+          local host = url:match("^https?://([^/:]+)")
+          if host and not is_private_host(host) then
+            remote_url = url
+            break
+          end
+        end
 
-      -- NOTE: Kill the entire untun/cloudflared process tree if a tunnel was started.
-      -- pkill -f is used because npx spawns child processes that share the "untun" string.
-      if M._tunnel_pid then
-        vim.fn.system("pkill -f untun 2>/dev/null || true")
-      end
-
-      -- NOTE: Remove all files owned by this neovim instance.
-      os.remove(port_file)
-      os.remove(port_file .. ".serve.log")
-      os.remove(pid_file)
+        local copy_url = remote_url or unique[1]
+        M._remote_url = remote_url
+        vim.fn.setreg("+", copy_url)
+        vim.notify(
+          string.format("Pair link copied (%d link(s), expire in 5 min):\n%s", #unique, table.concat(unique, "\n")),
+          vim.log.levels.INFO
+        )
+      end)
     end,
   })
 end
 
-local function load_credentials()
-  local cred_file = vim.fn.expand("~/.config/opencode/.server_credentials")
-  local handle = io.open(cred_file, "r")
-  if handle then
-    for line in handle:lines() do
-      local password = line:match('^OPENCODE_SERVER_PASSWORD="([^"]+)"')
-      if password then
-        M.OPENCODE_SERVER_PASSWORD = password
-        break
-      end
-    end
-    handle:close()
-  end
-end
-
-load_credentials()
-
--- NOTE: Returns the local network IP (192.168.x.x) for display in show_info.
--- Falls back to "127.0.0.1" if detection fails.
-local function get_local_ip()
-  local handle = io.popen("ipconfig getifaddr en0 2>/dev/null")
-  if handle then
-    local ip = handle:read("*a"):gsub("%s+", "")
-    handle:close()
-    if ip ~= "" then
-      return ip
-    end
-  end
-  return "127.0.0.1"
-end
-
--- NOTE: Returns the server URL for this neovim instance.
--- Tries M._port first (already cached in Lua state), then falls back to reading
--- PORT_FILE from disk (set by the bash script after `opencode serve` starts).
--- Returns nil if the server has not been started yet for this instance.
-function M.get_server_url()
-  if M._port then
-    return string.format("http://127.0.0.1:%d", M._port)
-  end
-  local f = io.open(get_port_file(), "r")
-  if f then
-    local p = f:read("*a"):gsub("%s+", "")
-    f:close()
-    local port = tonumber(p)
-    if port then
-      M._port = port
-      return string.format("http://127.0.0.1:%d", port)
-    end
-  end
-  return nil
-end
-
--- NOTE: Called by the on_open hook in cli-integration.lua each time the OpenCode TUI is opened.
--- If M._port is already known (server was started earlier in this neovim session), we write
--- the port back to PORT_FILE so the bash script's fast path can find it immediately and
--- skip starting a new server. Also arms the VimLeavePre cleanup on the first call.
-function M.on_open()
-  if M._port then
-    local port_file = get_port_file()
-    local dir = vim.fn.fnamemodify(port_file, ":h")
-    vim.fn.mkdir(dir, "p")
-    local f = io.open(port_file, "w")
-    if f then
-      f:write(tostring(M._port))
-      f:close()
-    end
-  end
-  -- NOTE: Arm cleanup on first open. register_cleanup() is idempotent.
-  M.register_cleanup()
-end
-
--- NOTE: Returns the full bash script used as cli_cmd for cli-integration.
--- WARN: cli-integration appends extra args (e.g. " -s <session_id>") as raw text after
--- cli_cmd. The script is wrapped in a shell function so those appended args become
--- positional parameters ($@) forwarded to `opencode --server <url>`.
---
--- Lifecycle per neovim instance:
---   Fast path  — PORT_FILE exists AND the server responds on that port:
---                skip startup, exec `opencode --server <url>` immediately.
---                This is the normal case when the TUI is closed (Ctrl+C kills the client
---                but leaves the server running) and then re-opened.
---   Slow path  — PORT_FILE absent or server unreachable:
---                start `opencode serve --port 0` in background, poll LOGFILE for the
---                assigned port (up to 5s), write PORT_FILE and PID_FILE, then connect.
---
--- Files written (all under ~/.local/share/opencode/, namespaced by nvim PID):
---   PORT_FILE        — the TCP port the server is listening on
---   LOGFILE          — stdout/stderr of `opencode serve`
---   PID_FILE         — PID of the `opencode serve` process (read by register_cleanup)
-function M.get_cli_cmd()
-  local password = M.OPENCODE_SERVER_PASSWORD
-  local mcp_config = OPENCODE_MCP_CONFIG_FILE
-
-  -- NOTE: The script body is wrapped in oc__main() so cli-integration's appended args
-  -- (e.g. "-s <session_id>") become positional parameters and can be forwarded via "$@"
-  -- to `opencode --server` without any string manipulation.
-  return string.format(
-    [[oc__main() {
-    echo "\n\n\n\n\n\n\n\n\n\n\n"
-    export OPENCODE_SERVER_PASSWORD=%s
-    PORT_FILE="%s"
-
-    # NOTE: Set OC_DEBUG=1 to enable debug logging to /tmp/opencode-debug-<pid>.log.
-    # Useful for diagnosing server startup, port detection, and health-check issues.
-    OC_DEBUG=%d
-    OC_DEBUG_LOG="/tmp/opencode-debug-$$.log"
-
-    # NOTE: Conditional logger — writes timestamped entries only when OC_DEBUG=1.
-    # Uses "|| true" to ensure the function never returns a non-zero exit code,
-    # which would affect the script's final exit status.
-    _oc_log() { [ "$OC_DEBUG" = "1" ] && echo "[$(date '+%%H:%%M:%%S')] $*" >> "$OC_DEBUG_LOG" || true; }
-
-    _oc_log "=== oc__main started ==="
-    _oc_log "PORT_FILE=$PORT_FILE"
-    _oc_log "SHELL=$SHELL (pid=$$)"
-    _oc_log "args=$*"
-
-    # NOTE: Each neovim instance has its own PORT_FILE (namespaced by nvim PID),
-    # so multiple neovim instances never share a server — each owns and cleans up its own.
-    # LOGFILE receives stdout/stderr from `opencode serve` and is parsed to detect the port.
-    # PID_FILE stores the server PID so the Lua cleanup can kill it even if M._server_pid
-    # was never populated (e.g. neovim crashed and was reopened with the same PID file present).
-    LOGFILE="${PORT_FILE}.serve.log"
-    PID_FILE="${PORT_FILE}.server.pid"
-
-    # NOTE: Portable TCP health-check — tries nc first (works on macOS and most Linux),
-    # then bash /dev/tcp (bash builtin, no external tool needed), then python3 as last resort.
-    _oc_port_alive() {
-      local port="$1"
-      nc -z 127.0.0.1 "$port" 2>/dev/null && return 0
-      bash -c "(echo >/dev/tcp/127.0.0.1/$port)" 2>/dev/null && return 0
-      python3 -c "import socket; s=socket.socket(); s.settimeout(1); s.connect(('127.0.0.1',$port)); s.close()" 2>/dev/null && return 0
-      return 1
-    }
-
-    # NOTE: Fast path — if PORT_FILE exists and the server is alive, connect immediately.
-    # This is the common case: the TUI was closed (Ctrl+C kills `opencode --server` but
-    # leaves `opencode serve` running), and the user re-opens it with <leader>aa.
-    # on_open() in Lua also pre-writes the PORT_FILE when M._port is already known,
-    # ensuring the fast path succeeds even if PORT_FILE was removed by an earlier cleanup.
-    if [ -f "$PORT_FILE" ]; then
-      EXISTING_PORT=$(cat "$PORT_FILE" 2>/dev/null)
-      _oc_log "PORT_FILE exists, EXISTING_PORT=$EXISTING_PORT"
-      if [ -n "$EXISTING_PORT" ] && _oc_port_alive "$EXISTING_PORT"; then
-        _oc_log "FAST PATH: server alive on port $EXISTING_PORT, connecting"
-        echo "Server already running. Attaching OpenCode CLI..."
-        exec opencode --server "http://127.0.0.1:$EXISTING_PORT" "$@"
-      else
-        _oc_log "SLOW PATH: port check failed (port=$EXISTING_PORT)"
-      fi
-    else
-      _oc_log "SLOW PATH: PORT_FILE does not exist"
-    fi
-
-    # NOTE: Slow path — no running server found. Start a fresh `opencode serve`.
-    # nohup + /dev/null stdin + redirect to LOGFILE ensures the process survives
-    # terminal detach. `disown` removes it from the shell's job table so it won't
-    # receive SIGHUP when the shell exits. The server PID is written to PID_FILE
-    # immediately so register_cleanup() can kill it on neovim exit even if the
-    # server crashes before writing the port.
-    _oc_log "Starting server, LOGFILE=$LOGFILE"
-    echo "Starting OpenCode server. Please wait..."
-
-    # NOTE: nohup + stdin from /dev/null + stdout/stderr to LOGFILE ensures the server
-    # survives terminal close. setsid is unnecessary because nohup already ignores SIGHUP.
-    # OPENCODE_CONFIG injects the Neovim overlay (MCP server + skills + commands);
-    # it is the only injection mechanism in V2 (OPENCODE_CONFIG_DIR would REPLACE the
-    # global config dir, losing global agents/plugins/mcp).
-    nohup env OPENCODE_CONFIG=%s opencode serve --port 0 --hostname 0.0.0.0 --print-logs </dev/null >"$LOGFILE" 2>&1 &
-    SERVER_PID=$!
-    disown $SERVER_PID 2>/dev/null
-    echo "$SERVER_PID" > "$PID_FILE"
-    _oc_log "Server PID=$SERVER_PID (nohup + disown), PID_FILE written"
-
-    # NOTE: Poll LOGFILE for up to 5s (50 × 100ms) waiting for the "listening on" line
-    # that contains the dynamically assigned port. Port 0 means the OS picks a free port,
-    # so we must parse it from the log rather than using a fixed value.
-    PORT=""
-    for i in $(seq 1 50); do
-      sleep 0.1
-      PORT=$(grep -o 'listening on http[s]*://[^:]*:\([0-9]*\)' "$LOGFILE" 2>/dev/null | grep -o '[0-9]*$' | head -1)
-      [ -n "$PORT" ] && break
-    done
-
-    if [ -z "$PORT" ]; then
-      _oc_log "ERROR: could not detect port after 5s"
-      echo "ERROR: Could not detect opencode server port after 5s" >&2
-      exit 1
-    fi
-    mkdir -p $(dirname "$PORT_FILE")
-    echo "$PORT" > "$PORT_FILE"
-    _oc_log "Server started on port $PORT, PORT_FILE written"
-
-    echo "Starting OpenCode CLI..."
-
-    opencode --server "http://127.0.0.1:$PORT" "$@"
-    _oc_log "opencode --server exited with code $?"
-  }
-  oc__main]],
-    password,
-    get_port_file(),
-    OC_DEBUG and 1 or 0,
-    mcp_config
-  )
-end
-
--- NOTE: Toggles the cloudflare tunnel via `npx untun`.
--- PINNED to untun@0.1.3: untun 0.2.x ships dist/cli.mjs without a
--- `#!/usr/bin/env node` shebang, so npx's symlink executes it as a shell
--- script (spawn fails with ImageMagick `import`/syntax errors). Remove the
--- pin once upstream fixes the shebang.
--- If a tunnel is already active (M._tunnel_handle is set), kills the entire untun/cloudflared
--- process tree and clears state. Otherwise starts a new tunnel pointing at this instance's
--- server port (M._port). The tunnel handle is NOT detached so it dies if neovim exits
--- without an explicit stop; register_cleanup() also kills it via pkill -f untun.
-function M.toggle_tunnel()
-  -- NOTE: SIGTERM to the npx handle alone does NOT propagate to the cloudflared child process.
-  -- pkill -f untun kills the entire process tree reliably.
-  if M._tunnel_handle then
-    vim.fn.jobstart({ "pkill", "-f", "untun" }, {
-      on_exit = function()
-        vim.schedule(function()
-          M._tunnel_handle = nil
-          M._tunnel_pid = nil
-          M._tunnel_url = nil
-          vim.notify("Tunnel stopped", vim.log.levels.INFO)
-        end)
-      end,
-    })
-    return
-  end
-
-  local server_url = M.get_server_url()
-  if not server_url then
-    vim.notify("OpenCode server not running. Open OpenCode first with <leader>aa", vim.log.levels.WARN)
-    return
-  end
-
-  local tunnel_target_url = string.format("http://localhost:%d", M._port)
-
-  local stdin_pipe = vim.loop.new_pipe(false)
-  local stdout_pipe = vim.loop.new_pipe(false)
-  local stderr_pipe = vim.loop.new_pipe(false)
-
-  if not stdin_pipe or not stdout_pipe or not stderr_pipe then
-    vim.notify("Failed to create pipes for tunnel", vim.log.levels.ERROR)
-    return
-  end
-
-  local handle, pid
-  handle, pid = vim.loop.spawn("npx", {
-    args = { "untun@0.1.3", "tunnel", tunnel_target_url },
-    -- NOTE: NOT detached — tunnel dies when neovim exits
-    stdio = { stdin_pipe, stdout_pipe, stderr_pipe },
-    -- Explicitly provide optional uv.spawn options to satisfy static checkers
-    env = nil,
-    cwd = nil,
-    uid = nil,
-    gid = nil,
-    verbatim = false,
-    detached = false,
-    hide = false,
-  }, function()
-    vim.schedule(function()
-      M._tunnel_handle = nil
-      M._tunnel_pid = nil
-      M._tunnel_url = nil
-    end)
-    if handle then
-      handle:close()
-    end
-    stdin_pipe:close()
-    stdout_pipe:close()
-    stderr_pipe:close()
-  end)
-
-  if not handle then
-    vim.notify("Failed to start tunnel", vim.log.levels.ERROR)
-    stdin_pipe:close()
-    stdout_pipe:close()
-    stderr_pipe:close()
-    return
-  end
-
-  M._tunnel_handle = handle
-  M._tunnel_pid = pid
-
-  -- NOTE: Accept cloudflared/untun license terms automatically
-  stdin_pipe:write("y\n", function() end)
-
-  vim.notify("Starting tunnel...", vim.log.levels.INFO)
-
-  local url_buffer = ""
-
-  local function try_capture_url(data)
-    if not data or M._tunnel_url then
+-- NOTE: Disables OpenTunnel remote access on the shared background service.
+-- WARN: `opencode service set` restarts the background service, which disrupts any
+-- client attached to it (and any session it serves). The private TUI servers are
+-- unaffected because they are separate processes.
+function M.disable_remote()
+  vim.ui.select({ "Yes, disable remote access", "No, cancel" }, {
+    prompt = "Disable OpenTunnel remote access? This restarts the background service.",
+  }, function(choice)
+    if not choice or not choice:match("^Yes") then
       return
     end
-    url_buffer = url_buffer .. data
-    local url = url_buffer:match("https://[%w%-]+%.trycloudflare%.com")
-    if url then
-      vim.schedule(function()
-        M._tunnel_url = url
-        vim.fn.setreg("+", url)
-        vim.notify("Tunnel active: " .. url .. " (copied to clipboard)", vim.log.levels.INFO)
-      end)
-    end
-  end
-
-  -- NOTE: untun may output the URL to stdout or stderr depending on version
-  vim.loop.read_start(stdout_pipe, function(err, data)
-    if not err then
-      try_capture_url(data)
-    end
-  end)
-
-  vim.loop.read_start(stderr_pipe, function(err, data)
-    if not err then
-      try_capture_url(data)
+    local out = vim.fn.system({ "opencode", "service", "set", "remote", "false" })
+    if vim.v.shell_error == 0 then
+      M._remote_url = nil
+      M._pair_urls = nil
+      vim.notify("Remote access disabled", vim.log.levels.INFO)
+    else
+      vim.notify("Failed to disable remote access: " .. out, vim.log.levels.ERROR)
     end
   end)
 end
 
--- NOTE: Shows a floating window in the top-right corner with the server local URL and tunnel status.
--- Keymaps shown in the title: u copies the local URL, t copies the tunnel URL.
--- <CR> and <Esc> close the window.
-function M.show_info()
-  local server_url = M.get_server_url()
-  if not server_url then
-    vim.notify("OpenCode server not running", vim.log.levels.WARN)
-    return
-  end
+-- NOTE: Entry point for the <leader>ast mapping. Offers local pairing, remote
+-- pairing (OpenTunnel), and turning remote access back off.
+function M.pair_menu()
+  local options = { "Pair local (links)", "Pair remote (OpenTunnel)", "Disable remote access" }
+  vim.ui.select(options, { prompt = "OpenCode pairing" }, function(choice)
+    if choice == "Pair local (links)" then
+      M.pair(false)
+    elseif choice == "Pair remote (OpenTunnel)" then
+      M.pair(true)
+    elseif choice == "Disable remote access" then
+      M.disable_remote()
+    end
+  end)
+end
 
-  local local_ip = get_local_ip()
-  local local_url = string.format("http://%s:%d", local_ip, M._port)
-  local tunnel_status = M._tunnel_url or "Closed"
+-- NOTE: Shows a floating window in the top-right corner with the pairing status.
+-- Keymaps: u copies the primary connect link, t copies the remote link. <CR>/<Esc> close.
+-- NOTE: With the V2 architecture there is no per-instance server URL to show; internet
+-- access is handled by `opencode pair --remote` (see M.pair).
+function M.show_info()
+  local link = (M._pair_urls and M._pair_urls[1]) or "Not paired (run <leader>ast)"
+  local remote = M._remote_url or "off"
 
   local lines = {
-    " Local:  " .. local_url,
-    " Tunnel: " .. tunnel_status,
+    " Link:   " .. link,
+    " Remote: " .. remote,
   }
 
   local width = 0
@@ -488,26 +242,30 @@ function M.show_info()
     style = "minimal",
     border = "rounded",
     -- NOTE: Using Nerd Font CircleInfo glyph directly as requested
-    title = "    u: Copy local URL │ t: Copy tunnel URL ",
+    title = "    u: Copy link │ t: Copy remote ",
     title_pos = "center",
   })
 
   local opts = { nowait = true, noremap = true, silent = true, buffer = buf }
 
   vim.keymap.set("n", "u", function()
-    vim.fn.setreg("+", local_url)
-    vim.notify("Local URL copied: " .. local_url, vim.log.levels.INFO)
+    if M._pair_urls and M._pair_urls[1] then
+      vim.fn.setreg("+", M._pair_urls[1])
+      vim.notify("Pair link copied: " .. M._pair_urls[1], vim.log.levels.INFO)
+    else
+      vim.notify("No pairing link captured", vim.log.levels.WARN)
+    end
     if vim.api.nvim_win_is_valid(win) then
       vim.api.nvim_win_close(win, true)
     end
   end, opts)
 
   vim.keymap.set("n", "t", function()
-    if M._tunnel_url then
-      vim.fn.setreg("+", M._tunnel_url)
-      vim.notify("Tunnel URL copied: " .. M._tunnel_url, vim.log.levels.INFO)
+    if M._remote_url then
+      vim.fn.setreg("+", M._remote_url)
+      vim.notify("Remote pair link copied: " .. M._remote_url, vim.log.levels.INFO)
     else
-      vim.notify("No tunnel active", vim.log.levels.WARN)
+      vim.notify("No remote link captured", vim.log.levels.WARN)
     end
     if vim.api.nvim_win_is_valid(win) then
       vim.api.nvim_win_close(win, true)
@@ -694,19 +452,26 @@ local function get_proc_cwd(pid, is_darwin)
 end
 
 -- NOTE: Interactive inspector for ALL opencode-related processes on the machine.
--- Lists: opencode serve (server), opencode --server (client), and npx untun (tunnel).
+-- Lists: opencode serve --service (shared background service), opencode --standalone
+-- (local TUI private server), opencode serve / opencode --server (manual server/client).
 -- Shows type, PID, directory, and allows killing one-by-one or all at once.
 function M.inspect_opencode_processes()
   local entries = {}
   local is_darwin = vim.fn.system("uname -s"):gsub("%s+", "") == "Darwin"
 
-  -- Collect all opencode processes (server + client) via ps
-  local oc_lines = vim.fn.systemlist("ps -eo pid,args | grep -E 'opencode (serve|--server)' | grep -v grep 2>/dev/null")
+  -- Collect all opencode processes via ps. The order of the checks matters:
+  -- `opencode serve --service` also matches the "opencode serve" prefix.
+  local oc_lines =
+    vim.fn.systemlist("ps -eo pid,args | grep -E 'opencode (serve|--server|--standalone)' | grep -v grep 2>/dev/null")
   for _, line in ipairs(oc_lines) do
     local pid, cmd = line:match("^%s*(%d+)%s+(.*)$")
     if pid and cmd then
       local kind
-      if cmd:find("opencode serve", 1, true) then
+      if cmd:find("opencode serve --service", 1, true) then
+        kind = "service"
+      elseif cmd:find("opencode --standalone", 1, true) then
+        kind = "tui"
+      elseif cmd:find("opencode serve", 1, true) then
         kind = "server"
       elseif cmd:find("opencode --server", 1, true) then
         kind = "client"
@@ -719,45 +484,6 @@ function M.inspect_opencode_processes()
     end
   end
 
-  -- Collect all untun tunnel processes.
-  -- NOTE: npx untun spawns two processes (npx parent + cloudflared child), both
-  -- matching "untun". We keep only the npx/node parent (the one whose command
-  -- starts with "npx" or "node") and count siblings so we can show "(+N children)"
-  -- in the label. When killing we use pkill -f untun to kill the whole tree.
-  local tun_lines = vim.fn.systemlist("ps -eo pid,args | grep untun | grep -v grep 2>/dev/null")
-  local tun_all = {}
-  for _, line in ipairs(tun_lines) do
-    local pid, cmd = line:match("^%s*(%d+)%s+(.*)$")
-    if pid and cmd then
-      table.insert(tun_all, { pid = pid, cmd = cmd })
-    end
-  end
-  -- Identify the parent: npm/npx is the top-level launcher
-  local tun_parent = nil
-  for _, t in ipairs(tun_all) do
-    if t.cmd:match("^npm") or t.cmd:match("^npx") then
-      tun_parent = t
-      break
-    end
-  end
-  -- Fallback: if no npx/node found, take the lowest PID as parent
-  if not tun_parent and #tun_all > 0 then
-    table.sort(tun_all, function(a, b)
-      return tonumber(a.pid) < tonumber(b.pid)
-    end)
-    tun_parent = tun_all[1]
-  end
-  if tun_parent then
-    local child_count = #tun_all - 1
-    local cwd = get_proc_cwd(tun_parent.pid, is_darwin)
-    local dir = cwd ~= "" and vim.fn.fnamemodify(cwd, ":~") or "?"
-    local extra = child_count > 0 and string.format(" (+%d child)", child_count) or ""
-    table.insert(
-      entries,
-      { kind = "tunnel", pid = tun_parent.pid, dir = dir, cmd = tun_parent.cmd, extra = extra, kill_tree = true }
-    )
-  end
-
   if #entries == 0 then
     vim.notify("No opencode processes found", vim.log.levels.INFO)
     return
@@ -765,30 +491,22 @@ function M.inspect_opencode_processes()
 
   -- NOTE: Helper to reset this instance's runtime state if the killed pid matches.
   local function maybe_clear_state(e)
-    if e.kind == "server" and M._port then
-      -- If the killed server was the one we track for this project, clear port state.
-      -- We can't know for certain (different project may share port), so clear conservatively.
-      M._port = nil
-    elseif e.kind == "tunnel" and M._tunnel_pid == tonumber(e.pid) then
-      M._tunnel_pid = nil
-      M._tunnel_handle = nil
-      M._tunnel_url = nil
+    if e.kind == "service" then
+      -- Killing the shared service drops any captured pairing links.
+      M._remote_url = nil
+      M._pair_urls = nil
     end
   end
 
   local function kill_entry(e)
-    if e.kill_tree then
-      vim.fn.system("pkill -f untun 2>/dev/null || true")
-    else
-      vim.fn.system(string.format("kill %s 2>/dev/null || true", e.pid))
-    end
+    vim.fn.system(string.format("kill %s 2>/dev/null || true", e.pid))
     maybe_clear_state(e)
   end
 
-  -- Build display strings: [type] pid  dir  (extra)
+  -- Build display strings: [type] pid  dir
   local options = { "Kill All", "Cancel" }
   for _, e in ipairs(entries) do
-    local label = string.format("[%-6s] pid %-6s  %s%s", e.kind, e.pid, e.dir, e.extra or "")
+    local label = string.format("[%-7s] pid %-6s  %s", e.kind, e.pid, e.dir)
     table.insert(options, label)
   end
 

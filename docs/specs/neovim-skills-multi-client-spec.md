@@ -23,19 +23,19 @@ This is the canonical version. Every change here **must** be replicated to all c
 
 ```
 lua/utils/opencode-neovim/
-├── AGENTS.md                            ← Multi-client sync rules
+├── AGENTS.md                            ← Multi-client sync rules (reference only in V2)
 ├── README.md
-├── opencode_nvim_mcps.jsonc             ← MCP server + agent permissions
-├── commands/                            ← OpenCode slash-commands
-│   ├── nvim-context.md
-│   ├── nvim-find.md
-│   ├── nvim-refs.md
-│   └── nvim-open-related.md
+├── opencode_nvim_mcps.jsonc             ← MCP server + commands map + skills + agent permissions
 └── skills/                              ← SOURCE OF TRUTH
     ├── using-neovim/SKILL.md
     ├── using-neovim-lsp/SKILL.md
     └── using-quickfix/SKILL.md
 ```
+
+> **V2 note:** the former `commands/*.md` files were ported into the `commands` map
+> inside `opencode_nvim_mcps.jsonc`, because V2 only discovers `.md` commands from the
+> global config directory. Config-dir injection (`OPENCODE_CONFIG_DIR`) was dropped; the
+> overlay is now passed as the `OPENCODE_CONFIG` file (see §5.3).
 
 ---
 
@@ -111,13 +111,13 @@ neovim_vim_command(":lua for _, w in ipairs(vim.api.nvim_list_wins()) do local b
 | Aspect | Detail |
 |--------|--------|
 | **Skill format** | `skills/<name>/SKILL.md` (with YAML frontmatter `name`+`description`) |
-| **Discovery** | OpenCode reads `skills/<name>/SKILL.md` from `OPENCODE_CONFIG_DIR` |
-| **Config** | `opencode_nvim_mcps.jsonc` — MCP server def + agent skill permissions |
-| **Agent rules** | `AGENTS.md` — multi-client sync rules, MCP usage policy |
-| **Commands** | `commands/*.md` — slash-commands for context, find, refs, open-related |
-| **Lua utils** | `opencode_utils.lua` — server lifecycle, session mgmt, tunnel |
-| **MCP server** | `mcp-neovim-server` via npx, configured in opencode.jsonc |
-| **Loading path** | `~/.config/opencode/` (stow-managed) + `OPENCODE_CONFIG_DIR` env var (points to Neovim dir) |
+| **Discovery** | OpenCode discovers skills listed in the `skills` key of `opencode_nvim_mcps.jsonc`, injected via the `OPENCODE_CONFIG` overlay |
+| **Config** | `opencode_nvim_mcps.jsonc` — MCP server def + commands map + skills + agent permissions |
+| **Agent rules** | `AGENTS.md` — multi-client sync rules, MCP usage policy (reference only in V2) |
+| **Commands** | `commands` map in `opencode_nvim_mcps.jsonc` — slash-commands for context, find, refs, open-related |
+| **Lua utils** | `opencode_utils.lua` — launches `opencode --standalone` with the overlay env, session mgmt, OpenTunnel pairing |
+| **MCP server** | `mcp-neovim-server` via npx, configured in `opencode_nvim_mcps.jsonc` |
+| **Loading path** | `~/.config/opencode/` (stow-managed, global) + `OPENCODE_CONFIG` file overlay (`opencode_nvim_mcps.jsonc`), applied only when launched from Neovim |
 
 ### 3.2 Augment (User-Level)
 
@@ -183,7 +183,7 @@ The following content **must** be word-for-word identical in every skill port:
 | **Prerequisites section** | "When MCP is Active" | "If not connected, use `editor-neovim` skill" | "If not connected, use `connect-to-neovim` skill" | "Gemini connects automatically via configured MCP" |
 | **Connect-to-Neovim skill** | N/A (MCP auto-starts) | `editor-neovim` | `connect-to-neovim` | N/A (auto-connect) |
 | **Native tool names** | `edit`/`write`/`grep`/`read`/`glob` | "augment's native edit/write/grep/read tools" | "augment's native..." | "Native tools" |
-| **Command/slash commands** | `commands/*.md` | N/A | N/A | N/A |
+| **Command/slash commands** | `commands` map in jsonc | N/A | N/A | N/A |
 | **Agent permissions** | `opencode.jsonc` | N/A | N/A | N/A |
 
 ### 4.3 The Syncing Rule
@@ -239,9 +239,15 @@ Target: <project>/.augment_work_profile/
 
 ### 5.3 Agent-based deploy (OpenCode commands)
 
-The Neovim config dir (`lua/utils/opencode-neovim/`) is included via the `OPENCODE_CONFIG_DIR`
-environment variable, set by `opencode_utils.lua` when the server starts. This makes
-OpenCode discover the skills and commands in that directory automatically.
+The Neovim overlay (`lua/utils/opencode-neovim/opencode_nvim_mcps.jsonc`) is injected via
+the `OPENCODE_CONFIG` environment variable, set by `opencode_utils.get_env()` when OpenCode
+is launched from Neovim (`opencode --standalone`). It merges on top of the global config, so
+the Neovim MCP, the skills list, the commands map, and the agent permissions become visible
+only for Neovim-launched sessions.
+
+> **V2 note:** config-dir injection was dropped. `OPENCODE_CONFIG_DIR` is no longer used
+> (it would REPLACE the global config dir, losing global agents/plugins/mcp). Use the
+> `OPENCODE_CONFIG` file overlay instead.
 
 ---
 
@@ -263,10 +269,9 @@ When modifying any Neovim skill, follow this checklist:
 
 | File | Purpose | Deploy Method |
 |------|---------|--------------|
-| `lua/utils/opencode-neovim/skills/<name>/SKILL.md` | Source of truth | `OPENCODE_CONFIG_DIR` env var |
-| `lua/utils/opencode-neovim/opencode_nvim_mcps.jsonc` | MCP + agent permissions | `OPENCODE_CONFIG_DIR` env var |
-| `lua/utils/opencode-neovim/commands/*.md` | OpenCode slash-commands | `OPENCODE_CONFIG_DIR` env var |
-| `lua/utils/opencode-neovim/AGENTS.md` | OpenCode agent rules | `OPENCODE_CONFIG_DIR` env var |
+| `lua/utils/opencode-neovim/skills/<name>/SKILL.md` | Source of truth | `OPENCODE_CONFIG` overlay (via the `skills` list) |
+| `lua/utils/opencode-neovim/opencode_nvim_mcps.jsonc` | MCP + commands map + skills + agent permissions | `OPENCODE_CONFIG` overlay |
+| `lua/utils/opencode-neovim/AGENTS.md` | OpenCode agent rules (reference only) | not auto-loaded in V2 |
 | `lua/utils/augment-work-profile/skills/<name>.md` | Augment work-profile skills | `augment_utils.lua` |
 | `lua/utils/augment-work-profile/AGENTS.md` | Work-profile agent rules | `augment_utils.lua` |
 | `stow-packages/augment/.augment/skills/<name>/SKILL.md` | Augment user-level skills | `stow` |

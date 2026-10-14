@@ -18,14 +18,6 @@ gh auth token
 
 ---
 
-### `OPENCODE_SERVER_USERNAME`
-
-Username for the opencode server.
-
-### `OPENCODE_SERVER_PASSWORD`
-
-Password for the opencode server.
-
 ### OpenCode credentials
 
 The OpenCode Quota plugin no longer reads credentials from environment

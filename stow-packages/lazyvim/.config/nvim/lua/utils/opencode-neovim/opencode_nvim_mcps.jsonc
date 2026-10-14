@@ -1,7 +1,7 @@
 // Neovim overlay config for OpenCode V2.
 //
 // Injected via OPENCODE_CONFIG when OpenCode is launched from Neovim
-// (see opencode_utils.lua get_cli_cmd()). It merges ON TOP of the global
+// (see opencode_utils.lua get_env()). It merges ON TOP of the global
 // ~/.config/opencode/opencode.jsonc, so entries here win over the global ones.
 //
 // Replaces the old V1 shape (flat `mcp` + `agent` maps). The companion

@@ -19,5 +19,12 @@
     "scrollbar": true,
     "thinking": "show"
   },
-  "animations": true
+  "animations": true,
+  "prompt": {
+    "image_preview": false
+  },
+  "debug": {
+    "devtools": true,
+    "turn_tokens": false
+  }
 }

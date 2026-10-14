@@ -209,11 +209,13 @@ if is_company_project then
 else
   integration_op = {
     name = "OpenCode",
-    cli_cmd = opencode_utils.get_cli_cmd(),
-    cli_ready_flags = { search_for = "Ask", from_line = 15, lines_amt = 10 },
-    on_open = function()
-      opencode_utils.on_open()
-    end,
+    -- NOTE: --standalone runs a private server inside the TUI process, so the Neovim MCP
+    -- overlay injected via env.OPENCODE_CONFIG applies (see opencode_utils.get_env) and no
+    -- separate/background server is started. cli-integration appends resume args
+    -- (" -s <id>") as raw text, which `opencode` accepts directly.
+    cli_cmd = "opencode --standalone",
+    env = opencode_utils.get_env(),
+    cli_ready_flags = { search_for = "Ask", from_line = 1, lines_amt = 50 },
     start_doing = function(visual_text, actions)
       require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "OpenCode")
     end,
@@ -316,8 +318,8 @@ else
     },
     {
       "<leader>ast",
-      opencode_utils.toggle_tunnel,
-      desc = "OpenCode Toggle Tunnel",
+      opencode_utils.pair_menu,
+      desc = "OpenCode Pair (local/remote)",
       silent = true,
     },
     {
