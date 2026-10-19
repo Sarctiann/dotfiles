@@ -18,6 +18,9 @@ ZSH_PLUGINS: dict[str, str] = {
 
 ZSH_PLUGIN_DIR = Path.home() / ".local" / "share" / "zsh-plugins"
 
+# Regular (non-glass) blur intensity. 20 is Ghostty's `true` default; lower is softer.
+GHOSTTY_DEFAULT_BACKGROUND_BLUR = 10
+
 
 def install_tpm() -> None:
     if not which("tmux"):
@@ -197,11 +200,23 @@ def _ghostty_override_path() -> Path:
     return Path.home() / ".config" / "ghostty" / "local_config"
 
 
-def _ensure_ghostty_override() -> None:
+def _ghostty_background_blur(config: dict) -> int:
+    """Regular blur intensity from config.json, clamped to a usable range."""
+    try:
+        value = int(
+            config.get("ghostty_background_blur", GHOSTTY_DEFAULT_BACKGROUND_BLUR)
+        )
+    except (TypeError, ValueError):
+        value = GHOSTTY_DEFAULT_BACKGROUND_BLUR
+    return max(0, value)
+
+
+def _ensure_ghostty_override(config: dict) -> None:
     """Ensure ~/.config/ghostty/local_config exists with machine-specific overrides.
 
     This file is gitignored and loaded after config (tracked), so values here
-    take precedence. font-family and command are set by the installer later.
+    take precedence. font-family, command, and background-blur are set by the
+    installer later.
     """
     if is_wsl():
         return
@@ -209,15 +224,17 @@ def _ensure_ghostty_override() -> None:
     if override_path.is_file() or override_path.is_symlink():
         return
 
+    blur = _ghostty_background_blur(config)
     override_path.parent.mkdir(parents=True, exist_ok=True)
     override_path.write_text(
         "# Ghostty machine-specific overrides (gitignored)\n"
         "# Loaded after config (tracked) \u2014 values here take precedence.\n"
-        "# The installer manages font-family and command below. Add any\n"
-        "# other override below.\n"
+        "# The installer manages font-family, command, and background-blur\n"
+        "# below. Add any other override below.\n"
         "\n"
         '# font-family = "CodeNewRoman Nerd Font"\n'
         '# command = "/opt/homebrew/bin/tmux new-session -A -D -s main"\n'
+        f"# background-blur = {blur}\n"
         "\n"
     )
     print("   \u2713 ghostty: created ~/.config/ghostty/local_config")
@@ -274,6 +291,20 @@ def _update_ghostty_command() -> None:
     tmux_cmd = f'command = "{tmux_bin} new-session -A -D -s main"'
     _set_or_add_line(override_path, "command", tmux_cmd)
     print(f"   \u2713 ghostty: tmux command enabled ({tmux_bin})")
+
+
+def _update_ghostty_background_blur(config: dict) -> None:
+    """Set a regular (non-glass) background blur in the ghostty override file."""
+    import platform
+
+    if platform.system() != "Darwin" or is_wsl():
+        return
+    override_path = _ghostty_override_path()
+    if not override_path.is_file():
+        return
+    blur = _ghostty_background_blur(config)
+    _set_or_add_line(override_path, "background-blur", f"background-blur = {blur}")
+    print(f"   \u2713 ghostty: background-blur set to {blur}")
 
 
 def _update_ghostty_window_decoration() -> None:
@@ -760,13 +791,16 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     terminal_font = config.get("terminal_font", "CodeNewRoman Nerd Font Propo")
 
     print("🐚 Ensuring ghostty override file...")
-    _ensure_ghostty_override()
+    _ensure_ghostty_override(config)
 
     print("🔤 Generating terminal font overrides...")
     _generate_terminal_font_overrides(config)
 
     print("⚡ Setting ghostty tmux command...")
     _update_ghostty_command()
+
+    print("🌫  Setting ghostty background blur...")
+    _update_ghostty_background_blur(config)
 
     print("🪟 Setting ghostty window decorations...")
     _update_ghostty_window_decoration()

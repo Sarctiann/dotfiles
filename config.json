@@ -42,6 +42,7 @@
     }
   },
   "terminal_font": "CodeNewRoman",
+  "ghostty_background_blur": 10,
   "runtimes": {
     "nvm": true,
     "bun": true,
