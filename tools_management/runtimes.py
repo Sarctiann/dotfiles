@@ -6,6 +6,7 @@ from urllib.request import Request, urlopen
 
 from core import BIN_DIR, run, which
 import manifest as mf
+import ruby_setup
 
 
 def _latest_github_release(repo: str) -> str | None:
@@ -253,6 +254,8 @@ def _preexisting_names() -> list[str]:
         preexisting.append("claude")
     if which("uv"):
         preexisting.append("uv")
+    if which("mise"):
+        preexisting.append("mise")
     return preexisting
 
 
@@ -263,6 +266,7 @@ INSTALLERS = {
     "bun": install_bun,
     "rust": install_rust,
     "uv": install_uv,
+    "mise": ruby_setup.install_mise,
 }
 
 
@@ -273,6 +277,8 @@ UNINSTALLERS = {
     "opencode": _uninstall_opencode,
     "claude": _uninstall_claude,
     "uv": _uninstall_uv,
+    "mise": ruby_setup.uninstall_mise,
+    "ruby": ruby_setup.uninstall_ruby,
 }
 
 
@@ -286,6 +292,7 @@ def _check_runtime(name: str, enabled: bool) -> None:
         "opencode": lambda: which("opencode"),
         "claude": lambda: which("claude"),
         "uv": lambda: which("uv"),
+        "mise": lambda: which("mise"),
     }
     installed = checks.get(name, lambda: False)()
     display = {"opencode": "OpenCode", "claude": "Claude Code", "nvm": "nvm"}.get(name, name.capitalize())
@@ -299,13 +306,16 @@ def install_runtimes(config: dict, mode: str = "install") -> None:
         return
 
     runtimes = config.get("runtimes", {})
-    if not runtimes:
+    if not runtimes and not ruby_setup.ruby_enabled(config):
         return
 
     if mode == "check":
         print("📋 Runtimes:")
         for name, enabled in runtimes.items():
             _check_runtime(name, enabled)
+        if ruby_setup.ruby_enabled(config):
+            status = "✅" if ruby_setup.ruby_status(config) else "⬜"
+            print(f"   {status} Ruby {config['ruby'].get('version', 'latest')} (mise)")
         print()
         return
 
@@ -320,6 +330,12 @@ def install_runtimes(config: dict, mode: str = "install") -> None:
         if fn:
             fn()
             installed.append(name)
+    if ruby_setup.ruby_enabled(config):
+        if "mise" not in installed:
+            ruby_setup.install_mise()
+            installed.append("mise")
+        ruby_setup.install_ruby(config)
+        installed.append("ruby")
     mf.record_installed(manifest, "runtimes", installed)
     mf.save(manifest)
     print()

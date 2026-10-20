@@ -235,6 +235,15 @@ load-nvmrc() {
 add-zsh-hook chpwd load-nvmrc
 load-nvmrc
 
+# mise (ruby): switches versions per directory (.ruby-version / .tool-versions / mise.toml).
+# .ruby-version is an "idiomatic" file, which mise only reads for tools listed here.
+export MISE_IDIOMATIC_VERSION_FILE_ENABLE_TOOLS="ruby"
+if command -v mise &>/dev/null; then
+  eval "$(mise activate zsh)"
+elif [ -x "$HOME/.local/bin/mise" ]; then
+  eval "$("$HOME/.local/bin/mise" activate zsh)"
+fi
+
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 

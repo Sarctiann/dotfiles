@@ -10,7 +10,7 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-- Edit `config.json` to toggle steps or change terminal
+- Edit `config.json` (machine-local, created from `config.sample.json` on first run) to toggle steps or change terminal
 - Use `./install.sh -i` to confirm each step interactively
 - Use `./install.sh --just lazyvim` for a minimal install (only what lazyvim needs)
 
@@ -285,7 +285,8 @@ dotfiles/
 │   ├── 1_setup.sh          ← Stage 1: bash bootstrap (python3 + base pkgs)
 │   ├── 1_uninstall.sh      ← Stage 1: bash bootstrap (python3)
 │   ├── 2_management.py     ← Stage 2: Python orchestrator (install/uninstall)
-│   ├── config.json         ← declarative config (what to install)
+│   ├── config.sample.json  ← tracked defaults (optional runtimes like ruby off)
+│   ├── config.json         ← your machine-local copy (gitignored)
 │   ├── config.py           ← config loader
 │   ├── core.py             ← OS/arch/WSL detection + utilities
 │   ├── system_packages.py  ← Homebrew/apt/pacman/dnf
@@ -323,6 +324,8 @@ Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and 
 7.  **NPM packages** — auggie, gemini-cli (via bun, fallback npm)
 8.  **Post-install** — TPM, Windows Terminal sync (WSL), terminal font overrides
 9.  **Verify** — checks essential commands are in PATH
+
+`config.json` is gitignored so each machine keeps its own choices; `config.sample.json` is the tracked template. If `config.json` is missing, the installer warns and asks before creating it from the sample (without a terminal it warns and continues). New options added to the sample are not merged into an existing `config.json`: copy them over by hand.
 
 All steps can be toggled on/off via `config.json`. Run with `-i` for interactive mode (confirms each step before proceeding). Use `--just PKG` to run only the steps needed by one or more stow packages (skips unrelated phases).
 
@@ -465,8 +468,17 @@ See [`testing/TESTING.md`](testing/TESTING.md) for details.
 - Completion: blink.cmp with emoji support
 - Picker: snacks.nvim (dashboard, files, grep)
 - AI integration: OpenCode CLI + custom Neovim utils (server management, tunnel, session browser)
-- Plugin extras: copilot, formatting (black, prettier), language support (Python, Rust, TypeScript, Zig, Docker, SQL, TOML, YAML, Markdown, Tailwind, Ruby, Mojo, V)
+- Plugin extras: copilot, formatting (black, prettier), language support (Python, Rust, TypeScript, Zig, Docker, SQL, TOML, YAML, Markdown, Tailwind, Mojo, V)
 - Custom plugins: cli-integration.nvim, cursor-agent.nvim, blamer.nvim
+
+### Ruby (optional, per machine)
+
+Ruby is off the shared config: `lazyvim.json` does not enable it. Set `"ruby": { "enabled": true }` in `config.json` and the installer will:
+
+- install [mise](https://mise.jdx.dev) (`~/.local/bin/mise`) and the Ruby from `ruby.version`, with the gems in `ruby.gems` (`~/.default-gems`, so every Ruby version mise installs gets them) and the build libraries in `ruby.system_packages`;
+- generate `lua/extras-local/ruby.lua` in the lazyvim package (gitignored). `config/lazy.lua` imports that directory only if it exists, so other machines are unaffected. It enables the `lang.ruby` extra with tools resolved from `PATH` (mise) instead of Mason, and formats/lints through ruby-lsp so each project's own RuboCop is used.
+
+Per-directory Ruby switching comes from `mise activate zsh` in `.zshrc`, which reads `.ruby-version`, `.tool-versions` and `mise.toml`. Set `"enabled": false` and re-run to stop managing it; `uninstall` removes mise and the generated file (`~/.default-gems` is kept).
 
 ## Git
 

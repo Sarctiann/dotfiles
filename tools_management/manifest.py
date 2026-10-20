@@ -90,12 +90,12 @@ def delete() -> None:
 
 
 STEP_CONFIG_KEYS: dict[str, list[str]] = {
-    "System packages": ["system_packages", "conditional_system_packages"],
+    "System packages": ["system_packages", "conditional_system_packages", "ruby"],
     "CLI tools": ["cli_tools"],
     "Fonts": ["terminal_font"],
     "Stow symlinks": ["stow"],
     "Git config": [],
-    "Runtimes": ["runtimes"],
+    "Runtimes": ["runtimes", "ruby"],
     "NPM packages": ["npm_packages"],
     "Post-install": ["post_install"],
 }

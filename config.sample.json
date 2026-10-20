@@ -49,7 +49,24 @@
     "rust": true,
     "opencode": true,
     "claude": true,
-    "uv": true
+    "uv": true,
+    "mise": true
+  },
+  "ruby": {
+    "enabled": false,
+    "version": "4.0",
+    "gems": ["ruby-lsp", "rubocop", "debug", "erb-formatter"],
+    "system_packages": {
+      "apt": [
+        "build-essential",
+        "libssl-dev",
+        "libyaml-dev",
+        "zlib1g-dev",
+        "libffi-dev",
+        "libreadline-dev"
+      ],
+      "brew": ["openssl@3", "libyaml", "readline"]
+    }
   },
   "stow": {
     "enabled": true,
@@ -119,6 +136,7 @@
       "opencode",
       "claude",
       "uv",
+      "mise",
       "auggie",
       "gemini"
     ]

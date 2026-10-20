@@ -30,10 +30,5 @@ vim.opt.spelllang = "en_us,es"
 -- Add Transparency to floating windows
 vim.opt.winblend = 7
 
--- Ruby lsp settings || "../plugins/ruby.lua"
-vim.g.lazyvim_ruby_lsp = "ruby_lsp"
-vim.g.lazyvim_ruby_formatter = "rubocop"
--- vim.g.lazyvim_ruby_lsp = "solargraph"
-
 -- Avoid useless Rust highlithings when working with rsx! macro
 vim.api.nvim_set_hl(0, "@lsp.type.unresolvedReference.rust", {})

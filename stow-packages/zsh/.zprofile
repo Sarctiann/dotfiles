@@ -1,11 +1,6 @@
 # ~/.local/bin added for user-level tools (uv, pipx, etc.)
 export PATH="$PATH:$HOME/.local/bin"
 
-# rbenv (only if installed)
-if command -v rbenv &>/dev/null; then
-  eval "$(rbenv init - --no-rehash zsh)"
-fi
-
 autoload -Uz compinit
 compinit
 

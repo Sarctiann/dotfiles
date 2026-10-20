@@ -1,7 +1,9 @@
+import subprocess
 import time
 from pathlib import Path
 
 import core
+import ruby_setup
 from core import detect_os, run, which
 
 
@@ -34,6 +36,15 @@ def _install_dnf(packages: list[str]) -> None:
     run(["sudo", "dnf", "install", "-y", *packages])
 
 
+def _installed(pkg: str) -> bool:
+    """Library packages (ruby build deps) are not commands, so ask the package manager."""
+    if which("dpkg"):
+        return subprocess.run(["dpkg", "-s", pkg], capture_output=True).returncode == 0
+    if which("brew"):
+        return subprocess.run(["brew", "list", pkg], capture_output=True).returncode == 0
+    return False
+
+
 def install_system_packages(config: dict, mode: str = "install") -> None:
     if mode == "uninstall":
         print("   (system packages are not removed)")
@@ -43,6 +54,8 @@ def install_system_packages(config: dict, mode: str = "install") -> None:
     for pkg, needs in config.get("conditional_system_packages", {}).items():
         if plan is None or set(needs) & plan:
             pkgs.append(pkg)
+    ruby_pkgs = ruby_setup.ruby_system_packages(config)
+    pkgs.extend(p for p in ruby_pkgs if p not in pkgs)
     if not pkgs:
         return
 
@@ -52,7 +65,7 @@ def install_system_packages(config: dict, mode: str = "install") -> None:
         pm = {"macos": "brew", "linux": "apt/pacman/dnf"}.get(os_name, "?")
         print(f"📦 System packages (via {pm}):")
         for pkg in pkgs:
-            status = "✅" if which(pkg) else "⬜"
+            status = "✅" if (_installed(pkg) if pkg in ruby_pkgs else which(pkg)) else "⬜"
             print(f"   {status} {pkg}")
         print()
         return
