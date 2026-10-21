@@ -1,7 +1,8 @@
 {
   "system_packages": ["tmux", "git", "zsh", "xclip", "chafa"],
   "conditional_system_packages": {
-    "luarocks": ["zsh"]
+    "luarocks": ["zsh"],
+    "sqlite3": ["opencode", "lazyvim"]
   },
   "base_steps": ["System packages", "Fonts", "Stow symlinks"],
   "cli_tools": {

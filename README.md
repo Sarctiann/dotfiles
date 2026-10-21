@@ -476,7 +476,7 @@ See [`testing/TESTING.md`](testing/TESTING.md) for details.
 Ruby is off the shared config: `lazyvim.json` does not enable it. Set `"ruby": { "enabled": true }` in `config.json` and the installer will:
 
 - install [mise](https://mise.jdx.dev) (`~/.local/bin/mise`) and the Ruby from `ruby.version`, with the gems in `ruby.gems` (`~/.default-gems`, so every Ruby version mise installs gets them) and the build libraries in `ruby.system_packages`;
-- generate `lua/extras-local/ruby.lua` in the lazyvim package (gitignored). `config/lazy.lua` imports that directory only if it exists, so other machines are unaffected. It enables the `lang.ruby` extra with tools resolved from `PATH` (mise) instead of Mason, and formats/lints through ruby-lsp so each project's own RuboCop is used.
+- generate `lua/extras-local/ruby.lua` in the lazyvim package (gitignored). `config/lazy.lua` imports that directory only if it exists, so other machines are unaffected. It enables the `lang.ruby` extra with tools resolved from `PATH` (mise) instead of Mason, and formats on save with the project's own RuboCop (through ruby-lsp) when its `Gemfile.lock` includes it, falling back to the RuboCop on `PATH` (mise) otherwise.
 
 Per-directory Ruby switching comes from `mise activate zsh` in `.zshrc`, which reads `.ruby-version`, `.tool-versions` and `mise.toml`. Set `"enabled": false` and re-run to stop managing it; `uninstall` removes mise and the generated file (`~/.default-gems` is kept).
 
@@ -533,6 +533,8 @@ sync_git_config.py
 - MCP servers: Playwright, Augment Context Engine, Neovim
 - Plugins: opencode-quota (toast + TUI), opencode-notifier, superpowers
 - Skills: agent-model-audit, agent-sync-neovim
+- Session picker: reads the OpenCode SQLite DB, so `sqlite3` is installed with the
+  `opencode`/`lazyvim` stow packages (`conditional_system_packages`)
 - Theme: custom tokyonight
 
 ### Augment (auggie)

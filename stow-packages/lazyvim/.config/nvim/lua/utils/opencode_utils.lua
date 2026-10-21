@@ -316,20 +316,79 @@ local function parse_timestamp(ts_ms)
   return iso, date, time
 end
 
--- NOTE: Query all sessions across projects via the sqlite3 CLI.
+-- NOTE: Query all sessions across projects directly from the OpenCode DB.
 -- OpenCode V2 dropped the `opencode db` subcommand; `opencode session list` only lists
 -- the current project, so direct DB access is required for the cross-project picker.
 -- DB path comes from `opencode debug paths db` (~/.local/share/opencode/opencode.db).
+local SESSION_COLUMNS = "id, title, directory, time_updated"
+
+-- NOTE: OpenCode V2 migrated live sessions to `session_v2`; the legacy `session` table is
+-- frozen at the migration date. Prefer `session_v2`, falling back to `session` on older DBs.
+local SESSION_TABLE_QUERY = table.concat({
+  "SELECT name FROM sqlite_master",
+  "WHERE type = 'table' AND name IN ('session_v2', 'session')",
+  "ORDER BY name = 'session_v2' DESC",
+  "LIMIT 1;",
+}, " ")
+
+-- NOTE: Run a query and return its rows as JSON. Prefer the sqlite3 CLI and fall back to
+-- Python's bundled sqlite3 module, since sqlite3 is not installed everywhere and
+-- `vim.fn.system` raises E475 when the executable is missing.
+local function query_db(db_path, sql)
+  if vim.fn.executable("sqlite3") == 1 then
+    local result = vim.fn.system({ "sqlite3", "-json", db_path, sql })
+    return result, vim.v.shell_error
+  end
+
+  if vim.fn.executable("python3") == 1 then
+    local script = table.concat({
+      "import json, sqlite3, sys",
+      "con = sqlite3.connect(sys.argv[1])",
+      "cur = con.execute(sys.argv[2])",
+      "cols = [d[0] for d in cur.description]",
+      "print(json.dumps([dict(zip(cols, r)) for r in cur.fetchall()]))",
+    }, "\n")
+    local result = vim.fn.system({ "python3", "-c", script, db_path, sql })
+    return result, vim.v.shell_error
+  end
+
+  return nil, 1
+end
+
+-- NOTE: Resolve the live session table, allowing only names read from sqlite_master.
+local function session_table(db_path)
+  local result, exit_code = query_db(db_path, SESSION_TABLE_QUERY)
+  if exit_code ~= 0 or not result or result == "" then
+    return "session"
+  end
+  local ok, data = pcall(vim.json.decode, result)
+  if not ok or type(data) ~= "table" or type(data[1]) ~= "table" then
+    return "session"
+  end
+  local name = data[1].name
+  if name == "session_v2" or name == "session" then
+    return name
+  end
+  return "session"
+end
+
 local function get_sessions()
   local sessions = {}
   local db_path = vim.fn.expand("~/.local/share/opencode/opencode.db")
-  local result = vim.fn.system({
-    "sqlite3",
-    "-json",
-    db_path,
-    "SELECT id, title, directory, time_updated FROM session ORDER BY time_updated DESC;",
-  })
-  if vim.v.shell_error ~= 0 or result == "" then
+  if vim.fn.filereadable(db_path) == 0 then
+    vim.notify("OpenCode database not found: " .. db_path, vim.log.levels.WARN)
+    return sessions
+  end
+
+  -- NOTE: Only top-level sessions, matching `opencode session list`.
+  local sql = string.format(
+    "SELECT %s FROM %s WHERE parent_id IS NULL ORDER BY time_updated DESC;",
+    SESSION_COLUMNS,
+    session_table(db_path)
+  )
+  local result, exit_code = query_db(db_path, sql)
+  if not result or exit_code ~= 0 or result == "" then
+    vim.notify("Cannot read OpenCode sessions: install `sqlite3` or `python3`", vim.log.levels.ERROR)
     return sessions
   end
 

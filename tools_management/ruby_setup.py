@@ -34,9 +34,20 @@ return {
     "stevearc/conform.nvim",
     optional = true,
     opts = function(_, opts)
-      -- Format through ruby-lsp so the project's own RuboCop version and plugins are used.
       opts.formatters_by_ft = opts.formatters_by_ft or {}
-      opts.formatters_by_ft.ruby = nil
+      -- If the project bundles RuboCop, ruby-lsp formats with that version and its plugins
+      -- (an empty list falls back to LSP formatting). Otherwise use the RuboCop on PATH (mise).
+      opts.formatters_by_ft.ruby = function(bufnr)
+        local lock = vim.fs.find("Gemfile.lock", { upward = true, path = vim.api.nvim_buf_get_name(bufnr) })[1]
+        if lock then
+          for line in io.lines(lock) do
+            if line:match("^    rubocop %(") then
+              return {}
+            end
+          end
+        end
+        return { "rubocop" }
+      end
       return opts
     end,
   },
