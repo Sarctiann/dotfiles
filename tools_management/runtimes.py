@@ -85,15 +85,8 @@ def install_opencode() -> None:
     if which("opencode"):
         print("✅ opencode already installed")
         return
-    print("📋 Installing opencode...")
-    version = _latest_github_release("anomalyco/opencode")
-    env = os.environ.copy()
-    if version:
-        env["VERSION"] = version
-    run(
-        ["bash", "-c", "curl -fsSL https://opencode.ai/install | bash"],
-        env=env,
-    )
+    print("📋 Installing opencode v2...")
+    run(["bash", "-c", "curl -fsSL https://opencode.ai/v2/install | bash"])
 
 
 def install_claude() -> None:
