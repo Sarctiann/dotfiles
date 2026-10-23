@@ -9,8 +9,10 @@ return {
         help = true,
         snacks_dashboard = true,
         snacks_explorer = true,
+        snacks_layout_box = true, -- explorer sidebar: normal window with this ft
         snacks_picker = true,
         snacks_picker_list = true,
+        snacks_picker_preview = true,
         snacks_notifier = true,
         snacks_input = true,
         snacks_terminal = true,
