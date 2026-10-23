@@ -2,6 +2,8 @@ local win_width = vim.o.columns
 local logo_padding = string.rep(" ", math.floor(win_width / 4))
 
 local logo = [[
+{padding}
+{padding}
 {padding} ███████╗ █████╗ ██████╗  ██████╗   ███╗   ██╗██╗   ██╗██╗███╗   ███╗
 {padding} ██╔════╝██╔══██╗██╔══██╗██╔════╝   ████╗  ██║██║   ██║██║████╗ ████║
 {padding} ███████╗███████║██████╔╝██║        ██╔██╗ ██║██║   ██║██║██╔████╔██║
