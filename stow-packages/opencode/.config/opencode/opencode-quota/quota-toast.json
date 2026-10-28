@@ -48,7 +48,7 @@
   "anthropicBinaryPath": "claude",
   "googleModels": ["CLAUDE"],
   "opencodeGoWindows": ["rolling", "weekly", "monthly"],
-  "alibabaCodingPlanTier": "lite",
   "cursorPlan": "none",
-  "opencodeZenDisplay": "detailed"
+
+  "accountingDetail": "detailed"
 }
