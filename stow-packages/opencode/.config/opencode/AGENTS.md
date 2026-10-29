@@ -10,6 +10,17 @@
 
 - Never create a git commit unless the user explicitly asks you to.
 
+## Subagents
+
+- Never dispatch a subagent without asking the user first, every single time.
+  There is no standing permission: a previous yes covers that one dispatch and
+  nothing else.
+- This applies to the `subagent` tool and to every skill that instructs a
+  dispatch (an implementer, a reviewer, parallel workers). When a skill reaches
+  a dispatch step, stop there, say in one line what the subagent would do, and
+  ask. Wait for the answer before continuing.
+- If the user declines, do the work inline instead.
+
 ## Response Style
 
 - Keep responses concise. List file changes as bullet points without explanations or justifications,

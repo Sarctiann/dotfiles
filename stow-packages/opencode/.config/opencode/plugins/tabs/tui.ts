@@ -11,7 +11,7 @@ export default Plugin.define({
           id: "dotfiles.tabs.close_all",
           title: "Close all session tabs",
           group: "Tabs",
-          bind: "tabd",
+          bind: "tabq",
           palette: true,
           run: () => {
             const sessionIDs = context.ui.tabs.list().map((tab) => tab.sessionID)

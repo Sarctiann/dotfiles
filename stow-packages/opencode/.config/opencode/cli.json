@@ -7,9 +7,9 @@
   "keybinds": {
     "which-key.toggle": "<leader>k",
     "session.new": "tabn,<leader>n",
-    "session.tab.close": "tabq,<leader>w",
-    "session.tab.previous": "tabh,ctrl+shift+tab,alt+up",
-    "session.tab.next": "tabl,ctrl+tab,alt+down"
+    "session.tab.close": "tabd,<leader>w",
+    "session.tab.previous": "tableft,ctrl+shift+tab,alt+up",
+    "session.tab.next": "tabright,ctrl+tab,alt+down"
   },
   "plugins": ["@slkiser/opencode-quota@latest", "./plugins/tabs"],
   "diffs": {
