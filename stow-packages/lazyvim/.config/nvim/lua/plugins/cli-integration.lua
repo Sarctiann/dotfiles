@@ -2,7 +2,6 @@ local DOCS_DIR = os.getenv("DOCS_DIR")
 local plugin_dir = DOCS_DIR and (DOCS_DIR .. "/SARCTIANN/LuaCode/custom_plugins/cli-integration.nvim/") or nil
 
 local gemini_utils = require("utils.gemini_utils")
-local augment_utils = require("utils.augment_utils")
 local opencode_utils = require("utils.opencode_utils")
 local claude_utils = require("utils.claude_utils")
 
@@ -64,9 +63,10 @@ local claude_op = {
 }
 
 
-local claude_keys = {
+local function claude_keys_for(new_session_key, sessions_key)
+  return {
     {
-      "<leader>ac",
+      new_session_key,
       function()
         claude_utils.new_session()
       end,
@@ -75,13 +75,13 @@ local claude_keys = {
       mode = { "n", "v" },
     },
     {
-      "<leader>aC",
+      sessions_key,
       nil,
       desc = " Claude Code Sessions",
       silent = true,
     },
     {
-      "<leader>aCc",
+      sessions_key .. "c",
       function()
         claude_utils.resume_last_session()
       end,
@@ -89,7 +89,7 @@ local claude_keys = {
       silent = true,
     },
     {
-      "<leader>aCs",
+      sessions_key .. "s",
       function()
         claude_utils.manage_claude_sessions(false, claude_cfg)
       end,
@@ -97,7 +97,7 @@ local claude_keys = {
       silent = true,
     },
     {
-      "<leader>aCd",
+      sessions_key .. "d",
       function()
         claude_utils.delete_all_claude_sessions(claude_cfg)
       end,
@@ -105,108 +105,29 @@ local claude_keys = {
       silent = true,
     },
     {
-      "<leader>aCq",
+      sessions_key .. "q",
       function()
         claude_utils.ask_inline()
       end,
       desc = "Claude Ask (inline)",
       mode = { "n", "v" },
     },
-}
+  }
+end
+
+-- Company projects used to bind <leader>aa/aA to Augment; Claude takes over
+-- those slots. Personal projects keep Claude on <leader>ac/aC.
+local claude_keys
+if is_company_project then
+  claude_keys = claude_keys_for("<leader>aa", "<leader>as")
+else
+  claude_keys = claude_keys_for("<leader>ac", "<leader>aC")
+end
 
 local integration_op
-local keys_op
+local keys_op = {}
 
-if is_company_project then
-  local cache_dir = augment_utils.get_augment_cache_dir()
-
-  integration_op = {
-    name = "Augment",
-    cli_cmd = "auggie --augment-cache-dir=" .. vim.fn.shellescape(cache_dir),
-    cli_ready_flags = { search_for = "Version" },
-    start_doing = function(visual_text, actions)
-      require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Augment")
-    end,
-    on_open = function(_, _)
-      local nvim_soc = os.getenv("NVIM") or vim.v.servername
-      augment_utils.on_open_auggie(cache_dir, {
-        neovim = { NVIM_SOCKET_PATH = nvim_soc },
-        jira = { JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN") },
-      })
-    end,
-    format_paths = function(paths, actions)
-      if #paths == 0 or #paths[1] == 0 then
-        return
-      end
-      if #paths == 1 then
-        actions.send_keys("@" .. paths[1] .. " ")
-      else
-        actions.for_each_path(function(path)
-          actions.send_keys("@" .. path)
-          actions.send_line()
-        end)
-      end
-    end,
-    window_width = 50,
-    terminal_keys = {
-      terminal_mode = {
-        normal_mode = { "<M-q>" },
-        insert_file_path = { "<C-o>" },
-        insert_all_buffers = { "<C-o><C-o>" },
-      },
-    },
-  }
-
-  keys_op = {
-    {
-      "<leader>aa",
-      function()
-        augment_utils.new_session(cache_dir)
-      end,
-      desc = "Augment New Session",
-      silent = true,
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>aA",
-      nil,
-      desc = " Augment Code Sessions",
-      silent = true,
-    },
-    {
-      "<leader>aAc",
-      function()
-        augment_utils.resume_last_session(cache_dir)
-      end,
-      desc = "Augment Code Resume last session",
-      silent = true,
-    },
-    {
-      "<leader>aAd",
-      function()
-        augment_utils.delete_all_augment_sessions(cache_dir)
-      end,
-      desc = "Augment Code Delete All sessions",
-      silent = true,
-    },
-    {
-      "<leader>aAs",
-      function()
-        augment_utils.manage_augment_sessions(false, cache_dir)
-      end,
-      desc = "Augment Code Custom Session Manager",
-      silent = true,
-    },
-    {
-      "<leader>aAq",
-      function()
-        augment_utils.ask_inline(cache_dir)
-      end,
-      desc = "Augment Ask (inline)",
-      mode = { "n", "v" },
-    },
-  }
-else
+if not is_company_project then
   integration_op = {
     name = "OpenCode",
     -- NOTE: --standalone runs a private server inside the TUI process, so the Neovim MCP
@@ -333,7 +254,11 @@ else
   }
 end
 
-local integration_list = { integration_op, claude_op }
+local integration_list = {}
+if integration_op then
+  integration_list[#integration_list + 1] = integration_op
+end
+integration_list[#integration_list + 1] = claude_op
 integration_list[#integration_list + 1] = {
   name = "Gemini",
   cli_cmd = "gemini",
