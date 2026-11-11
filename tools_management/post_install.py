@@ -168,19 +168,60 @@ def _resolve_primary_terminal(config: dict) -> str:
     return "ghostty"
 
 
+def _write_wsl_notifier_config(notifier_path: Path) -> None:
+    """Route notifications through a Windows toast on WSL.
+
+    Windows Terminal does not implement OSC 9, and node-notifier's WSL
+    path depends on a cached SnoreToast binary that loses its executable
+    bit when the plugin is updated. The plugin's documented ``command``
+    hook is independent of that cache: a stowed wrapper shows a WinRT
+    toast through Windows PowerShell.
+    """
+    wrapper = Path.home() / ".local" / "bin" / "opencode-notify-wsl"
+    if not wrapper.is_file():
+        print("   ⚠  opencode-notify-wsl not found — run the Stow symlinks step first")
+
+    notifier_cfg = {
+        "notification": False,
+        "sound": False,
+        "bell": False,
+        "showSessionTitle": True,
+        "command": {
+            "enabled": True,
+            "path": str(wrapper),
+            "args": ["{message}", "{projectName}"],
+        },
+        "events": {
+            "subagent_complete": False,
+            "user_cancelled": False,
+            "session_started": False,
+            "user_message": False,
+            "client_connected": False,
+        },
+    }
+
+    notifier_path.parent.mkdir(parents=True, exist_ok=True)
+    notifier_path.write_text(json.dumps(notifier_cfg, indent=2) + "\n")
+    print("   ✓ notifications routed to a Windows toast (opencode-notify-wsl)")
+
+
 def _write_notifier_config(config: dict) -> None:
-    """Write opencode-notifier.json only when ghostty is the primary terminal."""
+    """Write opencode-notifier.json for the primary terminal's notifications."""
     notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
     primary = _resolve_primary_terminal(config)
+
+    if notifier_path.is_symlink():
+        notifier_path.unlink()
+
+    if primary == "windows-terminal" and is_wsl():
+        _write_wsl_notifier_config(notifier_path)
+        return
 
     if primary != "ghostty":
         if notifier_path.exists():
             notifier_path.unlink()
             print("   ✓ removed stale opencode-notifier.json")
         return
-
-    if notifier_path.is_symlink():
-        notifier_path.unlink()
 
     notifier_path.parent.mkdir(parents=True, exist_ok=True)
     notifier_path.write_text(
@@ -771,12 +812,20 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         if notifier_path.is_file():
             try:
                 data = json.loads(notifier_path.read_text())
-                ns = data.get("notificationSystem", "?")
-                print(f"   🔔 opencode-notifier: notificationSystem={ns}")
+                if data.get("command", {}).get("enabled"):
+                    command = data["command"].get("path", "?")
+                    print(f"   🔔 opencode-notifier: command={command}")
+                else:
+                    ns = data.get("notificationSystem", "?")
+                    print(f"   🔔 opencode-notifier: notificationSystem={ns}")
             except Exception:
                 print("   ⚠  opencode-notifier.json: invalid")
         else:
             print("   ⬜ opencode-notifier.json: not found")
+        if is_wsl():
+            wrapper = Path.home() / ".local" / "bin" / "opencode-notify-wsl"
+            status = "✅" if wrapper.is_file() else "⬜"
+            print(f"   {status} WSL notification wrapper")
         print()
         return
 

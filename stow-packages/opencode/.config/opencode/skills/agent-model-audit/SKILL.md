@@ -7,7 +7,7 @@ description: Use when auditing agent models, reviewing provider offerings, optim
 
 Audit connected providers, analyze model offerings (cost, speed, usage limits), and optimize agent-to-model assignments. Produces a dated audit report and updates agent configurations.
 
-> **Important:** The current model assignments in `opencode.jsonc` are the **output** of this process, not the input. Discard them at the start. All assignments will be determined fresh from the data gathered in steps 1–5.
+> **Important:** The current model assignments in `opencode.jsonc` are the **output** of this process, not the input. Discard them at the start. All assignments will be determined fresh from the data gathered in steps 1–5 and validated in step 6.
 
 ## Priority Mode
 
@@ -51,7 +51,11 @@ From the output:
 >
 > **Never guess or normalize model names.** Always copy-paste the exact identifier
 > from the `opencode models` output. This applies to all steps that reference
-> model names (steps 2, 3, 5, 6, 7, 8, and 9).
+> model names (steps 2, 3, 5, 6, 7, 8, 9, and 10).
+>
+> **`opencode models` lists configured models — it does not prove they are reachable.**
+> Some models fail at request time despite appearing in the list. Step 6 probes
+> actual availability before any assignment is finalized.
 
 Also read `opencode.jsonc` to collect:
 
@@ -60,31 +64,10 @@ Also read `opencode.jsonc` to collect:
 
 #### Filter Out Models
 
-Check if the optional filter file exists at `skills/agent-model-audit/filter-out.md`. If it exists, **read its content and apply it as strict exclusion rules** before proceeding:
+Check if the optional filter file exists at `~/.config/opencode/skills/agent-model-audit/filter-out.md`. If it exists, **read its content and apply it as strict exclusion rules** before proceeding:
 
 ```bash
-test -f skills/agent-model-audit/filter-out.md && cat skills/agent-model-audit/filter-out.md
-```
-
-If the file does not exist, skip this step — all models from `opencode models` remain candidates.
-
-The `filter-out.md` file is a **git-ignored markdown file** that may contain:
-
-- **Exact model identifiers** to exclude (e.g., `opencode-go/some-model`)
-- **Patterns** (e.g., `*experimental*`, `opencode-go/legacy-*`)
-- **Conditional rules** (e.g., exclude models with cost > $X, exclude models slower than Y t/s)
-- **Provider-level exclusions** (e.g., exclude all models from a specific provider)
-
-> **⚠️ CRITICAL:** The contents of `filter-out.md` are **strict rules**, not suggestions. Any model matching a filter-out rule MUST be excluded from ALL subsequent steps. This takes precedence over any other selection criteria. Apply the rules as literal as possible — if a rule is ambiguous, err on the side of exclusion.
-
-Add excluded model identifiers (if any) to a temporary note for reference in the audit report.
-
-#### Filter Out Models
-
-Check if the optional filter file exists at `skills/agent-model-audit/filter-out.md`. If it exists, **read its content and apply it as strict exclusion rules** before proceeding:
-
-```bash
-test -f skills/agent-model-audit/filter-out.md && cat skills/agent-model-audit/filter-out.md
+test -f "$HOME/.config/opencode/skills/agent-model-audit/filter-out.md" && cat "$HOME/.config/opencode/skills/agent-model-audit/filter-out.md"
 ```
 
 If the file does not exist, skip this step — all models from `opencode models` remain candidates.
@@ -187,33 +170,81 @@ Assign each agent a model from the step-1 list. Apply the **Priority Mode** from
 
 **All modes — non-negotiable constraints:**
 
-- **No duplicate model+variant** — each agent must use a unique model+variant combination. Same model with different `variant` values IS allowed (e.g., `deepseek-v4-flash` with `variant: max` and `variant: high`). If two agents share a model, they MUST have different `variant` values.
-- **Only models from step 1** — never assign a model not confirmed available
+- **Only models from step 1** — never assign a model absent from the `opencode models` output
 - **No assignment left blank** — every agent must have a model
 - **Exact identifier match** — model names must be copied verbatim from step 1 output, including all hyphens, dots, and version numbers. Never modify, normalize, or guess identifiers.
-- **Respect filter-out rules** — models excluded by `skills/agent-model-audit/filter-out.md` (if the file exists) must never be assigned to any agent.
-- **Respect filter-out rules** — models excluded by `skills/agent-model-audit/filter-out.md` (if the file exists) must never be assigned to any agent.
+- **Respect filter-out rules** — models excluded by `~/.config/opencode/skills/agent-model-audit/filter-out.md` (if the file exists) must never be assigned to any agent.
+- **Model sharing is allowed** — multiple agents may use the same model, including the same variant. Reuse a model whenever it is the best fit for several roles; do not pick a worse model just to make assignments unique.
 
-Save the resulting assignments to `docs/agent-audits/assignments.json` for use in step 6. If any agent uses a model shared with another agent, include the `variant` field to differentiate them:
+Save the resulting assignments to `docs/agent-audits/assignments.json` for use in steps 6 and 7. Prefer a plain agent → model mapping; if an agent uses a `variant`, use an object with `model` and `variant`:
 
 ```json
 {
   "build": "opencode-go/deepseek-v4-flash",
   "x-teach": "opencode-go/deepseek-v4-flash",
-  "z-spark": "opencode-go/deepseek-v4-free"
+  "z-forge": { "model": "opencode-go/deepseek-v4-flash", "variant": "max" }
 }
 ```
 
-The assignments dict maps agent names to model identifiers (for scale calculator compatibility). Variant info is recorded in the audit report and `opencode.jsonc` only.
+Model sharing does not require different variants. Set a variant only when it improves role fit or cost.
 
-### 6. Calculate Scale-Based Indicators
+For each agent, keep a ranked shortlist of at least two backup models in the same priority order. Step 6 uses those backups when a first choice proves unavailable.
 
-After assigning models to all agents (step 5), compute the quality, cost, and speed indicators **relative to the selected set of models only**.
+### 6. Probe Model Availability
 
-Run the scale calculator script with your collected data and assignments:
+`opencode models` lists configured models, but it does not prove they are
+reachable. Providers can list a model while requests fail (subscription or
+privacy restrictions, rate limits, regional outages, broken endpoints,
+unsupported variant settings). Probe every model+variant in the proposed
+assignments before finalizing them.
+
+Run the probe script:
 
 ```bash
-python skills/agent-model-audit/scripts/scale-calculator.py \
+python3 "$HOME/.config/opencode/skills/agent-model-audit/scripts/probe-models.py" \
+  --assignments docs/agent-audits/assignments.json \
+  --timeout 60 \
+  --attempts 2 \
+  --format json \
+  --output docs/agent-audits/probe-results.json
+```
+
+The script:
+
+- Deduplicates targets, so a model shared by several agents is probed once per variant.
+- Sends a single tiny prompt through `opencode run --archived`.
+- Passes a target only when the command exits 0 and the response contains `PROBE-OK`.
+- Retries transient failures (timeouts, rate limits, provider errors) once after a short delay. Definitively unavailable models are not retried.
+- Writes JSON with `results`, `summary`, and an `unavailable` list.
+
+**Handle failures:**
+
+1. Read `unavailable` from `docs/agent-audits/probe-results.json`.
+2. For each unavailable target, select the next-best candidate for the affected agents from the step-5 shortlist, still respecting step 1 and `filter-out.md`.
+3. Probe replacement candidates before assigning them:
+
+   ```bash
+   python3 "$HOME/.config/opencode/skills/agent-model-audit/scripts/probe-models.py" \
+     --targets "provider/model" "provider/model#variant" \
+     --format json
+   ```
+
+4. Update `docs/agent-audits/assignments.json` with the first passing replacement for each affected agent.
+5. Re-run the full probe until `unavailable` is empty. Limit this to 3 replacement rounds. If a model fails because it trains on request data or has another permanent policy restriction, add it to a temporary exclusion set and suggest adding it to `filter-out.md`.
+6. If no candidate passes for an agent, stop and report the blocker. Never write an unavailable model to `opencode.jsonc`.
+
+> **Keep it light:** this is a connectivity check, not a benchmark. Use only the
+> one-token prompt from the script. Do not ask for code, explanations, or long
+> outputs. Probing a paid model costs a negligible amount, but it is not free.
+
+### 7. Calculate Scale-Based Indicators
+
+After probing availability (step 6), compute the quality, cost, and speed indicators **relative to the selected set of models only**.
+
+Run the scale calculator script with your collected data and final assignments:
+
+```bash
+python3 "$HOME/.config/opencode/skills/agent-model-audit/scripts/scale-calculator.py" \
   --data docs/agent-audits/model-data.json \
   --assignments docs/agent-audits/assignments.json \
   --format json \
@@ -233,7 +264,7 @@ For each dimension:
 5. Divide the relevant range into equal segments
 6. Assign icons based on which segment each model falls into:
 
-### Dimension Rules
+#### Dimension Rules
 
 - **Intelligence:** `---` means `Basic`. Use all intelligence values and split the full range into 4 equal segments.
 - **Cost:** `---` means `Free`. Use `---` only when cost is exactly `0`. Split the positive-cost range into 3 equal segments for the remaining tiers.
@@ -254,7 +285,7 @@ For each dimension:
 
 > **Note:** For intelligence and speed, more icons = better. For cost, fewer icons = cheaper (better).
 
-### 7. Create Audit Report
+### 8. Create Audit Report
 
 Write to `docs/agent-audits/YYYY-MM-DD.md`:
 
@@ -290,7 +321,7 @@ Numeric data collected in step 3:
 
 ## Scale Calculation
 
-Range divided per dimension (computed in step 6):
+Range divided per dimension (computed in step 7):
 
 | Dimension    | Min / Scope      | Max / Scope      | Range | Q1 (< )     | Q2 (< )     | Q3 (< )     | Q4 (>=)     |
 | ------------ | ---------------- | ---------------- | ----- | ----------- | ----------- | ----------- | ----------- |
@@ -298,7 +329,21 @@ Range divided per dimension (computed in step 6):
 | Cost         | 0.15 (positive)  | 15.0 (positive)  | 14.85 | 0.15–3.86   | 3.86–7.58   | 7.58–11.29  | 11.29–15.00 |
 | Speed        | 40 (known)       | 200 (known)      | 160   | 40–80       | 80–120      | 120–160     | 160–200     |
 
+## Model Availability
+
+Light probe run in step 6: one tiny prompt per unique model+variant.
+
+| Target | Attempts | Result | Detail |
+| ------ | -------- | ------ | ------ |
+| opencode/big-pickle | 1 | ✅ Available | PROBE-OK received |
+| opencode-go/some-model | 1 | ❌ Unavailable | Model unavailable |
+| ... | ... | ... | ... |
+
+Replaced `opencode-go/some-model` with `opencode-go/other-model` for `z-forge`.
+
 ## Proposed Assignments
+
+Shared models are allowed; the same model may appear in several rows.
 
 | Agent   | Variant         | Model             | Intelligence | Cost | Speed | Role Fit  | Rationale           |
 | ------- | --------------- | ----------------- | ------------ | ---- | ----- | --------- | ------------------- |
@@ -312,15 +357,11 @@ Range divided per dimension (computed in step 6):
 - Assigned `z-forge` → `mimo-v2.5-pro` (precision coding, best role fit)
 - Assigned `explore` → `minimax-m2.5` (fast exploration, lowest cost)
 - Updated all agent descriptions with `[quality | cost | speed]` indicators
-
-## Uniqueness Check
-
-All agents use unique models: ✅
 ```
 
-### 8. Update Configurations
+### 9. Update Configurations
 
-All model assignments must come **exclusively** from models confirmed in step 1.
+All model assignments must come **exclusively** from models listed in step 1 and passing the step 6 probe.
 
 > **⚠️ CRITICAL:** Before writing any model identifier to `opencode.jsonc`,
 > verify it character-for-character against the `opencode models` output from step 1.
@@ -329,9 +370,10 @@ All model assignments must come **exclusively** from models confirmed in step 1.
 
 **`opencode.jsonc`:**
 
-- Set `agent.<name>.model` for every agent from the proposed assignments in step 7
-- Set `agent.<name>.description` with `[quality | cost | speed]` prefix
-- If an agent shares a model with another agent, set `agent.<name>.variant` to the variant value from step 7. Agents using a unique model do NOT need a `variant` field.
+- Set `agents.<name>.model` for every agent from the finalized `docs/agent-audits/assignments.json` (step 6)
+- Set `agents.<name>.description` with `[quality | cost | speed]` prefix
+- Set `agents.<name>.variant` only when the assignment includes one. Sharing a model with another agent does not require a variant; leave it unset unless the variant improves role fit.
+- Never write a model that failed the availability probe.
 
 **`agents/*.md`:**
 
@@ -347,11 +389,12 @@ All model assignments must come **exclusively** from models confirmed in step 1.
 - Speed padded to 4 chars: `--- ` (Unknown only when speed is missing), `󱐋  ` (Slow), `󱐋󱐋 ` (Normal), `󱐋󱐋󱐋` (Fast)
 - Example: `[󰫣󰫣 |   | 󱐋󱐋 ] Reasoning architect for decomposition and design decisions`
 
-### 9. Verify
+### 10. Verify
 
-- No duplicate model+variant across agents (same model + same variant never appears twice) ✅
+- Every assigned model+variant passed the availability probe, or was replaced with a passing candidate ✅
+- `docs/agent-audits/probe-results.json` has an empty `unavailable` list ✅
 - All agent descriptions have `[quality | cost | speed]` indicators ✅
-- Scale calculation ran on selected models only ✅
+- Scale calculation ran on the final selected models only ✅
 - Icons assigned by range quarters (Q1 → `---`, Q2 → 1 icon, Q3 → 2 icons, Q4 → 3 icons) ✅
 - All assigned models came from `opencode models` output ✅
 - **All model identifiers match `opencode models` output character-for-character** ✅
@@ -364,4 +407,6 @@ All model assignments must come **exclusively** from models confirmed in step 1.
 - `docs/agent-audits/` should be gitignored (working documents, not committed)
 - Config changes (`opencode.jsonc`) should be committed
 - Agent `.md` files should only be committed if their behavioral content (mode, tools, system prompt) was modified — not for description changes
-- Remind user to restart opencode after config changes
+- The availability probe sends one tiny prompt per unique model+variant; paid models incur a negligible but non-zero cost
+- Models that repeatedly fail the probe are good candidates for `filter-out.md`
+- Config changes apply automatically; if an agent still uses an old model, run `/reload`

@@ -106,6 +106,35 @@ else
 fi
 
 if $IS_WSL; then
+    if [ -x "$HOME/.local/bin/opencode-notify-wsl" ]; then
+        echo "   ✓ WSL notifier wrapper is executable"
+    else
+        echo "❌ WSL notifier wrapper missing or not executable"
+        FAILED=1
+    fi
+    if [ -f "$HOME/.local/share/opencode-notifier/opencode-notify.ps1" ]; then
+        echo "   ✓ WSL notifier PowerShell script exists"
+    else
+        echo "❌ WSL notifier PowerShell script missing"
+        FAILED=1
+    fi
+    if ! python3 - <<'PY'
+import json, os
+path = os.path.expanduser("~/.config/opencode/opencode-notifier.json")
+assert os.path.isfile(path), f"missing {path}"
+with open(path) as fh:
+    config = json.load(fh)
+assert config.get("notification") is False, config
+assert config.get("command", {}).get("enabled") is True, config
+assert config["command"]["path"].endswith("opencode-notify-wsl"), config
+print("   ✓ WSL notifier config uses the PowerShell command hook")
+PY
+    then
+        FAILED=1
+    fi
+fi
+
+if $IS_WSL; then
     echo "   ⚠  Skipping ghostty symlink check (WSL)"
 elif [ -L "$HOME/.config/ghostty/config" ]; then
     echo "   ✓ ghostty/config symlinked"
@@ -186,6 +215,15 @@ if [ -f "$HOME/.local/share/dotfiles/manifest.json" ]; then
     FAILED=1
 else
     echo "   ✓ Manifest removed"
+fi
+
+if $IS_WSL; then
+    if [ ! -f "$HOME/.config/opencode/opencode-notifier.json" ]; then
+        echo "   ✓ WSL notifier config removed"
+    else
+        echo "❌ WSL notifier config still exists after uninstall"
+        FAILED=1
+    fi
 fi
 
 # Preexisting ghostty config restored

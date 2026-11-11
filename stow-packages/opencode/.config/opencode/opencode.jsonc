@@ -38,69 +38,70 @@
   "agents": {
     // Built-in agents with specific models and colors
     "explore": {
-      "model": "opencode/mimo-v2.6-flash-free",
-      "description": "[󰫣󰫣  | --- | 󱐋  ] Fast codebase exploration at zero cost",
+      "model": "opencode/deepseek-v4.1-flash-free",
+      "description": "[󰫣    | ---  | 󱐋󱐋󱐋] Fast codebase exploration at zero cost",
     },
     "general": {
-      "model": "opencode/step-5-preview-free",
-      "description": "[󰫣󰫣󰫣 | --- | 󱐋  ] Balanced general-purpose assistant",
+      "model": "opencode/big-pickle",
+      "description": "[󰫣󰫣   | ---  | 󱐋  ] Balanced general-purpose assistant",
     },
     "build": {
-      "model": "opencode-go/deepseek-v4-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "variant": "max",
       "color": "#bb9af7",
-      "description": "[󰫣󰫣  |    | 󱐋󱐋󱐋] Implementation specialist with precision coding",
+      "description": "[󰫣   |    | 󱐋󱐋󱐋] Implementation specialist with precision coding",
     },
     "plan": {
-      "model": "opencode/muse-spark-1.3-contributor-free",
+      "model": "opencode-go/glm-5.3",
       "color": "#ff9e64",
-      "description": "[󰫣󰫣󰫣 | --- | 󱐋󱐋 ] Deep reasoning architect for multi-step planning and design",
+      "description": "[󰫣󰫣󰫣  |   | 󱐋  ] Deep reasoning architect for multi-step planning and design",
     },
     // Custom agents with specific models and colors
     "x--free": {
       "model": "opencode/big-pickle",
       "color": "#b8db87",
-      "description": "[󰫣   | --- | 󱐋  ] Free tier model for unlimited experimentation",
+      "description": "[󰫣󰫣   | ---  | 󱐋  ] Free tier model for unlimited experimentation",
       "mode": "primary",
     },
     "x-teach": {
       "model": "opencode-go/claude-haiku-5-5",
       "color": "#4fd6be",
-      "description": "[󰫣󰫣󰫣 |    | 󱐋󱐋 ] Learning companion — doesn't code, teaches concepts and how to find answers independently",
+      "description": "[󰫣    |     | 󱐋󱐋󱐋] Learning companion — doesn't code, teaches concepts and how to find answers independently",
     },
     "z-forge": {
-      "model": "opencode-go/mimo-v2.6-pro",
+      "model": "opencode-go/kimi-k3.1-pro",
       "color": "#007197",
-      "description": "[󰫣󰫣󰫣 |  | 󱐋  ] High-precision implementation specialist",
+      "description": "[󰫣󰫣󰫣  |   | 󱐋  ] High-precision implementation specialist",
       "permissions": [{ "action": "skill", "resource": "*", "effect": "ask" }],
     },
     "z-logic": {
-      "model": "opencode-go/step-5-preview-free",
+      "model": "opencode-go/deepseek-v4-pro",
       "color": "#2e7de9",
-      "description": "[󰫣󰫣󰫣 | --- | 󱐋  ] Reasoning architect for decomposition and design decisions",
+      "description": "[󰫣󰫣󰫣  |    | 󱐋  ] Reasoning architect for decomposition and design decisions",
       "permissions": [{ "action": "skill", "resource": "*", "effect": "ask" }],
     },
     "z-nexus": {
-      "model": "opencode/ling-3.1-flash-free",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "color": "#9854f1",
-      "description": "[󰫣󰫣  | --- | 󱐋󱐋󱐋] Large-context analyzer for multi-file understanding",
+      "description": "[󰫣    |     | 󱐋󱐋󱐋] Large-context analyzer for multi-file understanding",
       "permissions": [{ "action": "skill", "resource": "*", "effect": "ask" }],
     },
     "z-pilot": {
-      "model": "opencode-go/space-bunny",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "color": "#7aa2f7",
-      "description": "[󰫣󰫣  |    | 󱐋  ] Tool and execution specialist for tests/builds/scripts",
+      "description": "[󰫣    |     | 󱐋󱐋󱐋] Tool and execution specialist for tests/builds/scripts",
       "permissions": [{ "action": "skill", "resource": "*", "effect": "ask" }],
     },
     "z-spark": {
-      "model": "opencode/ling-3.0-flash-fin-free",
+      "model": "opencode/glm-5.3-flash-free",
       "color": "#7dcfff",
-      "description": "[--- | --- | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
+      "description": "[---  | ---  | 󱐋󱐋󱐋] Low-latency agent for quick tasks",
       "permissions": [{ "action": "skill", "resource": "*", "effect": "ask" }],
     },
     "z-ultra": {
-      "model": "opencode-go/deepseek-v4-flash-vision-exp",
+      "model": "opencode-go/glm-5.3",
       "color": "#e26a75",
-      "description": "[󰫣󰫣  |    | 󱐋󱐋 ] Heavy refactor and structural transformation specialist",
+      "description": "[󰫣󰫣󰫣  |   | 󱐋  ] Heavy refactor and structural transformation specialist",
       "permissions": [{ "action": "skill", "resource": "*", "effect": "ask" }],
     },
   },
@@ -109,8 +110,8 @@
   "commands": {
     "audit-agents": {
       "agent": "x--free",
-      "template": "Run the agent-model-audit skill to audit and optimize agent model assignments. Check if the user provided a priority mode argument: 'skill'/'ability'/'habilidad' (default) = role fit first; 'price'/'cost'/'precio'/'barato' = cost first; 'speed'/'fast'/'velocidad'/'rapido' = speed first. Use that mode throughout the optimization step. If no argument was given, default to 'skill' mode.",
-      "description": "Audit and optimize agent model assignments. Optional argument: skill (default), price, or speed",
+      "template": "Run the agent-model-audit skill to audit and optimize agent model assignments. Check if the user provided a priority mode argument: 'skill'/'ability'/'habilidad' (default) = role fit first; 'price'/'cost'/'precio'/'barato' = cost first; 'speed'/'fast'/'velocidad'/'rapido' = speed first. Use that mode throughout the optimization step. If no argument was given, default to 'skill' mode. Shared models across agents are allowed; do not enforce uniqueness. Before writing the final configuration, probe every proposed model for availability as described in the skill, and replace any unavailable model.",
+      "description": "Audit and optimize agent model assignments with availability probing. Optional argument: skill (default), price, or speed",
     },
     "sync-agents": {
       "agent": "x--free",

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# WSL bridge for opencode-notifier: show a Windows toast through PowerShell.
+set -euo pipefail
+
+message="${1:-OpenCode notification}"
+project="${2:-}"
+
+script="$HOME/.local/share/opencode-notifier/opencode-notify.ps1"
+[ -f "$script" ] || exit 0
+
+# Allow an explicit PowerShell path, then prefer Windows PowerShell and
+# fall back to whatever `powershell.exe` resolves to on PATH.
+powershell="${OPENCODE_NOTIFY_POWERSHELL:-}"
+if [ -z "$powershell" ]; then
+    powershell="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+    if [ ! -x "$powershell" ]; then
+        powershell="$(command -v powershell.exe || true)"
+    fi
+fi
+[ -n "$powershell" ] || exit 0
+
+wslpath_bin="$(command -v wslpath || true)"
+[ -n "$wslpath_bin" ] || exit 0
+win_script="$("$wslpath_bin" -w "$script" 2>/dev/null || true)"
+[ -n "$win_script" ] || exit 0
+
+title="OpenCode"
+if [ -n "$project" ]; then
+    title="OpenCode ($project)"
+fi
+
+exec "$powershell" -NoProfile -NonInteractive -ExecutionPolicy Bypass \
+    -File "$win_script" -Title "$title" -Message "$message"

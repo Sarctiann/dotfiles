@@ -39,6 +39,12 @@ WSL emulation sets `DOTFILES_WSL=1` (detected by `tools_management/core.py:is_ws
 
 Logs are saved to `testing/test_containers/logs/<target>-<timestamp>.log`. During execution, a progress indicator prints every 15s (`⏳ linux running... (30s)`) so you know containers are still working.
 
+## Notifier unit tests
+
+`python3 testing/test_notifier_config.py` checks the WSL opencode-notifier
+configuration and the argument forwarding of `opencode-notify-wsl`. It needs no
+Docker and runs on any platform.
+
 ## macOS Check (Dry-Run)
 
 On macOS, run a read-only validation instead of real containers:

@@ -36,13 +36,24 @@ def unique_preserving_order(values):
     return unique
 
 
+def assignment_model(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        model = value.get("model")
+        if not isinstance(model, str) or not model:
+            raise ValueError("Assignment objects must contain a non-empty 'model' string")
+        return model
+    raise ValueError("Assignments must be model strings or objects with a 'model' field")
+
+
 def selected_models(all_models, assignments_path, model_args):
     if assignments_path:
         assignments = load_json(assignments_path)
         if isinstance(assignments, dict):
-            selected = list(assignments.values())
+            selected = [assignment_model(value) for value in assignments.values()]
         elif isinstance(assignments, list):
-            selected = assignments
+            selected = [assignment_model(value) for value in assignments]
         else:
             raise ValueError("Assignments must be an object or an array of model names")
     elif model_args:

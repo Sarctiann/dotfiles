@@ -83,6 +83,16 @@ class ScaleCalculatorCliTest(unittest.TestCase):
         self.assertEqual(output["models"]["cheap"]["speed"]["tier"], 1)
         self.assertEqual(output["models"]["fast"]["speed"]["tier"], 3)
 
+    def test_accepts_assignment_objects_with_variants(self):
+        data = {"models": {"known": {"intelligence": 80, "cost": 1.0, "speed": 100}}}
+        assignments = {"agent-a": {"model": "known", "variant": "max"}}
+
+        result = self.run_script(data, assignments, "--format", "json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertIn("known", output["models"])
+
     def test_text_header_does_not_escape_dollar_sign(self):
         data = {"models": {"known": {"intelligence": 80, "cost": 1.0, "speed": 100}}}
 

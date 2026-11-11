@@ -13,7 +13,8 @@
   },
   "plugins": ["@slkiser/opencode-quota@latest", "./plugins/tabs"],
   "diffs": {
-    "wrap": "word"
+    "wrap": "word",
+    "single": true
   },
   "terminal": {
     "title": true

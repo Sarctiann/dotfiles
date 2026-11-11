@@ -532,6 +532,12 @@ sync_git_config.py
 - Custom agents: x-teach, z-forge, z-logic, z-nexus, z-pilot, z-spark, z-ultra, x--free
 - MCP servers: Playwright, Augment Context Engine, Neovim
 - Plugins: opencode-quota (toast + TUI), opencode-notifier, superpowers
+- WSL notifications: `post-install` writes a machine-local
+  `~/.config/opencode/opencode-notifier.json` that uses the plugin's `command`
+  hook to run `opencode-notify-wsl`. The wrapper calls Windows PowerShell and
+  shows a native toast, because Windows Terminal does not implement OSC 9 and
+  the plugin's SnoreToast path depends on a cache that loses its executable
+  bit on updates.
 - Skills: agent-model-audit, agent-sync-neovim
 - Session picker: reads the OpenCode SQLite DB, so `sqlite3` is installed with the
   `opencode`/`lazyvim` stow packages (`conditional_system_packages`)
