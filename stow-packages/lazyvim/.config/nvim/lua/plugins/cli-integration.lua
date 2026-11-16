@@ -12,7 +12,7 @@ local claude_op = {
   name = "Claude",
   cli_cmd = claude_utils.get_cli_cmd(),
   env = { CLAUDE_CONFIG_DIR = claude_cfg },
-  cli_ready_flags = { search_for = "Type your message", from_line = 1, lines_amt = 50 },
+  cli_ready_flags = { search_for = "Claude Code", from_line = 1, lines_amt = 10 },
   start_doing = function(visual_text, actions)
     require("cli-integration.hooks").insert_current_path_or_explain_selection()(visual_text, actions, "Claude")
   end,
@@ -61,7 +61,6 @@ local claude_op = {
     },
   },
 }
-
 
 local function claude_keys_for(new_session_key, sessions_key)
   return {
