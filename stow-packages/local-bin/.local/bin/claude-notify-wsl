@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Windows toast for Claude Code on WSL, called by claude_notify_watcher.py (user hooks are disabled by the
+# work org policy). Test: echo '{"hook_event_name":"Stop"}' | CLAUDE_NOTIFY_FORCE=1 claude-notify-wsl
+# Reads a hook-shaped JSON from stdin; returns immediately (toast is shown in background).
+# Skipped while the user is present: that Claude's tmux pane on screen (CLAUDE_NOTIFY_VISIBLE), Windows
+# Terminal in the foreground and keyboard/mouse input in the last CLAUDE_NOTIFY_IDLE seconds (default 60).
+# CLAUDE_NOTIFY_FORCE=1 always shows it.
+
+input="$(cat)"
+
+mapfile -t lines < <(python3 -I -c '
+import json, os, sys
+d = json.loads(sys.stdin.read() or "{}")
+project = os.path.basename(d.get("cwd") or os.getcwd())
+ev = d.get("hook_event_name", "")
+if ev == "Stop":
+    title, body = "Claude terminó", f"{project}: listo para tu revisión"
+else:
+    ntype = d.get("notification_type", "")
+    title = "Claude necesita permiso" if ntype == "permission_prompt" else "Claude te espera"
+    msg = d.get("message") or "Necesita tu respuesta"
+    body = f"{project}: {msg}"
+clean = lambda s: " ".join(s.split())
+print(clean(title)); print(clean(body))
+' <<<"$input" 2>/dev/null)
+title="${lines[0]:-Claude Code}"
+body="${lines[1]:-}"
+idle_limit="${CLAUDE_NOTIFY_IDLE:-60}"
+[[ "$idle_limit" =~ ^[0-9]+$ ]] || idle_limit=60
+[ "${CLAUDE_NOTIFY_FORCE:-0}" = 1 ] && idle_limit=0
+# Set by notify_watcher.py: 0 = that Claude's tmux pane is not on screen, so the user can't be watching it.
+[ "${CLAUDE_NOTIFY_VISIBLE:-}" = 0 ] && idle_limit=0
+
+ps_escape() { printf '%s' "${1//\'/\'\'}"; }
+
+# Presence check: foreground process + seconds since last input.
+read -r -d '' ps_presence <<'EOF'
+$sig = @'
+[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+[StructLayout(LayoutKind.Sequential)] public struct LII { public uint cbSize; public uint dwTime; }
+[DllImport("user32.dll")] public static extern bool GetLastInputInfo(ref LII p);
+'@
+Add-Type -MemberDefinition $sig -Name W -Namespace ClaudeNotify
+[uint32]$fpid = 0
+[void][ClaudeNotify.W]::GetWindowThreadProcessId([ClaudeNotify.W]::GetForegroundWindow(), [ref]$fpid)
+$fg = (Get-Process -Id $fpid -ErrorAction SilentlyContinue).ProcessName
+$lii = New-Object ClaudeNotify.W+LII; $lii.cbSize = 8
+[void][ClaudeNotify.W]::GetLastInputInfo([ref]$lii)
+$now = [int64][Environment]::TickCount -band 0xFFFFFFFFL
+$idle = ((($now - [int64]$lii.dwTime) + 4294967296L) % 4294967296L) / 1000
+EOF
+
+ps_script="$ps_presence
+if (\$env:CLAUDE_NOTIFY_PROBE) { \"fg=\$fg idle=\$idle\"; exit }
+if (\$fg -eq 'WindowsTerminal' -and \$idle -lt $idle_limit) { exit }
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > \$null
+\$t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+\$x = \$t.GetElementsByTagName('text')
+\$x.Item(0).AppendChild(\$t.CreateTextNode('$(ps_escape "$title")')) > \$null
+\$x.Item(1).AppendChild(\$t.CreateTextNode('$(ps_escape "$body")')) > \$null
+\$n = [Windows.UI.Notifications.ToastNotification]::new(\$t)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe').Show(\$n)
+"
+
+encoded="$(printf '%s' "$ps_script" | iconv -f UTF-8 -t UTF-16LE | base64 -w0)"
+PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+
+if [ -n "$CLAUDE_NOTIFY_PROBE" ]; then
+  # Debug: print what the presence check sees instead of showing a toast.
+  WSLENV="CLAUDE_NOTIFY_PROBE${WSLENV:+:$WSLENV}" "$PS" -NoProfile -NonInteractive -EncodedCommand "$encoded"
+  exit 0
+fi
+
+setsid "$PS" -NoProfile -NonInteractive -EncodedCommand "$encoded" >/dev/null 2>&1 &
+exit 0

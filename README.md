@@ -538,6 +538,13 @@ sync_git_config.py
   shows a native toast, because Windows Terminal does not implement OSC 9 and
   the plugin's SnoreToast path depends on a cache that loses its executable
   bit on updates.
+- Claude Code notifications (WSL): `.zshrc` starts `claude_notify_watcher.py` once
+  (`flock`). It tails the session transcripts of `~/.claude` and
+  `$COMPANY_DIR/.claude_work_profile` and runs `claude-notify-wsl` when a turn ends,
+  Claude asks something, or a tool waits for permission, because the work org policy
+  disables Claude hooks. The toast is skipped while that Claude's tmux pane is on
+  screen and you're active in Windows Terminal. Tunables: `CLAUDE_NOTIFY_DELAY`
+  (permission wait, 6s), `CLAUDE_NOTIFY_IDLE` (60s), `CLAUDE_NOTIFY_FORCE=1`.
 - Skills: agent-model-audit, agent-sync-neovim
 - Session picker: reads the OpenCode SQLite DB, so `sqlite3` is installed with the
   `opencode`/`lazyvim` stow packages (`conditional_system_packages`)
