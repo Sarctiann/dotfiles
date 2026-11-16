@@ -544,7 +544,8 @@ sync_git_config.py
   Claude asks something, or a tool waits for permission, because the work org policy
   disables Claude hooks. The toast is skipped while that Claude's tmux pane is on
   screen and you're active in Windows Terminal. Tunables: `CLAUDE_NOTIFY_DELAY`
-  (permission wait, 6s), `CLAUDE_NOTIFY_IDLE` (60s), `CLAUDE_NOTIFY_FORCE=1`.
+  (permission wait, 2s), `CLAUDE_NOTIFY_SLOW_DELAY` (MCP/web/ToolSearch, 6s),
+  `CLAUDE_NOTIFY_IDLE` (60s), `CLAUDE_NOTIFY_FORCE=1`.
 - Skills: agent-model-audit, agent-sync-neovim
 - Session picker: reads the OpenCode SQLite DB, so `sqlite3` is installed with the
   `opencode`/`lazyvim` stow packages (`conditional_system_packages`)

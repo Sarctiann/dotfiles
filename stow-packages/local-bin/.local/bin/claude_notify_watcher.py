@@ -8,7 +8,7 @@ config dir: ~/.claude, $COMPANY_DIR/.claude_work_profile (nvim picks one per pro
 Signals (inferred from the transcript format, may break on Claude Code updates):
   - assistant message with stop_reason "end_turn"          -> "Claude terminó"
   - AskUserQuestion / ExitPlanMode tool_use                -> "Claude te espera" (immediately)
-  - any other tool_use without tool_result after DELAY s,
+  - any other tool_use without tool_result after DELAY s (SLOW_DELAY for slow tools),
     and no process spawned by that session's claude since -> "Claude necesita permiso"
 """
 import glob
@@ -27,8 +27,12 @@ def config_dirs():
 
 CONFIG_DIRS = config_dirs()
 NOTIFY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "claude-notify-wsl")
-DELAY = float(os.environ.get("CLAUDE_NOTIFY_DELAY", "6"))
-POLL = 1.0
+# Auto-approved tools without a child process finish in <0.2s (p95), so 2s separates them from a permission
+# prompt. Slow tools that also spawn no process (MCP, web, ToolSearch) need a longer wait.
+DELAY = float(os.environ.get("CLAUDE_NOTIFY_DELAY", "2"))
+SLOW_DELAY = float(os.environ.get("CLAUDE_NOTIFY_SLOW_DELAY", "6"))
+SLOW_TOOLS = {"WebFetch", "WebSearch", "ToolSearch"}
+POLL = 0.5
 ACTIVE_WINDOW = 15 * 60  # only follow transcripts modified in the last 15 min
 ASK_TOOLS = {"AskUserQuestion", "ExitPlanMode"}
 SKIP_TOOLS = {"Agent", "Task", "Workflow"}  # long-running by nature, no child process to detect
@@ -102,7 +106,7 @@ def tool_is_running(cwd, since):
     """True if a claude process in `cwd` has a descendant started after `since`."""
     ps = procs()
     children = {}
-    for pid, (ppid, *_rest) in ps.items():
+    for pid, (ppid, *_) in ps.items():
         children.setdefault(ppid, []).append(pid)
     roots = [pid for pid, (_, _, comm, pcwd) in ps.items() if comm == "claude" and pcwd == cwd]
     stack = list(roots)
@@ -168,7 +172,8 @@ class Session:
     def check_pending(self):
         now = time.time()
         for tid, (name, seen, cwd, summ) in list(self.pending.items()):
-            if now - seen < DELAY:
+            slow = name in SLOW_TOOLS or name.startswith("mcp__")
+            if now - seen < (SLOW_DELAY if slow else DELAY):
                 continue
             del self.pending[tid]  # decide once per tool call
             if not tool_is_running(cwd, seen - 3):
