@@ -169,13 +169,14 @@ def _resolve_primary_terminal(config: dict) -> str:
 
 
 def _write_wsl_notifier_config(notifier_path: Path) -> None:
-    """Route notifications through a Windows toast on WSL.
+    """Route notifications through a stowed wrapper on WSL.
 
     Windows Terminal does not implement OSC 9, and node-notifier's WSL
     path depends on a cached SnoreToast binary that loses its executable
     bit when the plugin is updated. The plugin's documented ``command``
-    hook is independent of that cache: a stowed wrapper shows a WinRT
-    toast through Windows PowerShell.
+    hook is independent of that cache: the stowed ``opencode-notify-wsl``
+    shows a ``wt-notify`` popup on Windows Terminal's monitor (or a WinRT
+    toast with ``OPENCODE_NOTIFY_STYLE=toast``).
     """
     wrapper = Path.home() / ".local" / "bin" / "opencode-notify-wsl"
     if not wrapper.is_file():
@@ -202,7 +203,7 @@ def _write_wsl_notifier_config(notifier_path: Path) -> None:
 
     notifier_path.parent.mkdir(parents=True, exist_ok=True)
     notifier_path.write_text(json.dumps(notifier_cfg, indent=2) + "\n")
-    print("   ✓ notifications routed to a Windows toast (opencode-notify-wsl)")
+    print("   ✓ notifications routed to opencode-notify-wsl")
 
 
 def _write_notifier_config(config: dict) -> None:

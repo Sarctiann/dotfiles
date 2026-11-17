@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
-# WSL bridge for opencode-notifier: show a Windows toast through PowerShell.
+# WSL bridge for opencode-notifier. Default: popup on Windows Terminal's monitor (wt-notify).
+# OPENCODE_NOTIFY_STYLE=toast shows a Windows toast instead, which always appears on the primary display.
 set -euo pipefail
 
 message="${1:-OpenCode notification}"
 project="${2:-}"
+
+if [ "${OPENCODE_NOTIFY_STYLE:-popup}" != toast ]; then
+    wt_notify="${OPENCODE_NOTIFY_WT_NOTIFY:-$(dirname "$(realpath "$0")")/wt-notify}"
+    exec "$wt_notify" "OpenCode${project:+ ($project)}" "$message" "#5C9CF5"
+fi
 
 script="$HOME/.local/share/opencode-notifier/opencode-notify.ps1"
 [ -f "$script" ] || exit 0

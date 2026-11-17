@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Windows toast for Claude Code on WSL, called by claude_notify_watcher.py (user hooks are disabled by the
-# work org policy). Test: echo '{"hook_event_name":"Stop"}' | CLAUDE_NOTIFY_FORCE=1 claude-notify-wsl
-# Reads a hook-shaped JSON from stdin; returns immediately (toast is shown in background).
+# Notification for Claude Code on WSL, called by claude_notify_watcher.py (user hooks are disabled by the work
+# org policy). Test: echo '{"hook_event_name":"Stop"}' | CLAUDE_NOTIFY_FORCE=1 claude-notify-wsl
+# Shows a wt-notify popup on Windows Terminal's monitor; CLAUDE_NOTIFY_STYLE=toast shows a Windows toast instead.
+# Reads a hook-shaped JSON from stdin; returns immediately (the notification is shown in background).
 # Skipped while the user is present: that Claude's tmux pane on screen (CLAUDE_NOTIFY_VISIBLE), Windows
 # Terminal in the foreground and keyboard/mouse input in the last CLAUDE_NOTIFY_IDLE seconds (default 60).
 # CLAUDE_NOTIFY_FORCE=1 always shows it.
@@ -51,9 +52,18 @@ $now = [int64][Environment]::TickCount -band 0xFFFFFFFFL
 $idle = ((($now - [int64]$lii.dwTime) + 4294967296L) % 4294967296L) / 1000
 EOF
 
-ps_script="$ps_presence
+ps_skip="$ps_presence
 if (\$env:CLAUDE_NOTIFY_PROBE) { \"fg=\$fg idle=\$idle\"; exit }
-if (\$fg -eq 'WindowsTerminal' -and \$idle -lt $idle_limit) { exit }
+if (\$fg -eq 'WindowsTerminal' -and \$idle -lt $idle_limit) { exit }"
+
+# The presence check runs first in the popup's PowerShell process; the toast below always shows on the primary
+# display, so it is only used with CLAUDE_NOTIFY_STYLE=toast.
+if [ "${CLAUDE_NOTIFY_STYLE:-popup}" != toast ] && [ -z "$CLAUDE_NOTIFY_PROBE" ]; then
+  WT_NOTIFY_PRELUDE="$ps_skip" "$(dirname "$(realpath "$0")")/wt-notify" "$title" "$body" "#D97757"
+  exit 0
+fi
+
+ps_script="$ps_skip
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > \$null
 \$t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
 \$x = \$t.GetElementsByTagName('text')

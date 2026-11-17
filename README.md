@@ -534,15 +534,23 @@ sync_git_config.py
 - Plugins: opencode-quota (toast + TUI), opencode-notifier, superpowers
 - WSL notifications: `post-install` writes a machine-local
   `~/.config/opencode/opencode-notifier.json` that uses the plugin's `command`
-  hook to run `opencode-notify-wsl`. The wrapper calls Windows PowerShell and
-  shows a native toast, because Windows Terminal does not implement OSC 9 and
-  the plugin's SnoreToast path depends on a cache that loses its executable
-  bit on updates.
+  hook to run `opencode-notify-wsl`, because Windows Terminal does not implement
+  OSC 9 and the plugin's SnoreToast path depends on a cache that loses its
+  executable bit on updates.
+- WSL notification popup: `opencode-notify-wsl` and `claude-notify-wsl` call
+  `wt-notify`, which shows a small popup (`~/.local/share/wt-notify/popup.ps1`) on
+  the monitor where Windows Terminal is, because Windows toasts only appear on the
+  primary display. Popups shown at the same time stack upwards from 1/4 of the
+  screen height, and each one shows the time it appeared. It doesn't take focus and
+  closes after `WT_NOTIFY_SECONDS` (8s) or on click. It plays a dry wood-block
+  knock (`woodblock.wav`, synthesized at full scale so it's louder than Windows'
+  sounds); `WT_NOTIFY_SOUND_FILE` picks another `.wav`, `WT_NOTIFY_SOUND=0` mutes it. `OPENCODE_NOTIFY_STYLE=toast` /
+  `CLAUDE_NOTIFY_STYLE=toast` go back to the native toast.
 - Claude Code notifications (WSL): `.zshrc` starts `claude_notify_watcher.py` once
   (`flock`). It tails the session transcripts of `~/.claude` and
   `$COMPANY_DIR/.claude_work_profile` and runs `claude-notify-wsl` when a turn ends,
   Claude asks something, or a tool waits for permission, because the work org policy
-  disables Claude hooks. The toast is skipped while that Claude's tmux pane is on
+  disables Claude hooks. The notification is skipped while that Claude's tmux pane is on
   screen and you're active in Windows Terminal. Tunables: `CLAUDE_NOTIFY_DELAY`
   (permission wait, 2s), `CLAUDE_NOTIFY_SLOW_DELAY` (MCP/web/ToolSearch, 6s),
   `CLAUDE_NOTIFY_IDLE` (60s), `CLAUDE_NOTIFY_FORCE=1`.

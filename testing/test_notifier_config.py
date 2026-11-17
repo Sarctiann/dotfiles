@@ -92,6 +92,7 @@ class WslNotifierWrapperTest(unittest.TestCase):
                 "HOME": tmp,
                 "PATH": f"{bin_dir}:{os.environ['PATH']}",
                 "OPENCODE_NOTIFY_POWERSHELL": str(fake_powershell),
+                "OPENCODE_NOTIFY_STYLE": "toast",
             }
             result = subprocess.run(
                 [str(WRAPPER), "Session finished", "cauce"],
@@ -119,6 +120,29 @@ class WslNotifierWrapperTest(unittest.TestCase):
                 "Session finished",
             ],
         )
+
+    def test_wrapper_defaults_to_the_windows_terminal_popup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded = Path(tmp) / "recorded-args"
+            fake_wt_notify = Path(tmp) / "wt-notify"
+            fake_wt_notify.write_text(
+                f'#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "{recorded}"\n'
+            )
+            fake_wt_notify.chmod(0o755)
+            env = {**os.environ, "OPENCODE_NOTIFY_WT_NOTIFY": str(fake_wt_notify)}
+            env.pop("OPENCODE_NOTIFY_STYLE", None)
+            result = subprocess.run(
+                [str(WRAPPER), "Session finished", "cauce"],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            args = recorded.read_text().splitlines()
+
+        self.assertEqual(args, ["OpenCode (cauce)", "Session finished", "#5C9CF5"])
 
 
 if __name__ == "__main__":
