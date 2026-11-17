@@ -8,6 +8,9 @@
 # run first in the same process (it can `exit` to skip the popup).
 # Returns immediately unless WT_NOTIFY_FOREGROUND=1; the popup lives in a detached PowerShell.
 
+# Disabled: launching powershell.exe from WSL raised malware alerts with the company's IT security.
+exit 0
+
 title="${1:-Notificación}"
 body="${2:-}"
 accent="${3:-#D97757}"

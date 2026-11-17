@@ -7,6 +7,9 @@
 # Terminal in the foreground and keyboard/mouse input in the last CLAUDE_NOTIFY_IDLE seconds (default 60).
 # CLAUDE_NOTIFY_FORCE=1 always shows it.
 
+# Disabled: launching powershell.exe from WSL raised malware alerts with the company's IT security.
+exit 0
+
 input="$(cat)"
 
 mapfile -t lines < <(python3 -I -c '

@@ -51,7 +51,7 @@ class WslNotifierConfigTest(unittest.TestCase):
         self.assertFalse(config["notification"])
         self.assertFalse(config["sound"])
         self.assertFalse(config["bell"])
-        self.assertTrue(config["command"]["enabled"])
+        self.assertFalse(config["command"]["enabled"])
         self.assertEqual(config["command"]["path"], str(wrapper))
         self.assertEqual(config["command"]["args"], ["{message}", "{projectName}"])
         self.assertFalse(config["events"]["subagent_complete"])
@@ -62,6 +62,7 @@ class WslNotifierConfigTest(unittest.TestCase):
         self.assertNotIn("notificationSystem", config)
 
 
+@unittest.skip("opencode-notify-wsl is disabled (exits at once) after IT security alerts")
 class WslNotifierWrapperTest(unittest.TestCase):
     def test_wrapper_invokes_powershell_with_the_toast_script(self) -> None:
         self.assertTrue(WRAPPER.is_file(), f"missing wrapper: {WRAPPER}")

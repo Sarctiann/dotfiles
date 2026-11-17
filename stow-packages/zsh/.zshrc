@@ -270,9 +270,10 @@ export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
 # ─── Claude Code notifications (WSL) ───────────────────────────
 # The work org policy disables Claude hooks, so a watcher tails session transcripts and shows
 # Windows toasts. flock keeps one instance when tmux restores many panes at once.
-if [[ -n "$WSL_DISTRO_NAME" ]] && command -v claude_notify_watcher.py &>/dev/null; then
-  (setsid flock -n /tmp/claude-notify-watcher.lock claude_notify_watcher.py >/dev/null 2>&1 &)
-fi
+# Disabled: launching powershell.exe from WSL raised malware alerts with the company's IT security.
+# if [[ -n "$WSL_DISTRO_NAME" ]] && command -v claude_notify_watcher.py &>/dev/null; then
+#   (setsid flock -n /tmp/claude-notify-watcher.lock claude_notify_watcher.py >/dev/null 2>&1 &)
+# fi
 
 # ─── SSH agent (keychain) ──────────────────────────────────────
 # Manages ssh-agent across terminals; prompts for passphrase once per boot.

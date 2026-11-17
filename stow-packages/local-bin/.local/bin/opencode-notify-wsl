@@ -3,6 +3,9 @@
 # OPENCODE_NOTIFY_STYLE=toast shows a Windows toast instead, which always appears on the primary display.
 set -euo pipefail
 
+# Disabled: launching powershell.exe from WSL raised malware alerts with the company's IT security.
+exit 0
+
 message="${1:-OpenCode notification}"
 project="${2:-}"
 

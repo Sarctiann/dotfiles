@@ -188,7 +188,8 @@ def _write_wsl_notifier_config(notifier_path: Path) -> None:
         "bell": False,
         "showSessionTitle": True,
         "command": {
-            "enabled": True,
+            # Disabled: launching powershell.exe from WSL raised malware alerts with the company's IT security.
+            "enabled": False,
             "path": str(wrapper),
             "args": ["{message}", "{projectName}"],
         },
@@ -203,7 +204,7 @@ def _write_wsl_notifier_config(notifier_path: Path) -> None:
 
     notifier_path.parent.mkdir(parents=True, exist_ok=True)
     notifier_path.write_text(json.dumps(notifier_cfg, indent=2) + "\n")
-    print("   ✓ notifications routed to opencode-notify-wsl")
+    print("   ✓ opencode-notify-wsl configured (disabled)")
 
 
 def _write_notifier_config(config: dict) -> None:
