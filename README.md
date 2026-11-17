@@ -524,6 +524,14 @@ sync_git_config.py
 | `Ctrl+b Ctrl+s`   | Save session (resurrect)    |
 | `Ctrl+b Ctrl+r`   | Restore session (resurrect) |
 
+## WSL networking
+
+`wsl-fix-net` restores WSL's internet access when `wsl-vpnkit` breaks and leaves
+`eth0` without a default route (`Network is unreachable`). It stops `wsl-vpnkit`,
+adds a default route through the Windows host (the first IP of `eth0`'s subnet)
+and checks ping, DNS and HTTPS. It re-runs itself with `sudo`; `--disable-vpnkit`
+also stops the service from starting with WSL, and `--iface` picks another interface.
+
 ## OpenCode / AI Clients
 
 ### OpenCode

@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Restore WSL internet access when wsl-vpnkit leaves eth0 without a default route.
+
+Steps:
+  1. Stop wsl-vpnkit (optionally disable it) so it does not delete the route again.
+  2. Add a default route via the Windows host (first IP of eth0's subnet).
+  3. Check connectivity (ping, DNS, HTTPS).
+
+Usage: wsl-fix-net [--disable-vpnkit] [--iface eth0]
+Re-runs itself with sudo if not root.
+"""
+
+import argparse
+import ipaddress
+import json
+import os
+import socket
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+
+SERVICE = "wsl-vpnkit"
+
+
+def run(cmd, check=False):
+    return subprocess.run(cmd, capture_output=True, text=True, check=check)
+
+
+def step(msg):
+    print(f"\033[1;34m==>\033[0m {msg}")
+
+
+def ok(msg):
+    print(f"    \033[32m✓\033[0m {msg}")
+
+
+def fail(msg):
+    print(f"    \033[31m✗\033[0m {msg}")
+
+
+def ensure_root():
+    if os.geteuid() != 0:
+        os.execvp("sudo", ["sudo", sys.executable, os.path.abspath(__file__), *sys.argv[1:]])
+
+
+def handle_vpnkit(disable):
+    step(f"Servicio {SERVICE}")
+    if run(["systemctl", "cat", SERVICE]).returncode != 0:
+        ok("no está instalado")
+        return
+    if run(["systemctl", "is-active", "--quiet", SERVICE]).returncode == 0:
+        run(["systemctl", "stop", SERVICE], check=True)
+        ok("detenido")
+    else:
+        ok("ya estaba detenido")
+    if disable:
+        run(["systemctl", "disable", SERVICE], check=True)
+        ok("deshabilitado al arranque")
+
+
+def gateway_for(iface):
+    out = run(["ip", "-4", "-j", "addr", "show", iface], check=True).stdout
+    for info in json.loads(out)[0]["addr_info"]:
+        if info.get("family") == "inet":
+            net = ipaddress.ip_interface(f"{info['local']}/{info['prefixlen']}").network
+            return str(next(net.hosts()))
+    sys.exit(f"{iface} no tiene dirección IPv4")
+
+
+def fix_route(iface):
+    step("Ruta por defecto")
+    current = run(["ip", "route", "show", "default"]).stdout.strip()
+    gw = gateway_for(iface)
+    if current == f"default via {gw} dev {iface}":
+        ok(f"ya existe: {current}")
+        return
+    if current:
+        print(f"    ruta actual: {current}")
+    run(["ip", "route", "replace", "default", "via", gw, "dev", iface], check=True)
+    ok(f"default via {gw} dev {iface}")
+
+
+def check():
+    step("Conectividad")
+    good = True
+    if run(["ping", "-c1", "-W3", "1.1.1.1"]).returncode == 0:
+        ok("ping 1.1.1.1")
+    else:
+        fail("ping 1.1.1.1")
+        good = False
+    try:
+        socket.getaddrinfo("api.anthropic.com", 443)
+        ok("DNS api.anthropic.com")
+    except OSError as e:
+        fail(f"DNS: {e}")
+        good = False
+    try:
+        urllib.request.urlopen("https://api.anthropic.com", timeout=10)
+        ok("HTTPS api.anthropic.com")
+    except urllib.error.HTTPError as e:
+        ok(f"HTTPS api.anthropic.com (HTTP {e.code})")
+    except OSError as e:
+        fail(f"HTTPS: {e}")
+        good = False
+    return good
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("--disable-vpnkit", action="store_true", help=f"también deshabilitar {SERVICE} al arranque")
+    p.add_argument("--iface", default="eth0", help="interfaz de red (default: eth0)")
+    args = p.parse_args()
+
+    ensure_root()
+    handle_vpnkit(args.disable_vpnkit)
+    fix_route(args.iface)
+    sys.exit(0 if check() else 1)
+
+
+if __name__ == "__main__":
+    main()
