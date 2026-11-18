@@ -6,5 +6,6 @@
       "args": ["-y", "nvim-mcp-server"],
       "env": { "NVIM": "$NVIM" }
     }
-  }
+  },
+  "preferredNotifChannel": "notifications_disabled"
 }

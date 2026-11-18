@@ -24,6 +24,10 @@ vim.api.nvim_set_hl(0, "NewFlashLabel", { fg = "#ccfaff", bg = "#7f0044", bold =
 -- Set colorcolumn
 vim.opt.colorcolumn = "80"
 
+-- Let bells from :terminal jobs through (Claude, OpenCode, Gemini or Auggie opened by cli-integration) so tmux
+-- marks the window and Windows Terminal plays the sound. Every other bell stays off.
+vim.opt.belloff = "backspace,cursor,complete,copy,ctrlg,error,esc,ex,hangul,insertmode,lang,mess,showmatch,operator,register,shell,spell,wildmode"
+
 -- Spanish and English spell check for Markdown.
 vim.opt.spelllang = "en_us,es"
 

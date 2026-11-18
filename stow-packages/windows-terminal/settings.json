@@ -1,130 +1,155 @@
 {
-  "$help": "https://aka.ms/terminal-documentation",
-  "$schema": "https://aka.ms/terminal-profiles-schema",
-  "actions": [
-    {
-      "command": {
-        "action": "sendInput",
-        "input": "\u001b[13;2u"
-      },
-      "id": "User.sendInput.8882FD6D"
-    }
-  ],
-  "alwaysShowTabs": false,
-  "copyFormatting": "none",
-  "copyOnSelect": true,
-  "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
-  "disableAnimations": false,
-  "initialCols": 157,
-  "initialPosition": "4,1",
-  "initialRows": 43,
-  "keybindings": [
-    {
-      "id": "User.sendInput.8882FD6D",
-      "keys": "shift+enter"
-    },
-    {
-      "id": "Terminal.PasteFromClipboard",
-      "keys": "alt+v"
-    },
-    {
-      "id": null,
-      "keys": "ctrl+c"
-    },
-    {
-      "id": "Terminal.PasteFromClipboard",
-      "keys": "ctrl+shift+v"
-    },
-    {
-      "id": "Terminal.CopyToClipboard",
-      "keys": "alt+c"
-    },
-    {
-      "id": null,
-      "keys": "alt+shift+right"
-    },
-    {
-      "id": "Terminal.CopyToClipboard",
-      "keys": "ctrl+shift+c"
-    },
-    {
-      "id": null,
-      "keys": "ctrl+v"
-    },
-    {
-      "id": null,
-      "keys": "alt+shift+left"
-    }
-  ],
-  "launchMode": "focus",
-  "newTabMenu": [
-    {
-      "type": "remainingProfiles"
-    }
-  ],
-  "profiles": {
-    "defaults": {},
-    "list": [
-      {
-        "antialiasingMode": "cleartype",
-        "colorScheme": "TokyoNight",
-        "commandline": "wsl.exe ~ tmux new-session -A -D -s main",
-        "cursorColor": "#A9B1D6",
-        "cursorHeight": 25,
-        "cursorShape": "bar",
-        "elevate": false,
-        "font": {
-          "face": "CodeNewRoman Nerd Font Propo",
-          "features": {
-            "calt": 0,
-            "liga": 0
-          },
-          "size": 13,
-          "weight": "thin"
+    "$help": "https://aka.ms/terminal-documentation",
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "actions":
+    [
+        {
+            "command":
+            {
+                "action": "sendInput",
+                "input": "\u001b[13;2u"
+            },
+            "id": "User.sendInput.8882FD6D"
+        }
+    ],
+    "alwaysShowTabs": false,
+    "copyFormatting": "none",
+    "copyOnSelect": true,
+    "defaultProfile": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
+    "disableAnimations": false,
+    "initialCols": 157,
+    "initialPosition": "4,1",
+    "initialRows": 43,
+    "keybindings":
+    [
+        {
+            "id": "User.sendInput.8882FD6D",
+            "keys": "shift+enter"
         },
-        "guid": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
-        "hidden": false,
-        "icon": "\ue76c",
-        "name": "Sarc WSL",
-        "opacity": 90,
-        "padding": "10,9",
-        "scrollbarState": "hidden",
-        "snapOnInput": false,
-        "useAcrylic": false
-      }
-    ]
-  },
-  "schemes": [
+        {
+            "id": "Terminal.PasteFromClipboard",
+            "keys": "alt+v"
+        },
+        {
+            "id": "Terminal.PasteFromClipboard",
+            "keys": "ctrl+shift+v"
+        },
+        {
+            "id": null,
+            "keys": "ctrl+c"
+        },
+        {
+            "id": "Terminal.CopyToClipboard",
+            "keys": "alt+c"
+        },
+        {
+            "id": "Terminal.CopyToClipboard",
+            "keys": "ctrl+shift+c"
+        },
+        {
+            "id": null,
+            "keys": "alt+shift+right"
+        },
+        {
+            "id": null,
+            "keys": "ctrl+v"
+        },
+        {
+            "id": null,
+            "keys": "alt+shift+left"
+        }
+    ],
+    "launchMode": "focus",
+    "newTabMenu":
+    [
+        {
+            "type": "remainingProfiles"
+        }
+    ],
+    "profiles":
     {
-      "background": "#1A1B26",
-      "black": "#151E1E",
-      "blue": "#3A82DA",
-      "brightBlack": "#404858",
-      "brightBlue": "#7AA2F7",
-      "brightCyan": "#7DCFFF",
-      "brightGreen": "#9ECE6A",
-      "brightPurple": "#BB9AF7",
-      "brightRed": "#F7768E",
-      "brightWhite": "#C0CAF5",
-      "brightYellow": "#E0AF68",
-      "cursorColor": "#404858",
-      "cyan": "#5BDDED",
-      "foreground": "#C0CAF5",
-      "green": "#7EBE5A",
-      "name": "TokyoNight",
-      "purple": "#AD7AF9",
-      "red": "#D7546E",
-      "selectionBackground": "#2F3548",
-      "white": "#A9B1D6",
-      "yellow": "#C0AF68"
-    }
-  ],
-  "showTabsInTitlebar": false,
-  "showTerminalTitleInTitlebar": false,
-  "theme": "dark",
-  "themes": [],
-  "trimPaste": true,
-  "warning.largePaste": false,
-  "windowingBehavior": "useAnyExisting"
+        "defaults":
+        {
+            "bellSound":
+            [
+                "C:\\Users\\sebas\\AppData\\Local\\wt-sounds\\woodblock.wav"
+            ],
+            "bellStyle":
+            [
+                "audible",
+                "taskbar"
+            ]
+        },
+        "list":
+        [
+            {
+                "antialiasingMode": "cleartype",
+                "bellStyle":
+                [
+                    "audible",
+                    "window",
+                    "taskbar"
+                ],
+                "colorScheme": "TokyoNight",
+                "commandline": "wsl.exe ~ tmux new-session -A -D -s main",
+                "cursorColor": "#A9B1D6",
+                "cursorHeight": 25,
+                "cursorShape": "bar",
+                "elevate": false,
+                "font":
+                {
+                    "face": "CodeNewRoman Nerd Font Propo",
+                    "features":
+                    {
+                        "calt": 0,
+                        "liga": 0
+                    },
+                    "size": 13,
+                    "weight": "thin"
+                },
+                "guid": "{58ad8b0c-3ef0-4f6f-b9e0-6a9f16b2c8d3}",
+                "hidden": false,
+                "icon": "\ue76c",
+                "name": "Sarc WSL",
+                "opacity": 90,
+                "padding": "10,9",
+                "scrollbarState": "hidden",
+                "snapOnInput": false,
+                "useAcrylic": false
+            }
+        ]
+    },
+    "schemes":
+    [
+        {
+            "background": "#1A1B26",
+            "black": "#151E1E",
+            "blue": "#3A82DA",
+            "brightBlack": "#404858",
+            "brightBlue": "#7AA2F7",
+            "brightCyan": "#7DCFFF",
+            "brightGreen": "#9ECE6A",
+            "brightPurple": "#BB9AF7",
+            "brightRed": "#F7768E",
+            "brightWhite": "#C0CAF5",
+            "brightYellow": "#E0AF68",
+            "cursorColor": "#404858",
+            "cyan": "#5BDDED",
+            "foreground": "#C0CAF5",
+            "green": "#7EBE5A",
+            "name": "TokyoNight",
+            "purple": "#AD7AF9",
+            "red": "#D7546E",
+            "selectionBackground": "#2F3548",
+            "white": "#A9B1D6",
+            "yellow": "#C0AF68"
+        }
+    ],
+    "showTabsInTitlebar": false,
+    "showTerminalTitleInTitlebar": false,
+    "theme": "dark",
+    "themes": [],
+    "trimPaste": true,
+    "warning.largePaste": false,
+    "windowingBehavior": "useAnyExisting"
 }
-

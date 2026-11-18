@@ -112,12 +112,6 @@ if $IS_WSL; then
         echo "❌ WSL notifier wrapper missing or not executable"
         FAILED=1
     fi
-    if [ -f "$HOME/.local/share/opencode-notifier/opencode-notify.ps1" ]; then
-        echo "   ✓ WSL notifier PowerShell script exists"
-    else
-        echo "❌ WSL notifier PowerShell script missing"
-        FAILED=1
-    fi
     if ! python3 - <<'PY'
 import json, os
 path = os.path.expanduser("~/.config/opencode/opencode-notifier.json")
@@ -127,7 +121,7 @@ with open(path) as fh:
 assert config.get("notification") is False, config
 assert config.get("command", {}).get("enabled") is True, config
 assert config["command"]["path"].endswith("opencode-notify-wsl"), config
-print("   ✓ WSL notifier config uses the PowerShell command hook")
+print("   ✓ WSL notifier config uses the terminal bell command hook")
 PY
     then
         FAILED=1

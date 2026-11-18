@@ -1,42 +1,18 @@
 #!/usr/bin/env bash
-# WSL bridge for opencode-notifier. Default: popup on Windows Terminal's monitor (wt-notify).
-# OPENCODE_NOTIFY_STYLE=toast shows a Windows toast instead, which always appears on the primary display.
-set -euo pipefail
+# Called by opencode-notifier's command hook: rings the terminal bell of the OpenCode that ran it, as if OpenCode
+# rang it. An nvim :terminal passes it on (belloff without "term"), tmux marks the window in the status bar and
+# its alert-bell hook forwards it to other sessions, and Windows Terminal plays the sound.
+# The plugin's own "bell" option writes to the plugin process' stdout, which didn't reach OpenCode's terminal.
+# Everything stays inside WSL: launching powershell.exe from WSL raised malware alerts with IT security.
+# Arguments ({message} {projectName}) are ignored.
 
-# Disabled: launching powershell.exe from WSL raised malware alerts with the company's IT security.
+# Walk up from this process to the first ancestor whose stdin is a terminal: OpenCode's TUI.
+pid=$$
+while [ "${pid:-0}" -gt 1 ]; do
+  tty="$(readlink "/proc/$pid/fd/0" 2>/dev/null)"
+  case "$tty" in
+    /dev/pts/*) printf '\a' > "$tty"; exit 0 ;;
+  esac
+  pid="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')"
+done
 exit 0
-
-message="${1:-OpenCode notification}"
-project="${2:-}"
-
-if [ "${OPENCODE_NOTIFY_STYLE:-popup}" != toast ]; then
-    wt_notify="${OPENCODE_NOTIFY_WT_NOTIFY:-$(dirname "$(realpath "$0")")/wt-notify}"
-    exec "$wt_notify" "OpenCode${project:+ ($project)}" "$message" "#5C9CF5"
-fi
-
-script="$HOME/.local/share/opencode-notifier/opencode-notify.ps1"
-[ -f "$script" ] || exit 0
-
-# Allow an explicit PowerShell path, then prefer Windows PowerShell and
-# fall back to whatever `powershell.exe` resolves to on PATH.
-powershell="${OPENCODE_NOTIFY_POWERSHELL:-}"
-if [ -z "$powershell" ]; then
-    powershell="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
-    if [ ! -x "$powershell" ]; then
-        powershell="$(command -v powershell.exe || true)"
-    fi
-fi
-[ -n "$powershell" ] || exit 0
-
-wslpath_bin="$(command -v wslpath || true)"
-[ -n "$wslpath_bin" ] || exit 0
-win_script="$("$wslpath_bin" -w "$script" 2>/dev/null || true)"
-[ -n "$win_script" ] || exit 0
-
-title="OpenCode"
-if [ -n "$project" ]; then
-    title="OpenCode ($project)"
-fi
-
-exec "$powershell" -NoProfile -NonInteractive -ExecutionPolicy Bypass \
-    -File "$win_script" -Title "$title" -Message "$message"

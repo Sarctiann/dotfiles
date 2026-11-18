@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
-"""Watches Claude Code session transcripts and fires Windows toasts via claude-notify-wsl.
+"""Watches Claude Code session transcripts and rings the terminal bell of that Claude when it needs you.
 
-Replacement for the Stop / Notification hooks, which the work org policy (allowManagedHooksOnly) disables.
-It runs outside Claude Code (started once per boot from .zshrc) and only reads session transcripts of every
-config dir: ~/.claude, $COMPANY_DIR/.claude_work_profile (nvim picks one per project) and $CLAUDE_CONFIG_DIR.
+Replacement for the Stop / Notification hooks, which the work org policy (allowManagedHooksOnly) disables, and
+for Claude's own terminal_bell, which waits ~60s after a turn ends. It runs outside Claude Code (started once per
+boot from .zshrc) and only reads session transcripts of every config dir: ~/.claude,
+$COMPANY_DIR/.claude_work_profile (nvim picks one per project) and $CLAUDE_CONFIG_DIR.
+
+The bell is written to the terminal of every claude running in the session's cwd, as if Claude rang it: an nvim
+:terminal passes it on (belloff without "term"), tmux marks the window in the status bar and its alert-bell hook
+forwards it to other sessions, and Windows Terminal plays the sound. Everything stays inside WSL: launching
+powershell.exe from WSL raised malware alerts with the company's IT security.
 
 Signals (inferred from the transcript format, may break on Claude Code updates):
-  - assistant message with stop_reason "end_turn"          -> "Claude terminó"
-  - AskUserQuestion / ExitPlanMode tool_use                -> "Claude te espera" (immediately)
+  - assistant message with stop_reason "end_turn"          -> Claude finished
+  - AskUserQuestion / ExitPlanMode tool_use                -> Claude asks something (immediately)
   - any other tool_use without tool_result after DELAY s (SLOW_DELAY for slow tools),
-    and no process spawned by that session's claude since -> "Claude necesita permiso"
+    and no process spawned by that session's claude since -> Claude waits for a permission
 """
 import glob
 import json
 import os
-import subprocess
 import time
 
 def config_dirs():
@@ -26,7 +31,6 @@ def config_dirs():
 
 
 CONFIG_DIRS = config_dirs()
-NOTIFY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "claude-notify-wsl")
 # Auto-approved tools without a child process finish in <0.2s (p95), so 2s separates them from a permission
 # prompt. Slow tools that also spawn no process (MCP, web, ToolSearch) need a longer wait.
 DELAY = float(os.environ.get("CLAUDE_NOTIFY_DELAY", "2"))
@@ -42,42 +46,23 @@ with open("/proc/stat") as f:
     BOOT_TIME = next(int(l.split()[1]) for l in f if l.startswith("btime"))
 
 
-def notify(event, cwd, ntype="", message=""):
-    payload = {"hook_event_name": event, "cwd": cwd, "notification_type": ntype, "message": message}
-    env = dict(os.environ, CLAUDE_NOTIFY_VISIBLE=tmux_visibility(cwd))
-    try:
-        subprocess.run([NOTIFY], input=json.dumps(payload), text=True, timeout=10, env=env)
-    except Exception:
-        pass
-
-
-def tmux(*args):
-    try:
-        return subprocess.run(["tmux", *args], capture_output=True, text=True, timeout=3).stdout.splitlines()
-    except Exception:
-        return []
-
-
-def tmux_visibility(cwd):
-    """"1" if every claude in `cwd` runs in a tmux pane on screen, "0" if one is hidden, "" if not in tmux."""
-    ps = procs()
-    claudes = [pid for pid, (_, _, comm, pcwd) in ps.items() if comm == "claude" and pcwd == cwd]
-    if not claudes:
-        return ""
-    shown_sessions = set(tmux("list-clients", "-F", "#{client_session}"))
-    panes = {}
-    for line in tmux("list-panes", "-a", "-F", "#{pane_pid} #{pane_active} #{window_active} #{session_name}"):
-        pid, pane_active, window_active, session = line.split(" ", 3)
-        panes[int(pid)] = pane_active == "1" and window_active == "1" and session in shown_sessions
-    result = ""
-    for pid in claudes:
-        while pid > 1 and pid not in panes:
-            pid = ps.get(pid, (0,))[0]
-        if pid in panes:
-            if not panes[pid]:
-                return "0"
-            result = "1"
-    return result
+def ring(cwd):
+    """Rings the bell in the terminal of every claude running in `cwd` (the transcript doesn't say which one)."""
+    ttys = set()
+    for pid, (_, _, comm, pcwd) in procs().items():
+        if comm == "claude" and pcwd == cwd:
+            try:
+                tty = os.readlink(f"/proc/{pid}/fd/0")
+            except OSError:
+                continue
+            if tty.startswith("/dev/pts/"):
+                ttys.add(tty)
+    for tty in ttys:
+        try:
+            with open(tty, "w") as t:
+                t.write("\a")
+        except OSError:
+            pass
 
 
 def procs():
@@ -123,7 +108,7 @@ class Session:
         self.path = path
         self.offset = os.path.getsize(path)  # don't replay history
         self.buf = ""
-        self.pending = {}  # tool_use_id -> (name, seen_at, cwd, summary)
+        self.pending = {}  # tool_use_id -> (name, seen_at, cwd)
         self.done_msgs = set()
 
     def read(self):
@@ -157,13 +142,13 @@ class Session:
                 if block.get("type") == "tool_use":
                     name = block.get("name", "")
                     if name in ASK_TOOLS:
-                        notify("Notification", cwd, "elicitation_dialog", "Tiene una pregunta para vos")
+                        ring(cwd)
                     elif name not in SKIP_TOOLS:
-                        self.pending[block.get("id")] = (name, time.time(), cwd, summary(block))
+                        self.pending[block.get("id")] = (name, time.time(), cwd)
             if msg.get("stop_reason") == "end_turn" and msg.get("id") not in self.done_msgs:
                 self.done_msgs.add(msg.get("id"))
                 self.pending.clear()
-                notify("Stop", cwd)
+                ring(cwd)
         elif d.get("type") == "user":
             for block in content if isinstance(content, list) else []:
                 if block.get("type") == "tool_result":
@@ -171,20 +156,13 @@ class Session:
 
     def check_pending(self):
         now = time.time()
-        for tid, (name, seen, cwd, summ) in list(self.pending.items()):
+        for tid, (name, seen, cwd) in list(self.pending.items()):
             slow = name in SLOW_TOOLS or name.startswith("mcp__")
             if now - seen < (SLOW_DELAY if slow else DELAY):
                 continue
             del self.pending[tid]  # decide once per tool call
             if not tool_is_running(cwd, seen - 3):
-                notify("Notification", cwd, "permission_prompt", f"Permiso para {name}{summ}")
-
-
-def summary(block):
-    inp = block.get("input") or {}
-    text = inp.get("description") or inp.get("file_path") or inp.get("command") or ""
-    text = " ".join(str(text).split())
-    return f": {text[:80]}" if text else ""
+                ring(cwd)
 
 
 def main():

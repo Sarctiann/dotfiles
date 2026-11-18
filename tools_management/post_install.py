@@ -171,12 +171,13 @@ def _resolve_primary_terminal(config: dict) -> str:
 def _write_wsl_notifier_config(notifier_path: Path) -> None:
     """Route notifications through a stowed wrapper on WSL.
 
-    Windows Terminal does not implement OSC 9, and node-notifier's WSL
-    path depends on a cached SnoreToast binary that loses its executable
-    bit when the plugin is updated. The plugin's documented ``command``
-    hook is independent of that cache: the stowed ``opencode-notify-wsl``
-    shows a ``wt-notify`` popup on Windows Terminal's monitor (or a WinRT
-    toast with ``OPENCODE_NOTIFY_STYLE=toast``).
+    Windows Terminal does not implement OSC 9, and the plugin's own
+    ``bell`` writes to the plugin process' stdout, which doesn't reach
+    OpenCode's terminal. The plugin's documented ``command`` hook runs the
+    stowed ``opencode-notify-wsl``, which rings the bell in the terminal of
+    the OpenCode that called it; tmux marks the window and Windows Terminal
+    plays the sound. Nothing runs outside WSL: launching powershell.exe
+    from WSL raised malware alerts with the company's IT security.
     """
     wrapper = Path.home() / ".local" / "bin" / "opencode-notify-wsl"
     if not wrapper.is_file():
@@ -188,8 +189,7 @@ def _write_wsl_notifier_config(notifier_path: Path) -> None:
         "bell": False,
         "showSessionTitle": True,
         "command": {
-            # Disabled: launching powershell.exe from WSL raised malware alerts with the company's IT security.
-            "enabled": False,
+            "enabled": True,
             "path": str(wrapper),
             "args": ["{message}", "{projectName}"],
         },
@@ -204,7 +204,7 @@ def _write_wsl_notifier_config(notifier_path: Path) -> None:
 
     notifier_path.parent.mkdir(parents=True, exist_ok=True)
     notifier_path.write_text(json.dumps(notifier_cfg, indent=2) + "\n")
-    print("   ✓ opencode-notify-wsl configured (disabled)")
+    print("   ✓ notifications ring the terminal bell (opencode-notify-wsl)")
 
 
 def _write_notifier_config(config: dict) -> None:
