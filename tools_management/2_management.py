@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
+# The local imports below need this script's directory in sys.path first.
 import argparse
 import sys
 from pathlib import Path

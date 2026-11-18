@@ -65,7 +65,6 @@ def _save_to_credentials(vars: dict[str, str]) -> None:
     written = set()
     result_lines: list[str] = []
     section_header = "# ─── Git ────────────────────────────────────────────────────────\n"
-    seen_section = False
     for line in existing:
         matched_var = None
         for var in vars:
@@ -75,9 +74,7 @@ def _save_to_credentials(vars: dict[str, str]) -> None:
         if matched_var:
             result_lines.append(f'export {matched_var}="{vars[matched_var]}"\n')
             written.add(matched_var)
-        elif line.strip() == section_header.strip():
-            seen_section = True
-        else:
+        elif line.strip() != section_header.strip():
             result_lines.append(line)
     # append vars that weren't in the file
     new_vars = {k: v for k, v in vars.items() if k not in written}

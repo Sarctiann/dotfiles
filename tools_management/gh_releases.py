@@ -129,7 +129,7 @@ def install_release_binary(repo: str, binary: str, pattern: str) -> bool:
         if binary != "nvim" or not _neovim_runtime_missing():
             print(f"✅ {binary} already installed")
             return True
-        print(f"   nvim found but runtime missing — reinstalling")
+        print("   nvim found but runtime missing — reinstalling")
 
     print(f"📥 Installing {binary} from {repo}")
 

@@ -1,5 +1,4 @@
 import json
-import os
 import re
 import shutil
 from pathlib import Path, PurePosixPath
@@ -171,7 +170,7 @@ def _uninstall_stow(_: dict) -> None:
             target = Path.home() / ".config" / "nvim"
             if target.is_symlink():
                 target.unlink()
-                print(f"      removed ~/.config/nvim symlink")
+                print("      removed ~/.config/nvim symlink")
             continue
         run_optional(
             ["stow", "-D", "-t", str(Path.home()), pkg_name], cwd=str(STOW_DIR)
@@ -417,14 +416,12 @@ def stow_windows_terminal(terminal_font: str | None = None) -> None:
         print("   (removed stale symlink)")
 
     # Back up existing file before copying
-    backup_restored = False
     if target.is_file():
         bak = target.with_suffix(".json.bak")
         # Don't overwrite an existing backup — it's the user's original
         if not bak.exists():
             target.rename(bak)
             print(f"   (backed up existing settings.json → {bak.name})")
-            backup_restored = True
         else:
             print(f"   (backup already exists at {bak.name})")
 
