@@ -33,6 +33,13 @@ background-opacity = 0.90
 # --- Behavior ---
 confirm-close-surface = false
 
+# --- Bell ---
+# Ghostty disables bell audio by default (no-system,no-audio) and `audio` with no path is silent. agent-notify
+# rings the bell on the client's terminal for agent alerts; the system beep stays off to avoid doubling it.
+# The sound is relative to this file (the same woodblock Windows Terminal plays).
+bell-features = audio,attention,title,no-system,no-border
+bell-audio-path = woodblock.wav
+
 # --- Keybindings ---
 keybind = shift+enter=text:\x1b[13;2u
 keybind = ctrl+enter=text:\x1b[13;5u
