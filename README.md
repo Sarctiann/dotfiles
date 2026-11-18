@@ -560,7 +560,9 @@ also stops the service from starting with WSL, and `--iface` picks another inter
   whose `command` hook runs `agent-notify emit --source opencode` (the plugin's own
   `bell` writes to a stdout that doesn't reach OpenCode's terminal). `suppressWhenFocused`
   is off: the plugin would skip the hook whenever the terminal emulator has focus, even
-  for an OpenCode in a tmux window you aren't looking at.
+  for an OpenCode in a tmux window you aren't looking at. The plugin runs inside
+  `opencode serve --service`, which has no controlling terminal, so `agent-notify` falls
+  back to the `TMUX_PANE` that service inherited from the shell that started the TUI.
 - Claude Code: `.zshrc` starts `claude_notify_watcher.py` wherever `claude` is installed
   (it holds a lock, so one instance). It tails the session transcripts of `~/.claude`,
   `$COMPANY_DIR/.claude_work_profile` and `$CLAUDE_CONFIG_DIR` and runs `agent-notify emit`

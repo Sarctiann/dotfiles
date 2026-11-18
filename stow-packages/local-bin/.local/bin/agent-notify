@@ -255,10 +255,6 @@ def notify_terminal(tty, termname, title, body):
 def emit(args):
     procs = processes()
     chain = ancestors(args.pid or os.getpid(), procs)
-    ttys = [procs[p][1] for p in chain if procs[p][1]]
-    if not ttys:
-        log(f"emit {args.source} pid={args.pid}: no terminal")
-        return
 
     panes = {}
     if os.environ.get("TMUX") or shutil.which("tmux"):
@@ -268,6 +264,16 @@ def emit(args):
             tty, _, pane = line.partition(SEP)
             panes[tty] = pane
     tty, owner = outer_terminal(chain, procs)
+    if not tty:
+        # A client can run detached from the agent's terminal: OpenCode's plugin lives in `opencode serve
+        # --service`, whose ancestry has no tty. That service still inherits TMUX_PANE from the shell that
+        # started the TUI, which names the pane to notify.
+        wanted = os.environ.get("TMUX_PANE", "")
+        tty = next((t for t, pane in panes.items() if pane == wanted), "")
+    if not tty:
+        log(f"emit {args.source} pid={args.pid}: no terminal")
+        return
+
     pane_tty = tty if tty in panes else ""
 
     if not pane_tty:  # outside tmux: the agent's terminal decides

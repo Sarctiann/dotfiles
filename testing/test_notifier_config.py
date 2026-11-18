@@ -102,10 +102,10 @@ class EmitTest(unittest.TestCase):
             os.close(fd)
         self._tmp.cleanup()
 
-    def start_agent(self, slave: int, env=None) -> subprocess.Popen:
+    def start_agent(self, slave: int) -> subprocess.Popen:
         """A stand-in agent process whose controlling terminal is `slave`."""
         agent = subprocess.Popen(
-            ["sleep", "60"], stdin=slave, env={**os.environ, **(env or {})}, preexec_fn=own_terminal(slave),
+            ["sleep", "60"], stdin=slave, preexec_fn=own_terminal(slave),
         )
         self.agents.append(agent)
         return agent
@@ -116,12 +116,12 @@ class EmitTest(unittest.TestCase):
         return master, slave
 
     def emit(self, pane_active="1", client_flags="attached,focused,UTF-8", client_window="@3",
-             term="xterm-256color", event="done", agent=None, env=None):
+             term="xterm-256color", event="done", agent=None, env=None, pid=None):
         self.tmux.answer("display", [["@3", pane_active, "work:3"]])
         self.tmux.answer("list-clients", [[os.ttyname(self.client_slave), term, client_flags, client_window, "work"]])
         result = subprocess.run(
             [str(AGENT_NOTIFY), "emit", "--source", "claude", "--event", event,
-             "--pid", str((agent or self.agent).pid)],
+             "--pid", str(pid if pid is not None else (agent or self.agent).pid)],
             env={**self.tmux.env, **(env or {})}, capture_output=True, timeout=10,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -168,13 +168,12 @@ class EmitTest(unittest.TestCase):
         self.emit(env={"TERM": "xterm-256color"})
         self.assertEqual(read_pty(self.agent_master), b"\x07")
 
-    def test_outside_tmux_uses_the_agent_terminals_term(self) -> None:
-        """The watcher daemon's own TERM says nothing about the terminal the agent runs in."""
-        self.tmux.answer("list-panes", [])
-        master, slave = self.new_pty()
-        ghostty_agent = self.start_agent(slave, env={"TERM": "xterm-ghostty"})
-        self.emit(agent=ghostty_agent, env={"TERM": "tmux-256color"})
-        self.assertEqual(read_pty(master), b"\x1b]9;claude: done\x1b\\\x07")
+    def test_a_client_without_a_terminal_uses_the_pane_in_its_env(self) -> None:
+        """OpenCode's plugin runs in `opencode serve --service`, whose ancestry has no tty (pid 1 here): the
+        service inherits TMUX_PANE from the shell that started the TUI, which names the pane to notify."""
+        out = self.emit(pid=1, env={"TMUX_PANE": "%1"}, client_window="@1")
+        self.assertEqual(out, b"\x07")
+        self.assertIn("set -w -t @3 @agent_alert 1", self.tmux.calls())
 
 
 class AlertHookTest(unittest.TestCase):
@@ -218,7 +217,9 @@ class WatcherTest(unittest.TestCase):
             session.mkdir(parents=True)
             fd = os.open(session, os.O_RDONLY)
             try:
-                self.assertIn(str(session), watcher["open_files"](os.getpid()))
+                # lsof reports resolved paths (macOS: /private/var for /var), so compare real paths.
+                opened = {os.path.realpath(f) for f in watcher["open_files"](os.getpid())}
+                self.assertIn(os.path.realpath(session), opened)
             finally:
                 os.close(fd)
             self.assertTrue(callable(watcher["log"]))
