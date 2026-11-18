@@ -17,8 +17,15 @@ vim.keymap.set("v", "<M-Up>", ":m '<-2<cr>gv=gv", { desc = "Move up" })
 vim.keymap.set({ "n", "x" }, "/", "/\\v", { desc = "Search with Very Magic regex" })
 vim.keymap.set({ "n", "x" }, "?", "?\\v", { desc = "Search backward with Very Magic regex" })
 
+-- Not Snacks.bufdelete.all(): it lists every buffer up front and reads vim.bo[b] before checking the buffer still
+-- exists, but deleting one buffer wipes the bufhidden=wipe floats of nvim-scrollbar / noice, so it fails with
+-- "Invalid buffer id". Same deletion (keeps the window layout), checking each buffer first.
 vim.keymap.set("n", "<space>bq", function()
-  Snacks.bufdelete.all()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted then
+      Snacks.bufdelete.delete({ buf = buf })
+    end
+  end
 end, { desc = "Delete all buffers", silent = true })
 
 local open_or_create_new_note = function()
