@@ -21,7 +21,6 @@ Options:
 """
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
@@ -49,11 +48,12 @@ def dir_size_bytes(path: Path) -> int:
 
 
 def human_size(num_bytes: int) -> str:
+    size = float(num_bytes)
     for unit in ("B", "KB", "MB", "GB", "TB"):
-        if num_bytes < 1024 or unit == "TB":
-            return f"{num_bytes:.1f} {unit}"
-        num_bytes /= 1024
-    return f"{num_bytes:.1f} TB"
+        if size < 1024 or unit == "TB":
+            return f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
 
 
 def discover() -> list[dict]:

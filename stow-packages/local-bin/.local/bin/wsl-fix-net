@@ -41,22 +41,24 @@ def fail(msg):
 
 def ensure_root():
     if os.geteuid() != 0:
-        os.execvp("sudo", ["sudo", sys.executable, os.path.abspath(__file__), *sys.argv[1:]])
+        os.execvp(
+            "sudo", ["sudo", sys.executable, os.path.abspath(__file__), *sys.argv[1:]]
+        )
 
 
 def handle_vpnkit(disable):
-    step(f"Servicio {SERVICE}")
+    step(f"Service {SERVICE}")
     if run(["systemctl", "cat", SERVICE]).returncode != 0:
-        ok("no está instalado")
+        ok("not installed")
         return
     if run(["systemctl", "is-active", "--quiet", SERVICE]).returncode == 0:
         run(["systemctl", "stop", SERVICE], check=True)
-        ok("detenido")
+        ok("stopped")
     else:
-        ok("ya estaba detenido")
+        ok("already stopped")
     if disable:
         run(["systemctl", "disable", SERVICE], check=True)
-        ok("deshabilitado al arranque")
+        ok("disabled at boot")
 
 
 def gateway_for(iface):
@@ -65,24 +67,24 @@ def gateway_for(iface):
         if info.get("family") == "inet":
             net = ipaddress.ip_interface(f"{info['local']}/{info['prefixlen']}").network
             return str(next(net.hosts()))
-    sys.exit(f"{iface} no tiene dirección IPv4")
+    sys.exit(f"{iface} has no IPv4 address")
 
 
 def fix_route(iface):
-    step("Ruta por defecto")
+    step("Default route")
     current = run(["ip", "route", "show", "default"]).stdout.strip()
     gw = gateway_for(iface)
     if current == f"default via {gw} dev {iface}":
-        ok(f"ya existe: {current}")
+        ok(f"already set: {current}")
         return
     if current:
-        print(f"    ruta actual: {current}")
+        print(f"    current route: {current}")
     run(["ip", "route", "replace", "default", "via", gw, "dev", iface], check=True)
     ok(f"default via {gw} dev {iface}")
 
 
 def check():
-    step("Conectividad")
+    step("Connectivity")
     good = True
     if run(["ping", "-c1", "-W3", "1.1.1.1"]).returncode == 0:
         ok("ping 1.1.1.1")
@@ -107,9 +109,12 @@ def check():
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--disable-vpnkit", action="store_true", help=f"también deshabilitar {SERVICE} al arranque")
-    p.add_argument("--iface", default="eth0", help="interfaz de red (default: eth0)")
+    # __doc__ is None under python -OO
+    p = argparse.ArgumentParser(description=(__doc__ or "wsl-fix-net").splitlines()[0])
+    p.add_argument(
+        "--disable-vpnkit", action="store_true", help=f"also disable {SERVICE} at boot"
+    )
+    p.add_argument("--iface", default="eth0", help="network interface (default: eth0)")
     args = p.parse_args()
 
     ensure_root()
