@@ -1,0 +1,51 @@
+// OpenCode Quota server settings (v6), converted from the legacy quota-toast.json.
+// A missing key uses its default.
+// Every setting and its default: https://github.com/slkiser/opencode-quota/blob/main/docs/readme/configuration.md
+{
+  "version": 6,
+  "sidebar": {
+    "show": true,
+    "sessionTokens": true,
+    "hidden": []
+  },
+  "collapsed": {
+    "hidden": []
+  },
+  "statusLine": {
+    "show": false,
+    "hidden": [],
+    "home": false
+  },
+  "toast": {
+    "show": true,
+    "hidden": [],
+    "afterReply": "off",
+    "afterQuestion": true,
+    "afterCompaction": true,
+    "whenAllFail": true,
+    "seconds": 3,
+    "sessionTokens": true
+  },
+  "words": {
+    "percent": "left",
+    "detail": "detailed",
+    "onlyCurrentModel": false
+  },
+  "providers": {
+    "off": [],
+    "anthropic": {
+      "binaryPath": "claude"
+    },
+    "cursor": {
+      "plan": "none"
+    },
+    "checking": {
+      "minIntervalMs": 300000,
+      "requestTimeoutMs": 5000
+    },
+    "pricing": {
+      "source": "auto",
+      "autoRefreshDays": 7
+    }
+  }
+}
