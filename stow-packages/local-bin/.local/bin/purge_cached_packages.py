@@ -5,7 +5,8 @@ purge_cached_packages.py - Purge cached packages created by install.sh and stow-
 Removes the package caches that the dotfiles setup generates:
   - ~/.bun/install/cache/            bun install -g downloads (aggie, gemini)
   - ~/.npm/_cacache/                 npm/npx tarball downloads
-  - ~/.cache/opencode/packages/      opencode plugin cache (quota, notifier, superpowers)
+  - ~/.cache/opencode/npm/           OpenCode 2 plugin cache (quota, notifier, superpowers)
+  - ~/.cache/opencode/packages/      OpenCode 1 plugin cache (legacy)
   - ~/.npm/_npx/                     npx-executed packages (playwright, mcp-neovim-server, untun)
 
 These are re-downloaded automatically the next time the tool runs, so nothing
@@ -31,7 +32,8 @@ HOME = Path.home()
 CACHE_DIRS = [
     ("bun install cache", HOME / ".bun" / "install" / "cache"),
     ("npm cacache", HOME / ".npm" / "_cacache"),
-    ("opencode plugin cache", HOME / ".cache" / "opencode" / "packages"),
+    ("opencode plugin cache (v2)", HOME / ".cache" / "opencode" / "npm"),
+    ("opencode plugin cache (legacy)", HOME / ".cache" / "opencode" / "packages"),
     ("npx cache", HOME / ".npm" / "_npx"),
 ]
 
