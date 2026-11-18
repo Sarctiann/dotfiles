@@ -17,6 +17,7 @@ Signals (inferred from the transcript format, may break on Claude Code updates):
   - any other tool_use without tool_result after DELAY s (SLOW_DELAY for slow tools),
     and no process spawned by that session's claude since -> permission
 """
+
 import fcntl
 import glob
 import importlib.machinery
@@ -48,7 +49,11 @@ SLOW_TOOLS = {"WebFetch", "WebSearch", "ToolSearch"}
 POLL = 0.5
 ACTIVE_WINDOW = 15 * 60  # only follow transcripts modified in the last 15 min
 ASK_TOOLS = {"AskUserQuestion", "ExitPlanMode"}
-SKIP_TOOLS = {"Agent", "Task", "Workflow"}  # long-running by nature, no child process to detect
+SKIP_TOOLS = {
+    "Agent",
+    "Task",
+    "Workflow",
+}  # long-running by nature, no child process to detect
 AGENT_NOTIFY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "agent-notify")
 
 
@@ -66,8 +71,12 @@ def procs():
     now = time.time()
     out = {}
     try:
-        lines = subprocess.run(["ps", "-A", "-o", "pid=,ppid=,etime=,comm="], capture_output=True, text=True,
-                               timeout=5).stdout.splitlines()
+        lines = subprocess.run(
+            ["ps", "-A", "-o", "pid=,ppid=,etime=,comm="],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout.splitlines()
     except (OSError, subprocess.SubprocessError):
         return out
     for line in lines:
@@ -75,7 +84,11 @@ def procs():
         if len(parts) < 4:
             continue
         try:
-            out[int(parts[0])] = (int(parts[1]), now - etime_seconds(parts[2]), os.path.basename(parts[3]))
+            out[int(parts[0])] = (
+                int(parts[1]),
+                now - etime_seconds(parts[2]),
+                os.path.basename(parts[3]),
+            )
         except ValueError:
             continue
     return out
@@ -88,15 +101,23 @@ def cwd_of(pid):
         except OSError:
             return ""
     try:
-        out = subprocess.run(["lsof", "-a", "-d", "cwd", "-p", str(pid), "-Fn"], capture_output=True, text=True,
-                             timeout=5).stdout
+        out = subprocess.run(
+            ["lsof", "-a", "-d", "cwd", "-p", str(pid), "-Fn"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout
     except (OSError, subprocess.SubprocessError):
         return ""
-    return next((l[1:] for l in out.splitlines() if l.startswith("n")), "")
+    return next((line[1:] for line in out.splitlines() if line.startswith("n")), "")
 
 
 def claudes_in(cwd, ps):
-    return [pid for pid, (_, _, comm) in ps.items() if comm == "claude" and cwd_of(pid) == cwd]
+    return [
+        pid
+        for pid, (_, _, comm) in ps.items()
+        if comm == "claude" and cwd_of(pid) == cwd
+    ]
 
 
 def open_files(pid):
@@ -106,17 +127,23 @@ def open_files(pid):
         except OSError:
             return []
         files = []
-        for fd in fds:  # claude opens and closes files all the time: skip the ones gone since listdir
+        for (
+            fd
+        ) in (
+            fds
+        ):  # claude opens and closes files all the time: skip the ones gone since listdir
             try:
                 files.append(os.readlink(f"/proc/{pid}/fd/{fd}"))
             except OSError:
                 continue
         return files
     try:
-        out = subprocess.run(["lsof", "-p", str(pid), "-Fn"], capture_output=True, text=True, timeout=5).stdout
+        out = subprocess.run(
+            ["lsof", "-p", str(pid), "-Fn"], capture_output=True, text=True, timeout=5
+        ).stdout
     except (OSError, subprocess.SubprocessError):
         return []
-    return [l[1:] for l in out.splitlines() if l.startswith("n")]
+    return [line[1:] for line in out.splitlines() if line.startswith("n")]
 
 
 def claudes_of(session_id, cwd, ps):
@@ -125,21 +152,33 @@ def claudes_of(session_id, cwd, ps):
     Falls back to every claude in the session's starting cwd (several sessions may share it) when none does.
     """
     marker = f"/{session_id}/"
-    own = [pid for pid, (_, _, comm) in ps.items()
-           if comm == "claude" and any(marker in f + "/" for f in open_files(pid))]
+    own = [
+        pid
+        for pid, (_, _, comm) in ps.items()
+        if comm == "claude" and any(marker in f + "/" for f in open_files(pid))
+    ]
     return own or claudes_in(cwd, ps)
 
 
 def load_agent_notify():
-    """agent-notify as a module (it has no .py extension), for its log(): one log, one rotation."""
+    """agent-notify as a module (it has no .py extension), for its log(): one log, one rotation.
+
+    Bytecode stays off: it would land in the stowed bin directory as __pycache__/agent-notifycpython-*.pyc.
+    """
+    write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
     try:
         loader = importlib.machinery.SourceFileLoader("agent_notify", AGENT_NOTIFY)
         spec = importlib.util.spec_from_loader("agent_notify", loader)
+        if spec is None:
+            return None
         module = importlib.util.module_from_spec(spec)
         loader.exec_module(module)
         return module
     except (OSError, SyntaxError, ImportError):
         return None
+    finally:
+        sys.dont_write_bytecode = write_bytecode
 
 
 _agent_notify = load_agent_notify()
@@ -156,8 +195,21 @@ def notify(session_id, cwd, event):
     log(f"watcher: claude {event} session {session_id[:8]} ({cwd}) -> pids {pids}")
     for pid in pids:
         try:
-            subprocess.run([AGENT_NOTIFY, "emit", "--source", "claude", "--event", event, "--pid", str(pid)],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+            subprocess.run(
+                [
+                    AGENT_NOTIFY,
+                    "emit",
+                    "--source",
+                    "claude",
+                    "--event",
+                    event,
+                    "--pid",
+                    str(pid),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+            )
         except (OSError, subprocess.SubprocessError) as e:
             log(f"watcher: agent-notify failed: {e}")
 
@@ -243,7 +295,10 @@ class Session:
                         notify(self.session_id, cwd, "ask")
                     elif name not in SKIP_TOOLS:
                         self.pending[block.get("id")] = (name, time.time(), cwd)
-            if msg.get("stop_reason") == "end_turn" and msg.get("id") not in self.done_msgs:
+            if (
+                msg.get("stop_reason") == "end_turn"
+                and msg.get("id") not in self.done_msgs
+            ):
                 self.done_msgs.add(msg.get("id"))
                 self.pending.clear()
                 notify(self.session_id, cwd, "done")
@@ -265,7 +320,12 @@ class Session:
 
 def single_instance():
     """Holds an exclusive lock for the life of the process; exits if another watcher has it."""
-    lock = open(os.path.join(tempfile.gettempdir(), f"claude-notify-watcher-{os.getuid()}.lock"), "w")
+    lock = open(
+        os.path.join(
+            tempfile.gettempdir(), f"claude-notify-watcher-{os.getuid()}.lock"
+        ),
+        "w",
+    )
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
@@ -280,7 +340,11 @@ def main():
     sessions = {}
     while True:
         now = time.time()
-        paths = [p for d in CONFIG_DIRS for p in glob.glob(os.path.join(d, "projects", "*", "*.jsonl"))]
+        paths = [
+            p
+            for d in CONFIG_DIRS
+            for p in glob.glob(os.path.join(d, "projects", "*", "*.jsonl"))
+        ]
         for path in paths:
             try:
                 if now - os.path.getmtime(path) > ACTIVE_WINDOW:

@@ -19,7 +19,7 @@ from unittest.mock import patch
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "tools_management"))
 
-import post_install  # noqa: E402
+import post_install  # noqa: E402  # pyright: ignore[reportMissingImports]  (path added above)
 
 BIN = REPO_ROOT / "stow-packages/local-bin/.local/bin"
 AGENT_NOTIFY = BIN / "agent-notify"
@@ -241,6 +241,7 @@ class NotifierConfigTest(unittest.TestCase):
         self.assertFalse(config["notification"])
         self.assertFalse(config["sound"])
         self.assertFalse(config["bell"])
+        self.assertFalse(config["suppressWhenFocused"], "agent-notify, not the plugin, decides if you're watching")
         self.assertTrue(config["command"]["enabled"])
         self.assertEqual(
             config["command"]["args"],

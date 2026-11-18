@@ -21,6 +21,7 @@ Usage:
   agent-notify emit --source NAME [--event EVENT] [--message TEXT] [--pid PID]
   agent-notify alert WINDOW_ID              (from tmux's alert-bell hook)
 """
+
 import argparse
 import glob
 import os
@@ -32,7 +33,10 @@ import sys
 import time
 
 SEP = "\t"
-LOG = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "agent-notify.log")
+LOG = os.path.join(
+    os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"),
+    "agent-notify.log",
+)
 
 
 def log(msg):
@@ -49,7 +53,9 @@ def log(msg):
 
 def sh(*cmd, timeout=3):
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
+        return subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout
+        ).stdout
     except (OSError, subprocess.SubprocessError):
         return ""
 
@@ -143,7 +149,10 @@ def env_var(pid, name):
         except OSError:
             pass
         return ""
-    match = re.search(rf"(?:^|\s){re.escape(name)}=(\S+)", sh("ps", "-E", "-ww", "-o", "command=", "-p", str(pid)))
+    match = re.search(
+        rf"(?:^|\s){re.escape(name)}=(\S+)",
+        sh("ps", "-E", "-ww", "-o", "command=", "-p", str(pid)),
+    )
     return match.group(1) if match else ""
 
 
@@ -152,9 +161,17 @@ def env_var(pid, name):
 
 def nvim_socket(nvim_pid):
     uid, user = os.getuid(), os.environ.get("USER", "")
-    dirs = [os.environ.get("XDG_RUNTIME_DIR", ""), f"/run/user/{uid}", os.environ.get("TMPDIR", ""), "/tmp"]
+    dirs = [
+        os.environ.get("XDG_RUNTIME_DIR", ""),
+        f"/run/user/{uid}",
+        os.environ.get("TMPDIR", ""),
+        "/tmp",
+    ]
     for d in filter(None, dirs):
-        for pattern in (f"{d}/nvim.{nvim_pid}.0", f"{d}/nvim.{user}/*/nvim.{nvim_pid}.0"):
+        for pattern in (
+            f"{d}/nvim.{nvim_pid}.0",
+            f"{d}/nvim.{user}/*/nvim.{nvim_pid}.0",
+        ):
             found = glob.glob(pattern)
             if found:
                 return found[0]
@@ -172,8 +189,17 @@ def nvim_hides(chain, procs):
     sock = nvim_socket(chain[i])
     if not sock or not shutil.which("nvim"):
         return False
-    current = sh("nvim", "--server", sock, "--remote-expr", "get(b:, 'terminal_job_pid', 0)", timeout=2).strip()
-    if not current.isdigit():  # nvim didn't answer in time: don't claim the terminal is hidden
+    current = sh(
+        "nvim",
+        "--server",
+        sock,
+        "--remote-expr",
+        "get(b:, 'terminal_job_pid', 0)",
+        timeout=2,
+    ).strip()
+    if (
+        not current.isdigit()
+    ):  # nvim didn't answer in time: don't claim the terminal is hidden
         return False
     return current != str(chain[i - 1])
 
@@ -194,7 +220,12 @@ def desktop_notification(title, body):
     else:
         return
     try:
-        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
     except OSError:
         pass
 
@@ -231,7 +262,9 @@ def emit(args):
 
     panes = {}
     if os.environ.get("TMUX") or shutil.which("tmux"):
-        for line in tmux("list-panes", "-a", "-F", f"#{{pane_tty}}{SEP}#{{pane_id}}").splitlines():
+        for line in tmux(
+            "list-panes", "-a", "-F", f"#{{pane_tty}}{SEP}#{{pane_id}}"
+        ).splitlines():
             tty, _, pane = line.partition(SEP)
             panes[tty] = pane
     tty, owner = outer_terminal(chain, procs)
@@ -240,21 +273,39 @@ def emit(args):
     if not pane_tty:  # outside tmux: the agent's terminal decides
         # TERM of that terminal's process, not ours: the transcript watcher is a daemon started from another terminal.
         term = env_var(owner, "TERM") or os.environ.get("TERM", "")
-        log(f"emit {args.source} {args.event} pid={args.pid}: outside tmux -> {tty} ({term})")
+        log(
+            f"emit {args.source} {args.event} pid={args.pid}: outside tmux -> {tty} ({term})"
+        )
         notify_terminal(tty, term, args.source, args.message or args.event)
         return
 
     force = nvim_hides(chain, procs)
     agent = agent_id(chain, procs)
-    log(f"emit {args.source} {args.event} pid={args.pid}: agent {agent}, pane {panes[pane_tty]} ({pane_tty}), "
-        f"nvim hides it: {force}")
-    deliver(panes[pane_tty], f"{agent}:{args.source}:{args.event}", args.source, args.message or args.event, force)
+    log(
+        f"emit {args.source} {args.event} pid={args.pid}: agent {agent}, pane {panes[pane_tty]} ({pane_tty}), "
+        f"nvim hides it: {force}"
+    )
+    deliver(
+        panes[pane_tty],
+        f"{agent}:{args.source}:{args.event}",
+        args.source,
+        args.message or args.event,
+        force,
+    )
 
 
 def clients():
     """[(tty, termname, flags, window_id on screen, session)] of every tmux client"""
-    fields = ("client_tty", "client_termname", "client_flags", "window_id", "client_session")
-    rows = tmux("list-clients", "-F", SEP.join(f"#{{{f}}}" for f in fields)).splitlines()
+    fields = (
+        "client_tty",
+        "client_termname",
+        "client_flags",
+        "window_id",
+        "client_session",
+    )
+    rows = tmux(
+        "list-clients", "-F", SEP.join(f"#{{{f}}}" for f in fields)
+    ).splitlines()
     return [r.split(SEP) for r in rows if r.count(SEP) == len(fields) - 1]
 
 
@@ -276,7 +327,14 @@ def duplicate(pane, key):
             recent[k] = int(at)
     seen = key in recent
     recent[key] = now
-    tmux("set", "-p", "-t", pane, "@agent_last", " ".join(f"{k}={at}" for k, at in recent.items()))
+    tmux(
+        "set",
+        "-p",
+        "-t",
+        pane,
+        "@agent_last",
+        " ".join(f"{k}={at}" for k, at in recent.items()),
+    )
     return seen
 
 
@@ -289,13 +347,23 @@ def deliver(pane, key, source, text, force):
     if duplicate(pane, key):
         log(f"  {pane}: {key} already notified, skipped")
         return
-    info = tmux("display", "-p", "-t", pane, SEP.join(("#{window_id}", "#{pane_active}", "#{session_name}:#{window_index}")))
+    info = tmux(
+        "display",
+        "-p",
+        "-t",
+        pane,
+        SEP.join(("#{window_id}", "#{pane_active}", "#{session_name}:#{window_index}")),
+    )
     parts = info.strip().split(SEP)
     if len(parts) != 3:
         return
     window, active, label = parts
     cs = clients()
-    watching = not force and active == "1" and any(c[3] == window and "focused" in c[2].split(",") for c in cs)
+    watching = (
+        not force
+        and active == "1"
+        and any(c[3] == window and "focused" in c[2].split(",") for c in cs)
+    )
     if watching:
         log(f"  {label}: you are watching it, skipped")
         return
@@ -321,13 +389,21 @@ def alert(args):
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    # __doc__ is None under python -OO
+    p = argparse.ArgumentParser(description=(__doc__ or "agent-notify").splitlines()[0])
     sub = p.add_subparsers(dest="cmd", required=True)
-    e = sub.add_parser("emit", help="notify about the calling agent unless you are watching it")
+    e = sub.add_parser(
+        "emit", help="notify about the calling agent unless you are watching it"
+    )
     e.add_argument("--source", required=True)
     e.add_argument("--event", default="done")
     e.add_argument("--message", default="")
-    e.add_argument("--pid", type=int, default=0, help="agent process (default: the caller's ancestors)")
+    e.add_argument(
+        "--pid",
+        type=int,
+        default=0,
+        help="agent process (default: the caller's ancestors)",
+    )
     a = sub.add_parser("alert", help="tmux alert-bell hook (native bells)")
     a.add_argument("window")
     args, _ = p.parse_known_args()  # notifier hooks may pass extra placeholders

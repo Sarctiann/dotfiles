@@ -165,7 +165,10 @@ def _write_notifier_config() -> None:
     terminal the way it supports (OSC 9 on Ghostty, the bell elsewhere). The
     plugin's own ``bell`` writes to the plugin process' stdout, which doesn't
     reach OpenCode's terminal, and its desktop notifications skip that
-    decision. Nothing runs outside WSL there: launching powershell.exe from WSL
+    decision. ``suppressWhenFocused`` is off because the plugin would skip
+    the command whenever the terminal emulator has focus (on WSL: Windows
+    Terminal in the foreground, nearly always), even when OpenCode is in a
+    tmux window you aren't looking at; agent-notify decides that per pane. Nothing runs outside WSL there: launching powershell.exe from WSL
     raised malware alerts with the company's IT security.
     """
     notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
@@ -181,6 +184,7 @@ def _write_notifier_config() -> None:
         "sound": False,
         "bell": False,
         "showSessionTitle": True,
+        "suppressWhenFocused": False,
         "command": {
             "enabled": True,
             "path": str(agent_notify),
