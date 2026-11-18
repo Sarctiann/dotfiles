@@ -540,30 +540,44 @@ also stops the service from starting with WSL, and `--iface` picks another inter
 - Custom agents: x-teach, z-forge, z-logic, z-nexus, z-pilot, z-spark, z-ultra, x--free
 - MCP servers: Playwright, Augment Context Engine, Neovim
 - Plugins: opencode-quota (toast + TUI), opencode-notifier, superpowers
-- WSL notifications: `post-install` writes a machine-local
-  `~/.config/opencode/opencode-notifier.json` that uses the plugin's `command`
-  hook to run `opencode-notify-wsl`, which rings the terminal bell of the OpenCode
-  that called it (the plugin's own `bell` writes to a stdout that doesn't reach
-  OpenCode's terminal, and Windows Terminal does not implement OSC 9).
-- Claude Code notifications (WSL): `.zshrc` starts `claude_notify_watcher.py` once
-  (`flock`). It tails the session transcripts of `~/.claude` and
-  `$COMPANY_DIR/.claude_work_profile` and rings the terminal bell of the claude
-  running in that session's cwd as soon as a turn ends, Claude asks something, or a
-  tool waits for permission, because the work org policy disables Claude hooks and
-  Claude's own `terminal_bell` waits ~60s after a turn ends (so Claude's
-  `preferredNotifChannel` is `notifications_disabled`). Tunables:
-  `CLAUDE_NOTIFY_DELAY` (permission wait, 2s), `CLAUDE_NOTIFY_SLOW_DELAY`
-  (MCP/web/ToolSearch, 6s).
-- Notification path, all inside WSL (launching `powershell.exe` from WSL raised
-  malware alerts with the company's IT security): the agent's terminal bell → Neovim
-  passes bells from `:terminal` jobs (`belloff` without `term`) → tmux marks the
-  window in the status bar (`󰂚 session:window`) and its `alert-bell` hook runs
-  `tmux-bell` to ring clients on other sessions → Windows Terminal plays
-  `woodblock.wav` and flashes the taskbar (`bellStyle`/`bellSound`). The sound lives in
-  `stow-packages/windows-terminal/woodblock.wav`; copy it to
+- Agent notifications (Linux, WSL, macOS; any terminal): a client subscribes through
+  `~/.local/bin/agent-notify emit --source NAME --event EVENT`. It finds the agent's tmux
+  pane and does nothing when you are watching it (the pane is the active pane of the
+  window on screen, the terminal has focus — tmux `focus-events on` — and, inside a
+  Neovim `:terminal`, that terminal is the current buffer). Otherwise it marks the window
+  with `@agent_alert` (gold `󰂚 session:window` next to the date and a gold window
+  tab, cleared when you look at it) and notifies every tmux client, in any session, the
+  way its terminal supports: Ghostty gets an OSC 9 desktop notification plus the bell,
+  Alacritty the bell plus `notify-send`/`osascript`, anything else (Windows Terminal) the
+  bell. Outside tmux it writes the OSC 9 / bell to the agent's terminal and the terminal
+  decides. Programs that only ring their bell (Auggie `notificationMode: "bell"`, Gemini)
+  go through tmux: `bell-action other` rings and marks windows that aren't on screen and
+  the `alert-bell` hook (`agent-notify alert`) rings clients on other sessions
+  (`visual-bell` stays off: on, it prints "Bell in window N" over the status bar). Nothing
+  launches `powershell.exe` from WSL (it raised malware alerts with the company's IT
+  security).
+- OpenCode: `post-install` writes a machine-local `~/.config/opencode/opencode-notifier.json`
+  whose `command` hook runs `agent-notify emit --source opencode` (the plugin's own
+  `bell` writes to a stdout that doesn't reach OpenCode's terminal).
+- Claude Code: `.zshrc` starts `claude_notify_watcher.py` wherever `claude` is installed
+  (it holds a lock, so one instance). It tails the session transcripts of `~/.claude`,
+  `$COMPANY_DIR/.claude_work_profile` and `$CLAUDE_CONFIG_DIR` and runs `agent-notify emit`
+  for the claude running in that session's cwd as soon as a turn ends, Claude asks
+  something, or a tool waits for permission, because the work org policy disables Claude
+  hooks and Claude's own notification waits ~60s after a turn ends. In Claude's `auto`
+  permission mode the transcript only gets the `tool_use` once the prompt is answered, so
+  permission prompts also come from Claude itself: `preferredNotifChannel: "iterm2"` sends
+  an OSC 9, which Neovim catches from its `:terminal` (`TermRequest`,
+  `lua/config/agent_notify.lua`) and forwards to `agent-notify emit`; its 60s "waiting for
+  your input" reminder is dropped, and `agent-notify` drops the same event of the same
+  agent within 15s (the watcher and Claude can both report one prompt). Tunables: `CLAUDE_NOTIFY_DELAY`
+  (permission wait, 2s), `CLAUDE_NOTIFY_SLOW_DELAY` (MCP/web/ToolSearch, 6s). Each
+  transcript is matched to the claude that writes it (it keeps
+  `<tmp>/claude-<uid>/<project>/<session id>/` open), falling back to every claude in the
+  session's starting cwd. Decisions are logged to `~/.local/state/agent-notify.log`.
+- Windows Terminal plays `woodblock.wav` on the bell (`bellStyle`/`bellSound`). The sound
+  lives in `stow-packages/windows-terminal/woodblock.wav`; copy it to
   `C:\Users\<you>\AppData\Local\wt-sounds\` (the path in `settings.json`).
-- Gemini (`general.enableNotifications`) and Auggie (`notificationMode: "bell"`) ring
-  the bell themselves.
 - Skills: agent-model-audit, agent-sync-neovim
 - Session picker: reads the OpenCode SQLite DB, so `sqlite3` is installed with the
   `opencode`/`lazyvim` stow packages (`conditional_system_packages`)

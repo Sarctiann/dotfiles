@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+"""One notification path for every coding agent (Claude, OpenCode, Augment, Gemini...) on Linux, WSL and macOS.
+
+`agent-notify emit` is how a client subscribes (Claude's transcript watcher, OpenCode's notifier hook). It finds
+the agent's tmux pane and does nothing when you are watching it: the pane is the active pane of the window on
+screen in a focused terminal (tmux focus-events on) and, for an agent inside a Neovim :terminal, that terminal is
+the current buffer. Otherwise it marks the window with @agent_alert (status bar: gold "󰂚 session:window",
+and the window's tab turns gold; tmux hooks drop the mark when you look at it) and notifies every tmux client the
+way its terminal supports: Ghostty gets an OSC 9 desktop notification plus the bell, Alacritty the bell plus a
+desktop notification (notify-send / osascript), anything else (Windows Terminal) the bell. Outside tmux it writes
+the OSC 9 / bell straight to the agent's terminal and lets the terminal decide.
+
+Programs that only ring their own bell (Augment, Gemini) go through tmux: bell-action other rings for windows
+that aren't on screen and marks them, and the alert-bell hook (`agent-notify alert`) rings the clients on other
+sessions. visual-bell stays off: "on" would print "Bell in window N" over the status bar.
+
+Everything stays inside WSL there: launching powershell.exe from WSL raised malware alerts with the company's IT
+security.
+
+Usage:
+  agent-notify emit --source NAME [--event EVENT] [--message TEXT] [--pid PID]
+  agent-notify alert WINDOW_ID              (from tmux's alert-bell hook)
+"""
+import argparse
+import glob
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+SEP = "\t"
+LOG = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "agent-notify.log")
+
+
+def log(msg):
+    """Appends one line to ~/.local/state/agent-notify.log (shared with claude_notify_watcher.py), kept under 1 MB."""
+    try:
+        os.makedirs(os.path.dirname(LOG), exist_ok=True)
+        if os.path.exists(LOG) and os.path.getsize(LOG) > 1_000_000:
+            os.replace(LOG, LOG + ".1")
+        with open(LOG, "a") as f:
+            f.write(time.strftime("%H:%M:%S ") + msg + "\n")
+    except OSError:
+        pass
+
+
+def sh(*cmd, timeout=3):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def tmux(*args):
+    return sh("tmux", *args)
+
+
+# ─── processes (ps works on Linux and macOS) ─────────────────────────────
+
+
+def processes():
+    """pid -> (ppid, tty or "", command basename)"""
+    out = {}
+    for line in sh("ps", "-A", "-o", "pid=,ppid=,tty=,comm=").splitlines():
+        parts = line.split(None, 3)
+        if len(parts) < 4:
+            continue
+        pid, ppid, tty, comm = parts
+        tty = "" if tty in ("?", "??", "-") else "/dev/" + tty
+        out[int(pid)] = (int(ppid), tty, os.path.basename(comm))
+    return out
+
+
+def ancestors(pid, procs):
+    chain = []
+    while pid in procs and pid > 1 and pid not in chain:
+        chain.append(pid)
+        pid = procs[pid][0]
+    return chain
+
+
+def owning_nvim(chain, procs):
+    """Index in `chain` of the Neovim whose :terminal the agent runs in, or None.
+
+    Only the process that owns the agent's terminal counts: walking up stops at the first process on another tty,
+    so a terminal emulator started from inside nvim isn't taken for a :terminal.
+    """
+    first = next((procs[p][1] for p in chain if procs[p][1]), "")
+    for i, pid in enumerate(chain):
+        tty, comm = procs[pid][1], procs[pid][2]
+        if comm == "nvim":
+            return i
+        if tty and tty != first:
+            return None
+    return None
+
+
+def outer_terminal(chain, procs):
+    """(tty, pid) of the terminal the agent shows up in: its own tty or, inside a Neovim :terminal, the tty of
+    Neovim's UI; pid is the first process on that tty (the agent, or Neovim's UI).
+
+    Never further up: a terminal emulator started from another terminal must not ring that one.
+    The UI is the first process with a tty from nvim up (nvim --embed has none; a single-process nvim has it).
+    """
+    i = owning_nvim(chain, procs)
+    start = chain[i:] if i is not None else chain
+    return next(((procs[p][1], p) for p in start if procs[p][1]), ("", 0))
+
+
+def outer_tty(chain, procs):
+    return outer_terminal(chain, procs)[0]
+
+
+def agent_id(chain, procs):
+    """The process that stands for the agent: the topmost one on the agent's own terminal, below any Neovim.
+
+    The transcript watcher passes the claude pid and Neovim's TermRequest autocmd the :terminal job pid; both resolve
+    to the same process, so duplicate() can tell one agent from another sharing a tmux pane.
+    """
+    first = next((procs[p][1] for p in chain if procs[p][1]), "")
+    agent = chain[0] if chain else 0
+    for pid in chain:
+        tty, comm = procs[pid][1], procs[pid][2]
+        if comm == "nvim" or (tty and tty != first):
+            break
+        if tty == first:
+            agent = pid
+    return agent
+
+
+def env_var(pid, name):
+    """`name` in the environment of process `pid` ("" if unknown): /proc on Linux, ps -E on macOS."""
+    if platform.system() != "Darwin":
+        try:
+            with open(f"/proc/{pid}/environ", "rb") as f:
+                for item in f.read().split(b"\0"):
+                    key, _, value = item.partition(b"=")
+                    if key.decode(errors="replace") == name:
+                        return value.decode(errors="replace")
+        except OSError:
+            pass
+        return ""
+    match = re.search(rf"(?:^|\s){re.escape(name)}=(\S+)", sh("ps", "-E", "-ww", "-o", "command=", "-p", str(pid)))
+    return match.group(1) if match else ""
+
+
+# ─── Neovim :terminal ───────────────────────────────────────────────────
+
+
+def nvim_socket(nvim_pid):
+    uid, user = os.getuid(), os.environ.get("USER", "")
+    dirs = [os.environ.get("XDG_RUNTIME_DIR", ""), f"/run/user/{uid}", os.environ.get("TMPDIR", ""), "/tmp"]
+    for d in filter(None, dirs):
+        for pattern in (f"{d}/nvim.{nvim_pid}.0", f"{d}/nvim.{user}/*/nvim.{nvim_pid}.0"):
+            found = glob.glob(pattern)
+            if found:
+                return found[0]
+    return ""
+
+
+def nvim_hides(chain, procs):
+    """True if the agent runs in a Neovim :terminal that isn't the current buffer (you're editing something else).
+
+    The terminal job is the child of nvim on the chain; nvim's current buffer has its pid in b:terminal_job_pid.
+    """
+    i = owning_nvim(chain, procs)
+    if not i:  # None, or the caller is nvim itself
+        return False
+    sock = nvim_socket(chain[i])
+    if not sock or not shutil.which("nvim"):
+        return False
+    current = sh("nvim", "--server", sock, "--remote-expr", "get(b:, 'terminal_job_pid', 0)", timeout=2).strip()
+    if not current.isdigit():  # nvim didn't answer in time: don't claim the terminal is hidden
+        return False
+    return current != str(chain[i - 1])
+
+
+# ─── sinks ──────────────────────────────────────────────────────────────
+
+
+def clean(text):
+    return "".join(c for c in text if c.isprintable() and c not in "\x1b\x07;")[:200]
+
+
+def desktop_notification(title, body):
+    if platform.system() == "Darwin":
+        script = f"display notification {json_str(body)} with title {json_str(title)}"
+        cmd = ["osascript", "-e", script]
+    elif shutil.which("notify-send") and "WSL_DISTRO_NAME" not in os.environ:
+        cmd = ["notify-send", "--app-name=agent-notify", title, body]
+    else:
+        return
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        pass
+
+
+def json_str(text):
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def notify_terminal(tty, termname, title, body):
+    """Notifies through the terminal on `tty` the way that terminal supports."""
+    term = termname.lower()
+    seq = "\a"
+    if "ghostty" in term:
+        seq = f"\x1b]9;{clean(title)}: {clean(body)}\x1b\\\a"
+    elif "alacritty" in term:
+        desktop_notification(title, body)
+    try:
+        with open(tty, "w") as t:
+            t.write(seq)
+    except OSError:
+        pass
+
+
+# ─── emit ───────────────────────────────────────────────────────────────
+
+
+def emit(args):
+    procs = processes()
+    chain = ancestors(args.pid or os.getpid(), procs)
+    ttys = [procs[p][1] for p in chain if procs[p][1]]
+    if not ttys:
+        log(f"emit {args.source} pid={args.pid}: no terminal")
+        return
+
+    panes = {}
+    if os.environ.get("TMUX") or shutil.which("tmux"):
+        for line in tmux("list-panes", "-a", "-F", f"#{{pane_tty}}{SEP}#{{pane_id}}").splitlines():
+            tty, _, pane = line.partition(SEP)
+            panes[tty] = pane
+    tty, owner = outer_terminal(chain, procs)
+    pane_tty = tty if tty in panes else ""
+
+    if not pane_tty:  # outside tmux: the agent's terminal decides
+        # TERM of that terminal's process, not ours: the transcript watcher is a daemon started from another terminal.
+        term = env_var(owner, "TERM") or os.environ.get("TERM", "")
+        log(f"emit {args.source} {args.event} pid={args.pid}: outside tmux -> {tty} ({term})")
+        notify_terminal(tty, term, args.source, args.message or args.event)
+        return
+
+    force = nvim_hides(chain, procs)
+    agent = agent_id(chain, procs)
+    log(f"emit {args.source} {args.event} pid={args.pid}: agent {agent}, pane {panes[pane_tty]} ({pane_tty}), "
+        f"nvim hides it: {force}")
+    deliver(panes[pane_tty], f"{agent}:{args.source}:{args.event}", args.source, args.message or args.event, force)
+
+
+def clients():
+    """[(tty, termname, flags, window_id on screen, session)] of every tmux client"""
+    fields = ("client_tty", "client_termname", "client_flags", "window_id", "client_session")
+    rows = tmux("list-clients", "-F", SEP.join(f"#{{{f}}}" for f in fields)).splitlines()
+    return [r.split(SEP) for r in rows if r.count(SEP) == len(fields) - 1]
+
+
+DEDUPE_SECONDS = 15
+
+
+def duplicate(pane, key):
+    """True if `key` (agent:source:event) was already notified for `pane` in the last DEDUPE_SECONDS.
+
+    A Claude permission prompt or question can reach agent-notify twice: from the transcript watcher and from
+    Claude's own OSC 9 notification (forwarded by Neovim's TermRequest autocmd). The pane option @agent_last keeps
+    "key=time" entries, one per agent, since several agents can share a pane (several Neovim :terminals).
+    """
+    now = int(time.time())
+    recent = {}
+    for item in tmux("show", "-pqv", "-t", pane, "@agent_last").split():
+        k, _, at = item.rpartition("=")
+        if k and at.isdigit() and now - int(at) < DEDUPE_SECONDS:
+            recent[k] = int(at)
+    seen = key in recent
+    recent[key] = now
+    tmux("set", "-p", "-t", pane, "@agent_last", " ".join(f"{k}={at}" for k, at in recent.items()))
+    return seen
+
+
+def deliver(pane, key, source, text, force):
+    """Notifies every tmux client about `pane`, unless you are watching it or `key` is a duplicate.
+
+    Watching: the pane is the active pane of the window on screen in a focused terminal, and (force) the agent
+    isn't in a Neovim :terminal hidden behind another buffer.
+    """
+    if duplicate(pane, key):
+        log(f"  {pane}: {key} already notified, skipped")
+        return
+    info = tmux("display", "-p", "-t", pane, SEP.join(("#{window_id}", "#{pane_active}", "#{session_name}:#{window_index}")))
+    parts = info.strip().split(SEP)
+    if len(parts) != 3:
+        return
+    window, active, label = parts
+    cs = clients()
+    watching = not force and active == "1" and any(c[3] == window and "focused" in c[2].split(",") for c in cs)
+    if watching:
+        log(f"  {label}: you are watching it, skipped")
+        return
+    log(f"  {label}: notified {len(cs)} client(s)")
+    tmux("set", "-w", "-t", window, "@agent_alert", "1")
+    for c in cs:
+        notify_terminal(c[0], c[1], f"{source} · {label}", text)
+
+
+# ─── alert (tmux alert-bell hook: native bells) ─────────────────────────
+
+
+def alert(args):
+    """A program rang its own bell (Augment, Gemini...) in a window that isn't on screen (bell-action other).
+
+    tmux already rang the clients on that window's session and set window_bell_flag; ring the clients on the
+    other sessions too.
+    """
+    session = tmux("display", "-p", "-t", args.window, "#{session_name}").strip()
+    for c in clients():
+        if c[4] != session:
+            notify_terminal(c[0], c[1], f"terminal · {session}", "bell")
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    sub = p.add_subparsers(dest="cmd", required=True)
+    e = sub.add_parser("emit", help="notify about the calling agent unless you are watching it")
+    e.add_argument("--source", required=True)
+    e.add_argument("--event", default="done")
+    e.add_argument("--message", default="")
+    e.add_argument("--pid", type=int, default=0, help="agent process (default: the caller's ancestors)")
+    a = sub.add_parser("alert", help="tmux alert-bell hook (native bells)")
+    a.add_argument("window")
+    args, _ = p.parse_known_args()  # notifier hooks may pass extra placeholders
+    {"emit": emit, "alert": alert}[args.cmd](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

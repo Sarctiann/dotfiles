@@ -41,9 +41,11 @@ Logs are saved to `testing/test_containers/logs/<target>-<timestamp>.log`. Durin
 
 ## Notifier unit tests
 
-`python3 testing/test_notifier_config.py` checks the WSL opencode-notifier
-configuration and the argument forwarding of `opencode-notify-wsl`. It needs no
-Docker and runs on any platform.
+`python3 testing/test_notifier_config.py` checks `agent-notify` against a fake
+`tmux` (`emit`: watching vs. unfocused terminal, other window, inactive pane, Ghostty's
+OSC 9, never ringing the agent's own pane, outside tmux; the `alert` hook ringing only
+clients on other sessions), the Claude watcher's `ps` time parsing and the
+opencode-notifier configuration. It needs no Docker and runs on any platform.
 
 ## macOS Check (Dry-Run)
 

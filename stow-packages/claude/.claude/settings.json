@@ -7,5 +7,5 @@
       "env": { "NVIM": "$NVIM" }
     }
   },
-  "preferredNotifChannel": "notifications_disabled"
+  "preferredNotifChannel": "iterm2"
 }

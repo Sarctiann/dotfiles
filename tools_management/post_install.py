@@ -156,32 +156,25 @@ def _ghostty_font(base: str) -> str:
     return f"{base} Nerd Font"
 
 
-def _resolve_primary_terminal(config: dict) -> str:
-    """Return the first enabled terminal name."""
-    stow_cfg = config.get("stow", {})
-    if stow_cfg.get("ghostty_or_windowsTerminal", True):
-        return "windows-terminal" if is_wsl() else "ghostty"
-    if stow_cfg.get("alacritty", False):
-        return "alacritty"
-    if stow_cfg.get("wezterm", False):
-        return "wezterm"
-    return "ghostty"
+def _write_notifier_config() -> None:
+    """Route opencode-notifier through agent-notify on every platform and terminal.
 
-
-def _write_wsl_notifier_config(notifier_path: Path) -> None:
-    """Route notifications through a stowed wrapper on WSL.
-
-    Windows Terminal does not implement OSC 9, and the plugin's own
-    ``bell`` writes to the plugin process' stdout, which doesn't reach
-    OpenCode's terminal. The plugin's documented ``command`` hook runs the
-    stowed ``opencode-notify-wsl``, which rings the bell in the terminal of
-    the OpenCode that called it; tmux marks the window and Windows Terminal
-    plays the sound. Nothing runs outside WSL: launching powershell.exe
-    from WSL raised malware alerts with the company's IT security.
+    The plugin's documented ``command`` hook runs the stowed ``agent-notify
+    emit``, which rings the tmux pane of the OpenCode that called it; tmux's
+    alert-bell hook then decides whether you are watching it and notifies each
+    terminal the way it supports (OSC 9 on Ghostty, the bell elsewhere). The
+    plugin's own ``bell`` writes to the plugin process' stdout, which doesn't
+    reach OpenCode's terminal, and its desktop notifications skip that
+    decision. Nothing runs outside WSL there: launching powershell.exe from WSL
+    raised malware alerts with the company's IT security.
     """
-    wrapper = Path.home() / ".local" / "bin" / "opencode-notify-wsl"
-    if not wrapper.is_file():
-        print("   ⚠  opencode-notify-wsl not found — run the Stow symlinks step first")
+    notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
+    if notifier_path.is_symlink():
+        notifier_path.unlink()
+
+    agent_notify = Path.home() / ".local" / "bin" / "agent-notify"
+    if not agent_notify.is_file():
+        print("   ⚠  agent-notify not found — run the Stow symlinks step first")
 
     notifier_cfg = {
         "notification": False,
@@ -190,8 +183,8 @@ def _write_wsl_notifier_config(notifier_path: Path) -> None:
         "showSessionTitle": True,
         "command": {
             "enabled": True,
-            "path": str(wrapper),
-            "args": ["{message}", "{projectName}"],
+            "path": str(agent_notify),
+            "args": ["emit", "--source", "opencode", "--event", "{event}", "--message", "{message}"],
         },
         "events": {
             "subagent_complete": False,
@@ -204,32 +197,7 @@ def _write_wsl_notifier_config(notifier_path: Path) -> None:
 
     notifier_path.parent.mkdir(parents=True, exist_ok=True)
     notifier_path.write_text(json.dumps(notifier_cfg, indent=2) + "\n")
-    print("   ✓ notifications ring the terminal bell (opencode-notify-wsl)")
-
-
-def _write_notifier_config(config: dict) -> None:
-    """Write opencode-notifier.json for the primary terminal's notifications."""
-    notifier_path = Path.home() / ".config" / "opencode" / "opencode-notifier.json"
-    primary = _resolve_primary_terminal(config)
-
-    if notifier_path.is_symlink():
-        notifier_path.unlink()
-
-    if primary == "windows-terminal" and is_wsl():
-        _write_wsl_notifier_config(notifier_path)
-        return
-
-    if primary != "ghostty":
-        if notifier_path.exists():
-            notifier_path.unlink()
-            print("   ✓ removed stale opencode-notifier.json")
-        return
-
-    notifier_path.parent.mkdir(parents=True, exist_ok=True)
-    notifier_path.write_text(
-        json.dumps({"notificationSystem": "ghostty"}, indent=2) + "\n"
-    )
-    print("   ✓ notificationSystem set to 'ghostty'")
+    print("   ✓ OpenCode notifies through agent-notify")
 
 
 def _undo_opencode_notifier() -> None:
@@ -814,20 +782,16 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         if notifier_path.is_file():
             try:
                 data = json.loads(notifier_path.read_text())
-                if data.get("command", {}).get("enabled"):
-                    command = data["command"].get("path", "?")
-                    print(f"   🔔 opencode-notifier: command={command}")
-                else:
-                    ns = data.get("notificationSystem", "?")
-                    print(f"   🔔 opencode-notifier: notificationSystem={ns}")
+                command = data.get("command", {})
+                state = command.get("path", "?") if command.get("enabled") else "command hook disabled"
+                print(f"   🔔 opencode-notifier: {state}")
             except Exception:
                 print("   ⚠  opencode-notifier.json: invalid")
         else:
             print("   ⬜ opencode-notifier.json: not found")
-        if is_wsl():
-            wrapper = Path.home() / ".local" / "bin" / "opencode-notify-wsl"
-            status = "✅" if wrapper.is_file() else "⬜"
-            print(f"   {status} WSL notification wrapper")
+        agent_notify = Path.home() / ".local" / "bin" / "agent-notify"
+        status = "✅" if agent_notify.is_file() else "⬜"
+        print(f"   {status} agent-notify")
         print()
         return
 
@@ -857,7 +821,7 @@ def run_post_install(config: dict, mode: str = "install") -> None:
     _update_ghostty_window_decoration()
 
     print("🔔 Writing opencode-notifier config...")
-    _write_notifier_config(config)
+    _write_notifier_config()
 
     if is_wsl() and stow_cfg.get("ghostty_or_windowsTerminal", True):
         print("🪟  Setting up Windows Terminal...")

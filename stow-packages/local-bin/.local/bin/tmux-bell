@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-# Rings the terminal of every tmux client that is on a different session from the one where the bell rang.
-# tmux's own bell-action already rings the clients on that session. Called from the alert-bell hook in .tmux.conf.
-# Usage: tmux-bell SESSION_NAME
-
-session="${1:-}"
-tmux list-clients -F '#{client_session}	#{client_tty}' | while IFS=$'\t' read -r client_session tty; do
-  [ "$client_session" = "$session" ] || printf '\a' > "$tty"
-done

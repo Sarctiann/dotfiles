@@ -82,3 +82,6 @@ if not vim.g.vscode then
     end,
   })
 end
+
+-- Agent notifications from :terminal jobs (Claude permission prompts): see config/agent_notify.lua
+require("config.agent_notify")
