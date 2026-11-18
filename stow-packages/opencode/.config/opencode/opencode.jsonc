@@ -13,6 +13,8 @@
 
   // Provider model filters - hide duplicates from opencode (Zen) that exist in opencode-go
   "providers": {
+    // Declared so opencode-quota does not re-add the legacy top-level `provider` map.
+    "opencode-go": {},
     "opencode": {
       "models": {
         "minimax-m2.5": { "disabled": true },
