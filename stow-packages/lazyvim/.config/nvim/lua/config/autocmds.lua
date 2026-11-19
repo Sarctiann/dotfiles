@@ -85,3 +85,20 @@ end
 
 -- Agent notifications from :terminal jobs (Claude permission prompts): see config/agent_notify.lua
 require("config.agent_notify")
+
+-- Hide indent guides and active scope lines in cli-integration windows.
+-- Sidebar terminals get filetype=cli-integration, while floating ones only
+-- expose b:cli_integration_name, so check both markers.
+local cli_integration_no_indent = vim.api.nvim_create_augroup("cli_integration_no_indent", { clear = true })
+vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType" }, {
+  group = cli_integration_no_indent,
+  callback = function(args)
+    local buf = args.buf
+    if vim.bo[buf].filetype ~= "cli-integration" and vim.b[buf].cli_integration_name == nil then
+      return
+    end
+    vim.b[buf].miniindentscope_disable = true
+    vim.b[buf].snacks_indent = false
+    vim.b[buf].snacks_scope = false
+  end,
+})
