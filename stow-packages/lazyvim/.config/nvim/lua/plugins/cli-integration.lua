@@ -238,8 +238,24 @@ if not is_company_project then
     },
     {
       "<leader>ast",
-      opencode_utils.pair_menu,
-      desc = "OpenCode Pair (local/remote)",
+      function()
+        opencode_utils.pair(true)
+      end,
+      desc = "OpenCode Pair Remote (QR)",
+      silent = true,
+    },
+    {
+      "<leader>asT",
+      function()
+        opencode_utils.pair(false)
+      end,
+      desc = "OpenCode Pair Local (QR)",
+      silent = true,
+    },
+    {
+      "<leader>asx",
+      opencode_utils.disable_remote,
+      desc = "OpenCode Disable Remote Access",
       silent = true,
     },
     {

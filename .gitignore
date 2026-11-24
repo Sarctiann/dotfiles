@@ -38,6 +38,7 @@ company_dirs.lua
 **/docs/agent-audits/
 **/docs/plans/
 **/docs/superpowers/
+.superpowers/
 **/docs/agent-audits/
 
 # Machine-local installer config (copy of config.sample.json)
