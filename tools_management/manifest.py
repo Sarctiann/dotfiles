@@ -26,6 +26,7 @@ def create() -> dict:
             "tpm_installed": False,
             "windows_terminal_linked": False,
             "zsh_plugins_installed": [],
+            "wsl_scripts_linked": [],
         },
     }
 

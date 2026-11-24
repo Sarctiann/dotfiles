@@ -94,3 +94,8 @@ manifest.json
 dotfiles-manifest.json
 settings.*.json.bak
 filter-out.md
+
+# WSL-only scripts live in wsl-bin/; post-install links them into ~/.local/bin.
+# If stow folds ~/.local/bin into this package (fresh machine), those links land here: never commit them.
+stow-packages/local-bin/.local/bin/wsl-fix-net
+stow-packages/local-bin/.local/bin/wsl-reclaim-mem

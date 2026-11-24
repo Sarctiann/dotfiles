@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Free memory inside WSL2 so the VM can hand it back to Windows.
+
+Steps:
+  1. Flush dirty pages and drop the page cache (and dentries/inodes with --deep).
+  2. Compact memory: free page reporting only returns 2 MB contiguous blocks to
+     the host, so defragmenting is what makes the freed RAM actually go back.
+  3. Recycle swap (swapoff + swapon) when there is enough free RAM to absorb it,
+     so paged-out processes stop paying the swap-in latency.
+
+Usage: wsl-reclaim-mem [--deep] [--no-swap] [--swap-margin MB]
+Re-runs itself with sudo if not root.
+"""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+
+def run(cmd, check=False):
+    return subprocess.run(cmd, capture_output=True, text=True, check=check)
+
+
+def step(msg):
+    print(f"\033[1;34m==>\033[0m {msg}")
+
+
+def ok(msg):
+    print(f"    \033[32m✓\033[0m {msg}")
+
+
+def skip(msg):
+    print(f"    \033[33m-\033[0m {msg}")
+
+
+def fail(msg):
+    print(f"    \033[31m✗\033[0m {msg}")
+
+
+def ensure_root():
+    if os.geteuid() != 0:
+        os.execvp(
+            "sudo", ["sudo", sys.executable, os.path.abspath(__file__), *sys.argv[1:]]
+        )
+
+
+def meminfo():
+    """Return /proc/meminfo values in MB."""
+    info = {}
+    with open("/proc/meminfo") as f:
+        for line in f:
+            key, value = line.split(":", 1)
+            info[key] = int(value.split()[0]) // 1024
+    return info
+
+
+def snapshot(label):
+    m = meminfo()
+    cache = m["Buffers"] + m["Cached"] + m["SReclaimable"]
+    swap_used = m["SwapTotal"] - m["SwapFree"]
+    print(
+        f"    {label:<7} free {m['MemFree']:>6} MB | available {m['MemAvailable']:>6} MB"
+        f" | cache {cache:>6} MB | swap used {swap_used:>6} MB"
+    )
+    return m
+
+
+def write_proc(path, value):
+    with open(path, "w") as f:
+        f.write(value)
+
+
+def drop_caches(deep):
+    step("Page cache")
+    os.sync()
+    # 1 = page cache only; 3 = page cache + dentries/inodes (slower next file walk)
+    write_proc("/proc/sys/vm/drop_caches", "3" if deep else "1")
+    ok("dropped (page cache + dentries/inodes)" if deep else "dropped (page cache)")
+
+
+def compact():
+    step("Memory compaction")
+    if not os.path.exists("/proc/sys/vm/compact_memory"):
+        skip("kernel without CONFIG_COMPACTION")
+        return
+    write_proc("/proc/sys/vm/compact_memory", "1")
+    ok("compacted (free 2 MB blocks can now be reported to Windows)")
+
+
+def recycle_swap(margin_mb):
+    step("Swap")
+    m = meminfo()
+    used = m["SwapTotal"] - m["SwapFree"]
+    if m["SwapTotal"] == 0:
+        skip("no swap configured")
+        return
+    if used == 0:
+        ok("nothing swapped out")
+        return
+    if m["MemAvailable"] < used + margin_mb:
+        skip(
+            f"{used} MB swapped but only {m['MemAvailable']} MB available"
+            f" (needs {used + margin_mb} MB); left as is"
+        )
+        return
+    swapoff, swapon = shutil.which("swapoff"), shutil.which("swapon")
+    if not (swapoff and swapon):
+        fail("swapoff/swapon not found (util-linux)")
+        return
+    start = time.monotonic()
+    result = run([swapoff, "-a"])
+    # Always try to turn swap back on, even if swapoff failed halfway
+    run([swapon, "-a"])
+    if result.returncode != 0:
+        fail(f"swapoff: {result.stderr.strip()}")
+        return
+    ok(f"{used} MB moved back to RAM in {time.monotonic() - start:.1f}s")
+
+
+def main():
+    # __doc__ is None under python -OO
+    p = argparse.ArgumentParser(
+        description=(__doc__ or "wsl-reclaim-mem").splitlines()[0]
+    )
+    p.add_argument(
+        "--deep", action="store_true", help="also drop dentries/inodes (drop_caches=3)"
+    )
+    p.add_argument("--no-swap", action="store_true", help="do not recycle swap")
+    p.add_argument(
+        "--swap-margin",
+        type=int,
+        default=2048,
+        metavar="MB",
+        help="free RAM to keep after recycling swap (default: 2048)",
+    )
+    args = p.parse_args()
+
+    ensure_root()
+    step("Memory")
+    snapshot("before")
+    drop_caches(args.deep)
+    compact()
+    if not args.no_swap:
+        recycle_swap(args.swap_margin)
+    step("Memory")
+    snapshot("after")
+
+
+if __name__ == "__main__":
+    main()

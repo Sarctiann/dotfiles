@@ -277,6 +277,7 @@ dotfiles/
 │   ├── local-bin/          ← local scripts (includes sync_git_config.py)
 │   ├── mojo/               ← Mojo + Pixi config
 │   └── ...
+├── wsl-bin/                ← WSL-only scripts, linked to ~/.local/bin by post-install
 ├── testing/                ← container-based test suite
 │   ├── test_pipeline.py   ← CLI orchestrator (linux/wsl/mac)
 │   ├── test_containers/    ← Dockerfiles + pipeline script
@@ -322,7 +323,7 @@ Stage 1 handles the absolute minimum to get Python running. `stow`, `curl`, and 
 5.  **Git config** — prompts for identity vars, generates `~/.gitconfig` via `sync_git_config.py`
 6.  **Runtimes** — nvm + Node LTS, Bun, Rust (rustup), OpenCode, uv
 7.  **NPM packages** — auggie, gemini-cli (via bun, fallback npm)
-8.  **Post-install** — TPM, Windows Terminal sync (WSL), terminal font overrides
+8.  **Post-install** — TPM, Windows Terminal sync (WSL), WSL-only scripts from `wsl-bin/`, terminal font overrides
 9.  **Verify** — checks essential commands are in PATH
 
 `config.json` is gitignored so each machine keeps its own choices; `config.sample.json` is the tracked template. If `config.json` is missing, the installer warns and asks before creating it from the sample (without a terminal it warns and continues). New options added to the sample are not merged into an existing `config.json`: copy them over by hand.
@@ -438,7 +439,7 @@ What gets removed:
 - **NPM packages** — auggie, gemini-cli (only if not pre-existing)
 - **Runtimes** — nvm, Bun, Rust, OpenCode, uv (only if not pre-existing)
 - **Fonts** — Nerd Font files (derived from `terminal_font`)
-- **Post-install** — TPM, Windows Terminal symlink (WSL)
+- **Post-install** — TPM, Windows Terminal symlink, `wsl-bin/` script links (WSL)
 
 System packages (stow, tmux, git via brew/apt) are **not** removed.
 
@@ -524,13 +525,21 @@ sync_git_config.py
 | `Ctrl+b Ctrl+s`   | Save session (resurrect)    |
 | `Ctrl+b Ctrl+r`   | Restore session (resurrect) |
 
-## WSL networking
+## WSL scripts
+
+Scripts in `wsl-bin/` only make sense under WSL, so they are not part of the `local-bin` stow package:
+post-install links them into `~/.local/bin` only when it detects WSL (and uninstall removes those links).
 
 `wsl-fix-net` restores WSL's internet access when `wsl-vpnkit` breaks and leaves
 `eth0` without a default route (`Network is unreachable`). It stops `wsl-vpnkit`,
 adds a default route through the Windows host (the first IP of `eth0`'s subnet)
 and checks ping, DNS and HTTPS. It re-runs itself with `sudo`; `--disable-vpnkit`
 also stops the service from starting with WSL, and `--iface` picks another interface.
+
+`wsl-reclaim-mem` frees memory inside the WSL VM so `autoMemoryReclaim` can hand it back to Windows. It drops
+the page cache (`--deep` also drops dentries/inodes), compacts memory (Windows only takes back free 2 MB
+blocks) and recycles swap when there is enough free RAM to absorb it (`--no-swap` skips it, `--swap-margin`
+sets the free RAM to keep, default 2048 MB). It re-runs itself with `sudo`.
 
 ## OpenCode / AI Clients
 

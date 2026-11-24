@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -6,10 +7,13 @@ from pathlib import Path
 
 import core
 import manifest as mf
-from core import STOW_DIR, download, is_wsl, run, run_optional, safe_rmtree, which
+from core import BIN_DIR, DOTFILES_DIR, STOW_DIR, download, is_wsl, run, run_optional, safe_rmtree, which
 from stow import stow_windows_terminal
 
 TPM_DIR = Path.home() / ".tmux" / "plugins" / "tpm"
+
+# Scripts that only make sense under WSL: linked into ~/.local/bin by post-install
+WSL_BIN_DIR = DOTFILES_DIR / "wsl-bin"
 
 ZSH_PLUGINS: dict[str, str] = {
     "zsh-autosuggestions": "https://github.com/zsh-users/zsh-autosuggestions",
@@ -120,6 +124,41 @@ def _undo_wsl_windows_path() -> None:
         print("   removed WSL Windows path config")
 
 
+def _wsl_scripts() -> list[Path]:
+    if not WSL_BIN_DIR.is_dir():
+        return []
+    return sorted(
+        f for f in WSL_BIN_DIR.iterdir() if f.is_file() and not f.name.startswith(".")
+    )
+
+
+def _link_wsl_scripts() -> list[str]:
+    """Symlink wsl-bin/* into ~/.local/bin (relative, like stow does)."""
+    BIN_DIR.mkdir(parents=True, exist_ok=True)
+    linked = []
+    for src in _wsl_scripts():
+        dest = BIN_DIR / src.name
+        rel = Path(os.path.relpath(src, BIN_DIR))
+        if dest.is_symlink() and dest.resolve() == src.resolve():
+            linked.append(src.name)
+            continue
+        if dest.exists() or dest.is_symlink():
+            print(f"   ⚠  {dest} exists and is not ours, skipping {src.name}")
+            continue
+        dest.symlink_to(rel)
+        linked.append(src.name)
+        print(f"   🔗 {src.name} → ~/.local/bin")
+    return linked
+
+
+def _undo_wsl_scripts(names: list[str]) -> None:
+    for name in names:
+        dest = BIN_DIR / name
+        if dest.is_symlink() and dest.resolve().parent == WSL_BIN_DIR.resolve():
+            dest.unlink()
+            print(f"   removed ~/.local/bin/{name}")
+
+
 def _undo_post_install(_: dict) -> None:
     _undo_opencode_notifier()
     manifest = mf.saved_version()
@@ -135,6 +174,8 @@ def _undo_post_install(_: dict) -> None:
         _undo_zsh_plugins(post["zsh_plugins_installed"])
     if post.get("wsl_windows_path"):
         _undo_wsl_windows_path()
+    if post.get("wsl_scripts_linked"):
+        _undo_wsl_scripts(post["wsl_scripts_linked"])
     if is_wsl():
         _undo_ssh_agent()
     manifest["post_install"] = {
@@ -142,6 +183,7 @@ def _undo_post_install(_: dict) -> None:
         "windows_terminal_linked": False,
         "zsh_plugins_installed": [],
         "wsl_windows_path": False,
+        "wsl_scripts_linked": [],
     }
     mf.save(manifest)
 
@@ -777,6 +819,9 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         if is_wsl():
             wp_status = "✅" if WINDOWS_PATH_ZSH.is_file() else "⬜"
             print(f"   {wp_status} WSL Windows path config")
+            for src in _wsl_scripts():
+                ok = (BIN_DIR / src.name).is_symlink()
+                print(f"   {'✅' if ok else '⬜'} {src.name} (WSL script)")
         print("   📦 Zsh plugins:")
         for name in ZSH_PLUGINS:
             target = ZSH_PLUGIN_DIR / name
@@ -840,6 +885,8 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         _setup_ssh_agent()
         _ensure_wsl_windows_path()
         manifest["post_install"]["wsl_windows_path"] = True
+        print("🧰 Linking WSL-only scripts...")
+        manifest["post_install"]["wsl_scripts_linked"] = _link_wsl_scripts()
 
     if config.get("post_install", {}).get("tpm", True):
         install_tpm()
@@ -854,8 +901,6 @@ def run_post_install(config: dict, mode: str = "install") -> None:
         print("   all up to date")
 
     # Register ruff in Mason so mason-lspconfig doesn't reinstall via pip
-    from core import BIN_DIR
-
     mason_pkgs = Path.home() / ".local" / "share" / "nvim" / "mason" / "packages"
     mason_bin = Path.home() / ".local" / "share" / "nvim" / "mason" / "bin"
     ruff_pkg = mason_pkgs / "ruff"
